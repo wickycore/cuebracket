@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
+import { BracketManager } from "@/components/BracketManager";
+import { PlayerManager } from "@/components/PlayerManager";
 import { deleteTournament, getTournament, Tournament, updateTournament } from "@/lib/tournaments";
 
 export default function TournamentDetailPage() {
@@ -28,9 +30,7 @@ export default function TournamentDetailPage() {
 
   function handleDelete() {
     if (!tournament) return;
-    const shouldDelete = window.confirm(`Delete “${tournament.name}”?`);
-    if (!shouldDelete) return;
-
+    if (!window.confirm(`Delete “${tournament.name}”?`)) return;
     deleteTournament(tournament.id);
     router.push("/dashboard");
   }
@@ -51,14 +51,12 @@ export default function TournamentDetailPage() {
     );
   }
 
-  if (!tournament) {
-    return <main className="min-h-screen bg-slate-950" />;
-  }
+  if (!tournament) return <main className="min-h-screen bg-slate-950" />;
 
   return (
     <main className="min-h-screen bg-slate-950 text-white">
       <AppHeader />
-      <div className="mx-auto max-w-7xl px-5 py-10 sm:px-8">
+      <div className="mx-auto max-w-[1600px] px-5 py-10 sm:px-8">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <div className="flex flex-wrap items-center gap-2">
@@ -104,13 +102,15 @@ export default function TournamentDetailPage() {
           ))}
         </div>
 
-        <div className="mt-8 rounded-[2rem] border border-dashed border-white/15 bg-white/[0.03] px-6 py-16 text-center">
-          <div className="text-4xl">👥</div>
-          <h2 className="mt-5 text-2xl font-black">Player management comes next</h2>
-          <p className="mx-auto mt-2 max-w-xl text-slate-400">
-            Phase 3 will add player entry, remove, randomize, seed and import tools before bracket generation.
-          </p>
-        </div>
+        {!tournament.bracket ? (
+          <PlayerManager tournament={tournament} onTournamentChange={setTournament} />
+        ) : (
+          <div className="mt-8 rounded-2xl border border-cyan-400/15 bg-cyan-400/5 px-4 py-3 text-sm text-cyan-100">
+            The draw is locked while a bracket exists. Reset the bracket below to edit or randomize players again.
+          </div>
+        )}
+
+        <BracketManager tournament={tournament} onTournamentChange={setTournament} />
       </div>
     </main>
   );

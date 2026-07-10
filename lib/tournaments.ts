@@ -1,6 +1,31 @@
 export type TournamentFormat = "single" | "double";
 export type TournamentStatus = "draft" | "live" | "completed";
 
+export interface BracketMatch {
+  id: string;
+  round: number;
+  position: number;
+  player1: string | null;
+  player2: string | null;
+  score1: number | null;
+  score2: number | null;
+  winner: string | null;
+  completed: boolean;
+}
+
+export interface BracketRound {
+  round: number;
+  name: string;
+  matches: BracketMatch[];
+}
+
+export interface TournamentBracket {
+  type: "single";
+  rounds: BracketRound[];
+  generatedAt: string;
+  champion: string | null;
+}
+
 export interface Tournament {
   id: string;
   name: string;
@@ -10,6 +35,7 @@ export interface Tournament {
   bracketSize: 4 | 8 | 16 | 32 | 64 | 128;
   status: TournamentStatus;
   players: string[];
+  bracket?: TournamentBracket;
   createdAt: string;
   updatedAt: string;
 }
@@ -71,8 +97,7 @@ export function createTournament(input: TournamentInput): Tournament {
     updatedAt: now,
   };
 
-  const tournaments = [tournament, ...getTournaments()];
-  saveTournaments(tournaments);
+  saveTournaments([tournament, ...getTournaments()]);
   return tournament;
 }
 
@@ -113,6 +138,7 @@ export function duplicateTournament(id: string): Tournament | undefined {
     name: `${source.name} Copy`,
     status: "draft",
     players: [...source.players],
+    bracket: undefined,
     createdAt: now,
     updatedAt: now,
   };
