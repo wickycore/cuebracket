@@ -8,6 +8,11 @@ export interface ScoreSnapshot {
   recordedAt: string;
 }
 
+export type MatchSource =
+  | { kind: "seed"; player: string | null }
+  | { kind: "winner"; matchId: string }
+  | { kind: "loser"; matchId: string };
+
 export interface BracketMatch {
   id: string;
   round: number;
@@ -25,6 +30,8 @@ export interface BracketMatch {
   endedAt?: string | null;
   notes?: string;
   scoreHistory?: ScoreSnapshot[];
+  source1?: MatchSource;
+  source2?: MatchSource;
 }
 
 export interface BracketRound {
@@ -33,12 +40,25 @@ export interface BracketRound {
   matches: BracketMatch[];
 }
 
-export interface TournamentBracket {
+export interface SingleEliminationBracket {
   type: "single";
   rounds: BracketRound[];
   generatedAt: string;
   champion: string | null;
 }
+
+export interface DoubleEliminationBracket {
+  type: "double";
+  winners: BracketRound[];
+  losers: BracketRound[];
+  grandFinal: BracketRound[];
+  generatedAt: string;
+  champion: string | null;
+  resetRequired: boolean;
+  bracketResetEnabled: boolean;
+}
+
+export type TournamentBracket = SingleEliminationBracket | DoubleEliminationBracket;
 
 export interface Tournament {
   id: string;
@@ -69,31 +89,50 @@ function canUseBrowserStorage() {
 }
 
 function makeId() {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return crypto.randomUUID();
-  }
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
   return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function normalizeMatch(match: BracketMatch): BracketMatch {
+  return {
+    ...match,
+    status: match.status ?? (match.completed ? "finished" : "pending"),
+    tableNumber: match.tableNumber ?? "",
+    breakPlayer: match.breakPlayer ?? null,
+    startedAt: match.startedAt ?? null,
+    endedAt: match.endedAt ?? null,
+    notes: match.notes ?? "",
+    scoreHistory: match.scoreHistory ?? [],
+  };
+}
+
+function normalizeRounds(rounds: BracketRound[]) {
+  return rounds.map((round) => ({
+    ...round,
+    matches: round.matches.map(normalizeMatch),
+  }));
 }
 
 function normalizeTournament(tournament: Tournament): Tournament {
   if (!tournament.bracket) return tournament;
+  if (tournament.bracket.type === "double") {
+    return {
+      ...tournament,
+      bracket: {
+        ...tournament.bracket,
+        winners: normalizeRounds(tournament.bracket.winners),
+        losers: normalizeRounds(tournament.bracket.losers),
+        grandFinal: normalizeRounds(tournament.bracket.grandFinal),
+        resetRequired: tournament.bracket.resetRequired ?? false,
+        bracketResetEnabled: tournament.bracket.bracketResetEnabled ?? true,
+      },
+    };
+  }
   return {
     ...tournament,
     bracket: {
       ...tournament.bracket,
-      rounds: tournament.bracket.rounds.map((round) => ({
-        ...round,
-        matches: round.matches.map((match) => ({
-          ...match,
-          status: match.status ?? (match.completed ? "finished" : "pending"),
-          tableNumber: match.tableNumber ?? "",
-          breakPlayer: match.breakPlayer ?? null,
-          startedAt: match.startedAt ?? null,
-          endedAt: match.endedAt ?? null,
-          notes: match.notes ?? "",
-          scoreHistory: match.scoreHistory ?? [],
-        })),
-      })),
+      rounds: normalizeRounds(tournament.bracket.rounds),
     },
   };
 }
@@ -187,8 +226,15 @@ export function subscribeToTournamentChanges(callback: () => void) {
   };
 }
 
+export function getBracketRounds(bracket?: TournamentBracket): BracketRound[] {
+  if (!bracket) return [];
+  return bracket.type === "single"
+    ? bracket.rounds
+    : [...bracket.winners, ...bracket.losers, ...bracket.grandFinal];
+}
+
 export function getAllMatches(tournament: Tournament): BracketMatch[] {
-  return tournament.bracket?.rounds.flatMap((round) => round.matches) ?? [];
+  return getBracketRounds(tournament.bracket).flatMap((round) => round.matches);
 }
 
 export function formatDuration(milliseconds: number) {

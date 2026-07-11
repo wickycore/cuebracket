@@ -25,7 +25,6 @@ export default function PublicLivePage() {
 
   const matches = useMemo(() => tournament ? getAllMatches(tournament).filter((match) => match.player1 && match.player2) : [], [tournament]);
   const current = matches.filter((match) => match.status === "live" && !match.completed);
-  const completed = matches.filter((match) => match.completed).slice(-6).reverse();
   const stats = tournament ? getTournamentStats(tournament) : null;
 
   if (!checked) return <main className="min-h-screen bg-slate-950" />;
@@ -67,7 +66,6 @@ export default function PublicLivePage() {
 
         <section className="mt-10"><h2 className="mb-4 text-2xl font-black">Live bracket</h2><ReadOnlyBracket tournament={tournament} /></section>
 
-        <section className="mt-10"><h2 className="text-2xl font-black">Recently completed</h2><div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{completed.length ? completed.map((match) => <article key={match.id} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4"><p className="font-bold text-white">{match.player1} <span className="text-cyan-300">{match.score1}</span> — <span className="text-cyan-300">{match.score2}</span> {match.player2}</p><p className="mt-2 text-xs text-emerald-300">Winner: {match.winner}</p></article>) : <p className="text-slate-500">No completed matches yet.</p>}</div></section>
       </div>
     </main>
   );

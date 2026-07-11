@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { getAllMatches, Tournament } from "@/lib/tournaments";
+import { getAllMatches, getBracketRounds, Tournament } from "@/lib/tournaments";
 
 export function getTournamentStats(tournament: Tournament) {
   const matches = getAllMatches(tournament).filter((match) => match.player1 || match.player2);
@@ -20,8 +20,9 @@ export function getTournamentStats(tournament: Tournament) {
     : 0;
   const progress = playable.length ? Math.round((completed.length / playable.length) * 100) : 0;
   const currentRound =
-    tournament.bracket?.rounds.find((round) => round.matches.some((match) => match.player1 && match.player2 && !match.completed))?.name ??
-    (tournament.bracket?.champion ? "Complete" : "Not started");
+    getBracketRounds(tournament.bracket).find((round) =>
+      round.matches.some((match) => match.player1 && match.player2 && !match.completed),
+    )?.name ?? (tournament.bracket?.champion ? "Complete" : "Not started");
 
   return {
     totalPlayers: tournament.players.length,

@@ -99,17 +99,30 @@ export function LiveMatchCenter({ tournament, onTournamentChange }: Props) {
 
   function addPoint(player: 1 | 2) {
     updateMatch((target) => {
+      if (target.completed) return;
+
       if (target.status !== "live") {
         target.status = "live";
         target.startedAt = target.startedAt ?? new Date().toISOString();
       }
+
       target.scoreHistory = [
         ...(target.scoreHistory ?? []),
         { score1: target.score1 ?? 0, score2: target.score2 ?? 0, recordedAt: new Date().toISOString() },
       ];
+
       if (player === 1) target.score1 = (target.score1 ?? 0) + 1;
       else target.score2 = (target.score2 ?? 0) + 1;
-    });
+
+      const score1 = target.score1 ?? 0;
+      const score2 = target.score2 ?? 0;
+      if (score1 >= tournament.raceTo || score2 >= tournament.raceTo) {
+        target.completed = true;
+        target.status = "finished";
+        target.endedAt = new Date().toISOString();
+        target.winner = score1 > score2 ? target.player1 : target.player2;
+      }
+    }, true);
   }
 
   function undoScore() {
@@ -123,25 +136,6 @@ export function LiveMatchCenter({ tournament, onTournamentChange }: Props) {
     });
   }
 
-  function finishMatch() {
-    if (!match) return;
-    const score1 = match.score1 ?? 0;
-    const score2 = match.score2 ?? 0;
-    if (score1 === score2) {
-      window.alert("The match cannot finish with a tied score.");
-      return;
-    }
-    if (Math.max(score1, score2) < tournament.raceTo) {
-      const confirmed = window.confirm(`Neither player has reached race to ${tournament.raceTo}. Finish anyway?`);
-      if (!confirmed) return;
-    }
-    updateMatch((target) => {
-      target.completed = true;
-      target.status = "finished";
-      target.endedAt = new Date().toISOString();
-      target.winner = (target.score1 ?? 0) > (target.score2 ?? 0) ? target.player1 : target.player2;
-    }, true);
-  }
 
   if (!tournament.bracket) {
     return (
@@ -222,9 +216,8 @@ export function LiveMatchCenter({ tournament, onTournamentChange }: Props) {
       <div className="mt-6 flex flex-wrap gap-3">
         {match.status !== "live" ? <button onClick={startMatch} className="rounded-xl bg-emerald-400 px-5 py-3 font-black text-slate-950">Start match</button> : null}
         <button onClick={undoScore} disabled={!match.scoreHistory?.length} className="rounded-xl border border-white/10 px-5 py-3 font-bold text-slate-300 disabled:opacity-30">Undo last score</button>
-        <button onClick={finishMatch} className="rounded-xl bg-violet-400 px-5 py-3 font-black text-slate-950">Finish match</button>
       </div>
-      <p className="mt-4 text-xs text-slate-500">Changes save automatically after every click and restore after refresh.</p>
+      <p className="mt-4 text-xs text-slate-500">The match finishes automatically when a player reaches the race target. Every score saves instantly.</p>
     </section>
   );
 }

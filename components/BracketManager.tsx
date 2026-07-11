@@ -1,10 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { DoubleEliminationManager } from "@/components/DoubleEliminationManager";
 import {
   BracketMatch,
   BracketRound,
   Tournament,
+  SingleEliminationBracket,
   TournamentBracket,
   updateTournament,
 } from "@/lib/tournaments";
@@ -48,7 +50,7 @@ function autoResolveMatch(match: BracketMatch): BracketMatch {
   return match;
 }
 
-function buildSingleBracket(tournament: Tournament): TournamentBracket {
+function buildSingleBracket(tournament: Tournament): SingleEliminationBracket {
   const slots: Array<string | null> = Array.from({ length: tournament.bracketSize }, (_, index) =>
     tournament.players[index] ?? null,
   );
@@ -77,7 +79,7 @@ function buildSingleBracket(tournament: Tournament): TournamentBracket {
   return recomputeBracket({ type: "single", rounds, generatedAt: new Date().toISOString(), champion: null });
 }
 
-function recomputeBracket(bracket: TournamentBracket): TournamentBracket {
+function recomputeBracket(bracket: SingleEliminationBracket): SingleEliminationBracket {
   const rounds = bracket.rounds.map((round) => ({
     ...round,
     matches: round.matches.map((match) => ({ ...match })),
@@ -118,9 +120,13 @@ export function BracketManager({ tournament, onTournamentChange }: BracketManage
   const [message, setMessage] = useState("");
   const [draftScores, setDraftScores] = useState<Record<string, { score1: string; score2: string }>>({});
 
-  const bracket = tournament.bracket;
+  if (tournament.format === "double") {
+    return <DoubleEliminationManager tournament={tournament} onTournamentChange={onTournamentChange} />;
+  }
+
+  const bracket = tournament.bracket?.type === "single" ? tournament.bracket : undefined;
   const minimumPlayers = 2;
-  const canGenerate = tournament.players.length >= minimumPlayers && tournament.format === "single";
+  const canGenerate = tournament.players.length >= minimumPlayers;
 
   const playedMatches = useMemo(() => {
     if (!bracket) return 0;
@@ -134,10 +140,6 @@ export function BracketManager({ tournament, onTournamentChange }: BracketManage
 
   function generateBracket() {
     setMessage("");
-    if (tournament.format !== "single") {
-      setMessage("Double-life brackets will be added in the dedicated double-elimination phase.");
-      return;
-    }
     if (tournament.players.length < minimumPlayers) {
       setMessage("Add at least two players before generating the bracket.");
       return;
@@ -207,11 +209,6 @@ export function BracketManager({ tournament, onTournamentChange }: BracketManage
         <p className="mx-auto mt-2 max-w-2xl text-slate-400">
           The current player order becomes the draw order. Empty bracket slots are treated as automatic BYEs.
         </p>
-        {tournament.format === "double" ? (
-          <p className="mx-auto mt-4 max-w-2xl rounded-2xl bg-amber-400/10 px-4 py-3 text-sm font-bold text-amber-200 ring-1 ring-amber-400/20">
-            This phase introduces the stable single-elimination engine. Proper winners and losers brackets are coming in the dedicated double-elimination phase.
-          </p>
-        ) : null}
         {message ? <p className="mt-4 text-sm font-bold text-amber-300">{message}</p> : null}
         <button
           type="button"
