@@ -1,5 +1,12 @@
 export type TournamentFormat = "single" | "double";
 export type TournamentStatus = "draft" | "live" | "completed";
+export type MatchStatus = "pending" | "live" | "finished";
+
+export interface ScoreSnapshot {
+  score1: number;
+  score2: number;
+  recordedAt: string;
+}
 
 export interface BracketMatch {
   id: string;
@@ -11,6 +18,13 @@ export interface BracketMatch {
   score2: number | null;
   winner: string | null;
   completed: boolean;
+  status?: MatchStatus;
+  tableNumber?: string;
+  breakPlayer?: 1 | 2 | null;
+  startedAt?: string | null;
+  endedAt?: string | null;
+  notes?: string;
+  scoreHistory?: ScoreSnapshot[];
 }
 
 export interface BracketRound {
@@ -58,19 +72,39 @@ function makeId() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return crypto.randomUUID();
   }
-
   return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function normalizeTournament(tournament: Tournament): Tournament {
+  if (!tournament.bracket) return tournament;
+  return {
+    ...tournament,
+    bracket: {
+      ...tournament.bracket,
+      rounds: tournament.bracket.rounds.map((round) => ({
+        ...round,
+        matches: round.matches.map((match) => ({
+          ...match,
+          status: match.status ?? (match.completed ? "finished" : "pending"),
+          tableNumber: match.tableNumber ?? "",
+          breakPlayer: match.breakPlayer ?? null,
+          startedAt: match.startedAt ?? null,
+          endedAt: match.endedAt ?? null,
+          notes: match.notes ?? "",
+          scoreHistory: match.scoreHistory ?? [],
+        })),
+      })),
+    },
+  };
 }
 
 export function getTournaments(): Tournament[] {
   if (!canUseBrowserStorage()) return [];
-
   try {
     const value = window.localStorage.getItem(STORAGE_KEY);
     if (!value) return [];
-
     const parsed = JSON.parse(value) as Tournament[];
-    return Array.isArray(parsed) ? parsed : [];
+    return Array.isArray(parsed) ? parsed.map(normalizeTournament) : [];
   } catch {
     return [];
   }
@@ -96,7 +130,6 @@ export function createTournament(input: TournamentInput): Tournament {
     createdAt: now,
     updatedAt: now,
   };
-
   saveTournaments([tournament, ...getTournaments()]);
   return tournament;
 }
@@ -112,13 +145,11 @@ export function updateTournament(
   const tournaments = getTournaments();
   const index = tournaments.findIndex((tournament) => tournament.id === id);
   if (index === -1) return undefined;
-
-  tournaments[index] = {
+  tournaments[index] = normalizeTournament({
     ...tournaments[index],
     ...updates,
     updatedAt: new Date().toISOString(),
-  };
-
+  });
   saveTournaments(tournaments);
   return tournaments[index];
 }
@@ -130,7 +161,6 @@ export function deleteTournament(id: string) {
 export function duplicateTournament(id: string): Tournament | undefined {
   const source = getTournament(id);
   if (!source) return undefined;
-
   const now = new Date().toISOString();
   const copy: Tournament = {
     ...source,
@@ -142,20 +172,31 @@ export function duplicateTournament(id: string): Tournament | undefined {
     createdAt: now,
     updatedAt: now,
   };
-
   saveTournaments([copy, ...getTournaments()]);
   return copy;
 }
 
 export function subscribeToTournamentChanges(callback: () => void) {
   if (typeof window === "undefined") return () => undefined;
-
   const listener = () => callback();
   window.addEventListener("storage", listener);
   window.addEventListener("cuebracket:tournaments-changed", listener);
-
   return () => {
     window.removeEventListener("storage", listener);
     window.removeEventListener("cuebracket:tournaments-changed", listener);
   };
+}
+
+export function getAllMatches(tournament: Tournament): BracketMatch[] {
+  return tournament.bracket?.rounds.flatMap((round) => round.matches) ?? [];
+}
+
+export function formatDuration(milliseconds: number) {
+  const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return hours > 0
+    ? `${hours}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`
+    : `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
 }
