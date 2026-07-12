@@ -1,0 +1,17 @@
+IMPORTANT
+
+Extract BOTH files directly into:
+
+C:\project\cuebracket
+
+After extraction, this exact file must exist:
+
+C:\project\cuebracket\.env.local
+
+Then stop the running server with Ctrl+C and restart:
+
+npm run dev -- --webpack
+
+If Windows hides the file, enable:
+View > Show > Hidden items
+View > Show > File name extensions
