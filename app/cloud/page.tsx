@@ -13,13 +13,14 @@ export default async function CloudPage() {
       <AppHeader />
       <div className="mx-auto max-w-5xl px-5 py-10">
         <p className="text-sm font-black uppercase tracking-[0.28em] text-cyan-300">
-          Phase 6 cloud center
+          Phase 6B cloud center
         </p>
         <h1 className="mt-3 text-4xl font-black sm:text-5xl">
-          Real tournaments. Live everywhere.
+          Score once. Update everywhere.
         </h1>
-        <p className="mt-3 text-slate-400">
-          Signed in as {user?.email}. Public spectators receive database updates without refreshing.
+        <p className="mt-3 max-w-3xl text-slate-400">
+          Signed in as {user?.email}. CueBracket now backs up every tournament
+          change automatically and pushes live updates to spectators.
         </p>
         <div className="mt-8">
           <CloudSyncPanel />

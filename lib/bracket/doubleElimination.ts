@@ -1,4 +1,4 @@
-import {
+import type {
   BracketMatch,
   BracketRound,
   DoubleEliminationBracket,
@@ -67,11 +67,16 @@ function loserOf(match: BracketMatch) {
   return match.winner === match.player1 ? match.player2 : match.player1;
 }
 
-function resolveSource(source: MatchSource | undefined, matches: Map<string, BracketMatch>) {
+function resolveSource(
+  source: MatchSource | undefined,
+  matches: Map<string, BracketMatch>,
+) {
   if (!source) return { ready: false, player: null as string | null };
   if (source.kind === "seed") return { ready: true, player: source.player ?? null };
+
   const match = matches.get(source.matchId);
   if (!match || !match.completed) return { ready: false, player: null as string | null };
+
   return {
     ready: true,
     player: source.kind === "winner" ? match.winner : loserOf(match),
@@ -102,6 +107,7 @@ function applyParticipants(
   }
 
   if (!ready1 || !ready2 || match.completed) return;
+
   if (player1 && !player2) {
     match.winner = player1;
     match.completed = true;
@@ -110,19 +116,93 @@ function applyParticipants(
     match.winner = player2;
     match.completed = true;
     match.status = "finished";
+  } else if (!player1 && !player2) {
+    // An empty bracket slot is still resolved. Marking it complete lets the
+    // next round receive a ready null source instead of remaining stuck on TBD.
+    match.winner = null;
+    match.completed = true;
+    match.status = "finished";
   }
 }
 
-export function buildDoubleEliminationBracket(tournament: Tournament): DoubleEliminationBracket {
+/**
+ * Return evenly spread match positions.
+ *
+ * Example: total 4, count 2 => [1, 3]
+ */
+function spreadPositions(total: number, count: number) {
+  if (count <= 0) return new Set<number>();
+  if (count >= total) return new Set(Array.from({ length: total }, (_, index) => index));
+
+  return new Set(
+    Array.from({ length: count }, (_, index) =>
+      Math.min(total - 1, Math.floor(((index + 0.5) * total) / count)),
+    ),
+  );
+}
+
+/**
+ * Build first-round slots so BYEs are spread across the bracket instead of
+ * collecting at the bottom as BYE-vs-BYE matches.
+ */
+function buildBalancedFirstRoundSlots(players: string[], size: number) {
+  const matchCount = size / 2;
+  const playerCount = Math.min(players.length, size);
+
+  // When there are at least as many players as first-round matches, every
+  // match receives at least one player. The remaining players create the
+  // normal two-player matches.
+  if (playerCount >= matchCount) {
+    const fullMatchCount = playerCount - matchCount;
+    const fullPositions = spreadPositions(matchCount, fullMatchCount);
+    const slots: Array<string | null> = [];
+    let playerIndex = 0;
+
+    for (let matchIndex = 0; matchIndex < matchCount; matchIndex += 1) {
+      slots.push(players[playerIndex] ?? null);
+      playerIndex += 1;
+
+      if (fullPositions.has(matchIndex)) {
+        slots.push(players[playerIndex] ?? null);
+        playerIndex += 1;
+      } else {
+        slots.push(null);
+      }
+    }
+
+    return slots;
+  }
+
+  // Very sparse manually selected bracket sizes can still contain empty
+  // matches. Spread the occupied matches so progression remains balanced.
+  const occupiedPositions = spreadPositions(matchCount, playerCount);
+  const slots: Array<string | null> = [];
+  let playerIndex = 0;
+
+  for (let matchIndex = 0; matchIndex < matchCount; matchIndex += 1) {
+    if (occupiedPositions.has(matchIndex)) {
+      slots.push(players[playerIndex] ?? null, null);
+      playerIndex += 1;
+    } else {
+      slots.push(null, null);
+    }
+  }
+
+  return slots;
+}
+
+export function buildDoubleEliminationBracket(
+  tournament: Tournament,
+): DoubleEliminationBracket {
   const size = tournament.bracketSize;
   const roundsCount = Math.log2(size);
-  const slots = Array.from({ length: size }, (_, index) => tournament.players[index] ?? null);
-
+  const slots = buildBalancedFirstRoundSlots(tournament.players, size);
   const winners: BracketRound[] = [];
   const firstRoundMatches = size / 2;
+
   winners.push({
     round: 1,
-    name: `Winners Round 1`,
+    name: "Winners Round 1",
     matches: Array.from({ length: firstRoundMatches }, (_, position) =>
       blankMatch(
         id("w", 1, position),
@@ -137,6 +217,7 @@ export function buildDoubleEliminationBracket(tournament: Tournament): DoubleEli
   for (let round = 2; round <= roundsCount; round += 1) {
     const count = size / 2 ** round;
     const previous = winners[round - 2].matches;
+
     winners.push({
       round,
       name: round === roundsCount ? "Winners Final" : `Winners Round ${round}`,
@@ -155,6 +236,7 @@ export function buildDoubleEliminationBracket(tournament: Tournament): DoubleEli
   const losers: BracketRound[] = [];
   let losersRoundNumber = 1;
   const wbRound1 = winners[0].matches;
+
   losers.push({
     round: losersRoundNumber,
     name: "Losers Round 1",
@@ -170,13 +252,18 @@ export function buildDoubleEliminationBracket(tournament: Tournament): DoubleEli
   });
 
   let previousLosersRound = losers[0];
+
   for (let wbRoundIndex = 2; wbRoundIndex <= roundsCount; wbRoundIndex += 1) {
     losersRoundNumber += 1;
     const wbRound = winners[wbRoundIndex - 1];
     const majorCount = wbRound.matches.length;
+
     const majorRound: BracketRound = {
       round: losersRoundNumber,
-      name: wbRoundIndex === roundsCount ? "Losers Final" : `Losers Round ${losersRoundNumber}`,
+      name:
+        wbRoundIndex === roundsCount
+          ? "Losers Final"
+          : `Losers Round ${losersRoundNumber}`,
       matches: Array.from({ length: majorCount }, (_, position) =>
         blankMatch(
           id("l", losersRoundNumber, position),
@@ -187,11 +274,13 @@ export function buildDoubleEliminationBracket(tournament: Tournament): DoubleEli
         ),
       ),
     };
+
     losers.push(majorRound);
     previousLosersRound = majorRound;
 
     if (wbRoundIndex < roundsCount) {
       losersRoundNumber += 1;
+
       const minorRound: BracketRound = {
         round: losersRoundNumber,
         name: `Losers Round ${losersRoundNumber}`,
@@ -205,6 +294,7 @@ export function buildDoubleEliminationBracket(tournament: Tournament): DoubleEli
           ),
         ),
       };
+
       losers.push(minorRound);
       previousLosersRound = minorRound;
     }
@@ -216,7 +306,15 @@ export function buildDoubleEliminationBracket(tournament: Tournament): DoubleEli
     {
       round: 1,
       name: "Grand Final",
-      matches: [blankMatch("gf-r1-m0", 1, 0, winner(winnersFinal.id), winner(losersFinal.id))],
+      matches: [
+        blankMatch(
+          "gf-r1-m0",
+          1,
+          0,
+          winner(winnersFinal.id),
+          winner(losersFinal.id),
+        ),
+      ],
     },
     {
       round: 2,
@@ -279,6 +377,7 @@ export function recomputeDoubleEliminationBracket(
       losersChampion &&
       gf1.winner === losersChampion,
   );
+
   next.resetRequired = resetNeeded;
 
   if (resetNeeded && winnersChampion && losersChampion) {
@@ -297,7 +396,10 @@ export function recomputeDoubleEliminationBracket(
   return next;
 }
 
-export function findDoubleMatch(bracket: DoubleEliminationBracket, matchId: string) {
+export function findDoubleMatch(
+  bracket: DoubleEliminationBracket,
+  matchId: string,
+) {
   return [
     ...bracket.winners.flatMap((round) => round.matches),
     ...bracket.losers.flatMap((round) => round.matches),
@@ -316,8 +418,10 @@ export function updateDoubleMatch(
     losers: cloneRounds(bracket.losers),
     grandFinal: cloneRounds(bracket.grandFinal),
   };
+
   const match = findDoubleMatch(next, matchId);
   if (!match) return bracket;
+
   updater(match);
   return recomputeDoubleEliminationBracket(next);
 }
