@@ -3,9 +3,11 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { ChampionCelebration } from "@/components/ChampionCelebration";
 import { ReadOnlyBracket } from "@/components/ReadOnlyBracket";
+import { ReadOnlyCompetition } from "@/components/ReadOnlyCompetition";
 import { getTournamentStats } from "@/components/TournamentStats";
-import { getAllMatches, getTournament, subscribeToTournamentChanges, Tournament } from "@/lib/tournaments";
+import { getAllMatches, getTournament, getTournamentChampion, getTournamentChampionDescription, subscribeToTournamentChanges, Tournament } from "@/lib/tournaments";
 
 export default function PublicLivePage() {
   const params = useParams<{ tournamentId: string }>();
@@ -26,6 +28,16 @@ export default function PublicLivePage() {
   const matches = useMemo(() => tournament ? getAllMatches(tournament).filter((match) => match.player1 && match.player2) : [], [tournament]);
   const current = matches.filter((match) => match.status === "live" && !match.completed);
   const stats = tournament ? getTournamentStats(tournament) : null;
+  const summaryCards: Array<[string, string | number]> = stats
+    ? [
+        ["Progress", `${stats.progress}%`],
+        ["Current round", stats.currentRound],
+        [tournament?.competition?.type === "free_for_all" ? "Heats" : "Played matches", stats.totalMatches],
+        ["Completed", stats.completedMatches],
+        ["Remaining", stats.remainingMatches],
+        ...(stats.byes > 0 ? [["BYEs", stats.byes] as [string, number]] : []),
+      ]
+    : [];
 
   if (!checked) return <main className="min-h-screen bg-slate-950" />;
   if (!tournament) {
@@ -48,13 +60,13 @@ export default function PublicLivePage() {
         <div className="text-center">
           <p className="text-sm font-black uppercase tracking-[0.25em] text-cyan-400">Public spectator view</p>
           <h1 className="mt-3 text-4xl font-black sm:text-6xl">{tournament.name}</h1>
-          <p className="mt-3 text-slate-400">{tournament.venue || "Venue not set"} · Race to {tournament.raceTo}</p>
+          <p className="mt-3 text-slate-400">{tournament.venue || "Venue not set"} · {tournament.format === "free_for_all" ? "Score cap" : "Race to"} {tournament.raceTo}</p>
         </div>
 
-        {tournament.bracket?.champion ? <section className="mt-8 rounded-[2rem] border border-amber-300/25 bg-amber-300/10 p-8 text-center"><p className="text-5xl">🏆</p><p className="mt-3 text-sm font-black uppercase tracking-[0.25em] text-amber-300">Champion</p><h2 className="mt-2 text-4xl font-black">{tournament.bracket.champion}</h2></section> : null}
+        {getTournamentChampion(tournament) ? <div className="mt-8"><ChampionCelebration champion={getTournamentChampion(tournament)!} description={getTournamentChampionDescription(tournament)} /></div> : null}
 
-        <section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {stats ? [["Progress", `${stats.progress}%`], ["Current round", stats.currentRound], ["Completed", stats.completedMatches], ["Remaining", stats.remainingMatches]].map(([label, value]) => <div key={label} className="rounded-3xl border border-white/10 bg-white/[0.04] p-5"><p className="text-xs font-black uppercase tracking-wider text-slate-500">{label}</p><p className="mt-2 text-2xl font-black">{value}</p></div>) : null}
+        <section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {summaryCards.map(([label, value]) => <div key={label} className="rounded-3xl border border-white/10 bg-white/[0.04] p-5"><p className="text-xs font-black uppercase tracking-wider text-slate-500">{label}</p><p className="mt-2 text-2xl font-black">{value}</p></div>)}
         </section>
 
         <section className="mt-8">
@@ -64,7 +76,7 @@ export default function PublicLivePage() {
           </div>
         </section>
 
-        <section className="mt-10"><h2 className="mb-4 text-2xl font-black">Live bracket</h2><ReadOnlyBracket tournament={tournament} /></section>
+        <section className="mt-10"><h2 className="mb-4 text-2xl font-black">Live competition</h2>{tournament.bracket ? <ReadOnlyBracket tournament={tournament} /> : <ReadOnlyCompetition tournament={tournament} showChampion={false} />}</section>
 
       </div>
     </main>

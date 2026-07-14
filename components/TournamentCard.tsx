@@ -6,6 +6,9 @@ import {
   deleteTournament,
   duplicateTournament,
   getAllMatches,
+  getFormatLabel,
+  getTournamentEventCounts,
+  hasTournamentStructure,
 } from "@/lib/tournaments";
 
 interface TournamentCardProps {
@@ -36,10 +39,11 @@ export function TournamentCard({
   onChange,
   compact = false,
 }: TournamentCardProps) {
-  const matches = getAllMatches(tournament);
-  const completed = matches.filter((match) => match.completed).length;
-  const liveMatches = matches.filter((match) => match.status === "live").length;
-  const progress = matches.length ? Math.round((completed / matches.length) * 100) : 0;
+  const eventCounts = getTournamentEventCounts(tournament);
+  const completed = eventCounts.completed;
+  const liveMatches = getAllMatches(tournament).filter((match) => match.status === "live" && !match.completed).length;
+  const progress = eventCounts.total ? Math.round((completed / eventCounts.total) * 100) : 0;
+  const structureReady = hasTournamentStructure(tournament);
   const availableSeats = Math.max(0, tournament.bracketSize - tournament.players.length);
 
   function handleDelete() {
@@ -59,7 +63,7 @@ export function TournamentCard({
 
   const primaryLabel =
     tournament.status === "draft"
-      ? tournament.bracket
+      ? structureReady
         ? "Continue setup"
         : "Set up event"
       : tournament.status === "live"
@@ -81,7 +85,7 @@ export function TournamentCard({
                 {tournament.status}
               </span>
               <span className="rounded-full bg-white/5 px-3 py-1 text-[0.68rem] font-bold text-slate-400 ring-1 ring-white/10">
-                {tournament.format === "single" ? "Single elimination" : "Double elimination"}
+                {tournament.type === "two_stage" ? "Groups → Finals" : getFormatLabel(tournament.format)}
               </span>
             </div>
 
@@ -120,7 +124,7 @@ export function TournamentCard({
             />
           </div>
           <div className="mt-2 flex items-center justify-between text-[0.68rem] text-slate-600">
-            <span>{completed} of {matches.length || "—"} matches</span>
+            <span>{completed} of {eventCounts.total || "—"} events</span>
             <span>{liveMatches ? `${liveMatches} playing now` : `Updated ${formatDate(tournament.updatedAt)}`}</span>
           </div>
         </div>
@@ -150,7 +154,7 @@ export function TournamentCard({
             {primaryLabel}
           </Link>
 
-          {tournament.bracket ? (
+          {structureReady ? (
             <Link
               href={`/live/${tournament.id}`}
               title="Open spectator view"

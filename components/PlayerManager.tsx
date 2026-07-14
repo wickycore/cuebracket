@@ -52,7 +52,7 @@ export function PlayerManager({ tournament, onTournamentChange }: PlayerManagerP
     }
 
     if (tournament.players.length >= tournament.bracketSize) {
-      setError(`This bracket is full at ${tournament.bracketSize} players.`);
+      setError(`This event is full at ${tournament.bracketSize} players.`);
       return;
     }
 
@@ -101,7 +101,7 @@ export function PlayerManager({ tournament, onTournamentChange }: PlayerManagerP
     setBulkNames("");
 
     if (accepted.length < uniqueImported.length) {
-      setError(`${accepted.length} players added. The rest did not fit in the bracket.`);
+      setError(`${accepted.length} players added. The rest did not fit within the event capacity.`);
     }
   }
 
@@ -237,7 +237,7 @@ export function PlayerManager({ tournament, onTournamentChange }: PlayerManagerP
           <div className="mt-4 flex items-end justify-between gap-4">
             <div>
               <p className="text-4xl font-black text-white">{tournament.players.length}</p>
-              <p className="text-sm text-slate-500">of {tournament.bracketSize} players</p>
+              <p className="text-sm text-slate-500">of {tournament.bracketSize} capacity</p>
             </div>
             <p className="rounded-full bg-white/5 px-3 py-1 text-sm font-bold text-slate-300 ring-1 ring-white/10">
               {remaining} slots left

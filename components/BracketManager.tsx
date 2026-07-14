@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { DoubleEliminationManager } from "@/components/DoubleEliminationManager";
+import { buildSingleEliminationBracket, recomputeSingleEliminationBracket } from "@/lib/bracket/singleElimination";
 import {
   BracketMatch,
   BracketRound,
@@ -144,7 +145,7 @@ export function BracketManager({ tournament, onTournamentChange }: BracketManage
       setMessage("Add at least two players before generating the bracket.");
       return;
     }
-    saveBracket(buildSingleBracket(tournament));
+    saveBracket(buildSingleEliminationBracket(tournament.players, tournament.bracketSize));
   }
 
   function resetBracket() {
@@ -183,7 +184,7 @@ export function BracketManager({ tournament, onTournamentChange }: BracketManage
     target.completed = true;
 
     setMessage("");
-    saveBracket(recomputeBracket({ ...bracket, rounds }));
+    saveBracket(recomputeSingleEliminationBracket({ ...bracket, rounds }));
   }
 
   function clearResult(match: BracketMatch) {
@@ -198,7 +199,7 @@ export function BracketManager({ tournament, onTournamentChange }: BracketManage
     target.winner = null;
     target.completed = false;
     setDraftScores((current) => ({ ...current, [match.id]: { score1: "", score2: "" } }));
-    saveBracket(recomputeBracket({ ...bracket, rounds }));
+    saveBracket(recomputeSingleEliminationBracket({ ...bracket, rounds }));
   }
 
   if (!bracket) {

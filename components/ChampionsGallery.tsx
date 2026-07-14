@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
   getAllMatches,
+  getFormatLabel,
+  getTournamentChampion,
   getTournaments,
   subscribeToTournamentChanges,
   Tournament,
@@ -32,7 +34,7 @@ export function ChampionsGallery() {
   const champions = useMemo(
     () =>
       tournaments
-        .filter((tournament) => tournament.bracket?.champion)
+        .filter((tournament) => getTournamentChampion(tournament))
         .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
     [tournaments],
   );
@@ -43,7 +45,7 @@ export function ChampionsGallery() {
     let players = 0;
 
     champions.forEach((tournament) => {
-      const champion = tournament.bracket?.champion;
+      const champion = getTournamentChampion(tournament);
       if (champion) {
         const key = champion.trim().toLowerCase();
         const current = titleCount.get(key);
@@ -110,12 +112,15 @@ export function ChampionsGallery() {
           const completedMatches = matches.filter((match) => match.completed);
           const completed = completedMatches.length;
           const finalMatch = completedMatches.at(-1);
-          const champion = tournament.bracket?.champion ?? "Champion";
+          const champion = getTournamentChampion(tournament) ?? "Champion";
+          const standings = tournament.competition && tournament.competition.type !== "two_stage"
+            ? tournament.competition.standings
+            : [];
           const runnerUp = finalMatch
             ? finalMatch.player1 === champion
               ? finalMatch.player2
               : finalMatch.player1
-            : null;
+            : standings[1]?.player ?? null;
 
           return (
             <article
@@ -132,7 +137,7 @@ export function ChampionsGallery() {
                     {index === 0 ? "Latest champion" : "Champion"}
                   </span>
                   <span className="rounded-full bg-slate-950/60 px-3 py-1 text-[0.66rem] font-bold text-slate-400 ring-1 ring-white/8">
-                    {tournament.format === "double" ? "Double elim" : "Single elim"}
+                    {tournament.type === "two_stage" ? "Two stage" : getFormatLabel(tournament.format)}
                   </span>
                 </div>
 
@@ -186,7 +191,7 @@ export function ChampionsGallery() {
                   href={`/live/${tournament.id}`}
                   className="mt-6 inline-flex w-full items-center justify-center rounded-2xl bg-amber-300 px-4 py-3 text-sm font-black text-slate-950 transition hover:bg-amber-200"
                 >
-                  View final bracket →
+                  View final results →
                 </Link>
               </div>
             </article>

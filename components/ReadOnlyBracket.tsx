@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { BracketRound, Tournament, formatDuration } from "@/lib/tournaments";
+import { BracketRound, Tournament, formatDuration, getTournamentChampionDescription } from "@/lib/tournaments";
 import {
   BracketConnections,
   useBracketMatchRefs,
@@ -150,7 +150,7 @@ export function ReadOnlyBracket({ tournament }: { tournament: Tournament }) {
             <div className="h-full rounded-full bg-gradient-to-r from-cyan-400 via-violet-400 to-emerald-400 transition-[width] duration-700" style={{ width: `${progress}%` }} />
           </div>
         </div>
-        {bracket.champion ? <div className="mt-6"><ChampionCelebration champion={bracket.champion} /></div> : null}
+        {bracket.champion ? <div className="mt-6"><ChampionCelebration champion={bracket.champion} description={getTournamentChampionDescription(tournament)} /></div> : null}
 
         <Section
           title="Winners Bracket"
@@ -178,11 +178,14 @@ export function ReadOnlyBracket({ tournament }: { tournament: Tournament }) {
   }
 
   return (
-    <Section
-      title="Single Elimination"
-      rounds={bracket.rounds}
-      raceTo={tournament.raceTo}
-      tone="cyan"
-    />
+    <div>
+      {bracket.champion ? <div className="mb-6"><ChampionCelebration champion={bracket.champion} description={getTournamentChampionDescription(tournament)} /></div> : null}
+      <Section
+        title="Single Elimination"
+        rounds={bracket.rounds}
+        raceTo={tournament.raceTo}
+        tone="cyan"
+      />
+    </div>
   );
 }

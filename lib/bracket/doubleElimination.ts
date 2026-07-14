@@ -331,7 +331,7 @@ export function buildDoubleEliminationBracket(
     generatedAt: new Date().toISOString(),
     champion: null,
     resetRequired: false,
-    bracketResetEnabled: true,
+    bracketResetEnabled: tournament.options?.bracketResetEnabled ?? true,
   });
 }
 

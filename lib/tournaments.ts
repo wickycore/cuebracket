@@ -1,6 +1,31 @@
-export type TournamentFormat = "single" | "double";
+export type TournamentType = "single_stage" | "two_stage";
+export type TournamentFormat =
+  | "single"
+  | "double"
+  | "round_robin"
+  | "swiss"
+  | "free_for_all"
+  | "leaderboard";
+export type FinalStageFormat = "single" | "double";
+export type FreeForAllTieRule = "full_points" | "split_points" | "tiebreak_required";
 export type TournamentStatus = "draft" | "live" | "completed";
 export type MatchStatus = "pending" | "live" | "finished";
+
+export interface TournamentOptions {
+  roundRobinLegs: 1 | 2;
+  swissRounds: number;
+  freeForAllRounds: number;
+  freeForAllHeatSize: number;
+  freeForAllTieRule: FreeForAllTieRule;
+  leaderboardCycles: number;
+  pointsForWin: number;
+  pointsForDraw: number;
+  pointsForLoss: number;
+  groupCount: number;
+  qualifiersPerGroup: number;
+  finalStageFormat: FinalStageFormat;
+  bracketResetEnabled: boolean;
+}
 
 export interface ScoreSnapshot {
   score1: number;
@@ -60,16 +85,122 @@ export interface DoubleEliminationBracket {
 
 export type TournamentBracket = SingleEliminationBracket | DoubleEliminationBracket;
 
+export interface StandingRow {
+  rank: number;
+  player: string;
+  played: number;
+  won: number;
+  drawn: number;
+  lost: number;
+  framesFor: number;
+  framesAgainst: number;
+  frameDifference: number;
+  points: number;
+  buchholz?: number;
+  bonusPoints?: number;
+  headToHeadPoints?: number;
+  headToHeadDifference?: number;
+  byes?: number;
+  heatWins?: number;
+  podiums?: number;
+  averagePlacement?: number;
+  rawScore?: number;
+}
+
+export interface RoundRobinCompetition {
+  type: "round_robin";
+  rounds: BracketRound[];
+  standings: StandingRow[];
+  legs: 1 | 2;
+  champion: string | null;
+  generatedAt: string;
+}
+
+export interface SwissCompetition {
+  type: "swiss";
+  rounds: BracketRound[];
+  standings: StandingRow[];
+  totalRounds: number;
+  currentRound: number;
+  champion: string | null;
+  generatedAt: string;
+}
+
+export interface LeaderboardCompetition {
+  type: "leaderboard";
+  rounds: BracketRound[];
+  standings: StandingRow[];
+  cycles: number;
+  adjustments: Record<string, number>;
+  champion: string | null;
+  generatedAt: string;
+}
+
+export interface FreeForAllEntry {
+  player: string;
+  score: number | null;
+  placement: number | null;
+  points: number;
+}
+
+export interface FreeForAllHeat {
+  id: string;
+  round: number;
+  position: number;
+  name: string;
+  entries: FreeForAllEntry[];
+  completed: boolean;
+}
+
+export interface FreeForAllCompetition {
+  type: "free_for_all";
+  heats: FreeForAllHeat[];
+  standings: StandingRow[];
+  rounds: number;
+  heatSize: number;
+  tieRule: FreeForAllTieRule;
+  champion: string | null;
+  generatedAt: string;
+}
+
+export interface TwoStageGroup {
+  id: string;
+  name: string;
+  players: string[];
+  rounds: BracketRound[];
+  standings: StandingRow[];
+}
+
+export interface TwoStageCompetition {
+  type: "two_stage";
+  groups: TwoStageGroup[];
+  qualifiersPerGroup: number;
+  finalFormat: FinalStageFormat;
+  finalBracket?: TournamentBracket;
+  champion: string | null;
+  generatedAt: string;
+}
+
+export type TournamentCompetition =
+  | RoundRobinCompetition
+  | SwissCompetition
+  | LeaderboardCompetition
+  | FreeForAllCompetition
+  | TwoStageCompetition;
+
 export interface Tournament {
   id: string;
   name: string;
   venue: string;
+  type: TournamentType;
   format: TournamentFormat;
   raceTo: number;
-  bracketSize: 4 | 8 | 16 | 32 | 64 | 128;
+  bracketSize: number;
   status: TournamentStatus;
   players: string[];
+  options: TournamentOptions;
   bracket?: TournamentBracket;
+  competition?: TournamentCompetition;
   createdAt: string;
   updatedAt: string;
 }
@@ -77,12 +208,47 @@ export interface Tournament {
 export interface TournamentInput {
   name: string;
   venue: string;
+  type: TournamentType;
   format: TournamentFormat;
   raceTo: number;
-  bracketSize: Tournament["bracketSize"];
+  bracketSize: number;
+  options?: Partial<TournamentOptions>;
 }
 
 const STORAGE_KEY = "cuebracket:tournaments:v1";
+
+export const DEFAULT_TOURNAMENT_OPTIONS: TournamentOptions = {
+  roundRobinLegs: 1,
+  swissRounds: 5,
+  freeForAllRounds: 3,
+  freeForAllHeatSize: 4,
+  freeForAllTieRule: "split_points",
+  leaderboardCycles: 2,
+  pointsForWin: 3,
+  pointsForDraw: 1,
+  pointsForLoss: 0,
+  groupCount: 2,
+  qualifiersPerGroup: 2,
+  finalStageFormat: "single",
+  bracketResetEnabled: true,
+};
+
+export const FORMAT_LABELS: Record<TournamentFormat, string> = {
+  single: "Single elimination",
+  double: "Double elimination",
+  round_robin: "Round robin",
+  swiss: "Swiss system",
+  free_for_all: "Free for all",
+  leaderboard: "Leaderboard",
+};
+
+export function getFormatLabel(format: TournamentFormat) {
+  return FORMAT_LABELS[format] ?? format;
+}
+
+export function getTournamentTypeLabel(type: TournamentType) {
+  return type === "two_stage" ? "Two-stage tournament" : "Single-stage tournament";
+}
 
 function canUseBrowserStorage() {
   return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
@@ -106,34 +272,106 @@ function normalizeMatch(match: BracketMatch): BracketMatch {
   };
 }
 
-function normalizeRounds(rounds: BracketRound[]) {
+function normalizeRounds(rounds: BracketRound[] = []) {
   return rounds.map((round) => ({
     ...round,
-    matches: round.matches.map(normalizeMatch),
+    matches: (round.matches ?? []).map(normalizeMatch),
   }));
 }
 
-function normalizeTournament(tournament: Tournament): Tournament {
-  if (!tournament.bracket) return tournament;
-  if (tournament.bracket.type === "double") {
+function normalizeBracket(bracket?: TournamentBracket): TournamentBracket | undefined {
+  if (!bracket) return undefined;
+  if (bracket.type === "double") {
     return {
-      ...tournament,
-      bracket: {
-        ...tournament.bracket,
-        winners: normalizeRounds(tournament.bracket.winners),
-        losers: normalizeRounds(tournament.bracket.losers),
-        grandFinal: normalizeRounds(tournament.bracket.grandFinal),
-        resetRequired: tournament.bracket.resetRequired ?? false,
-        bracketResetEnabled: tournament.bracket.bracketResetEnabled ?? true,
-      },
+      ...bracket,
+      winners: normalizeRounds(bracket.winners),
+      losers: normalizeRounds(bracket.losers),
+      grandFinal: normalizeRounds(bracket.grandFinal),
+      resetRequired: bracket.resetRequired ?? false,
+      bracketResetEnabled: bracket.bracketResetEnabled ?? true,
+    };
+  }
+  return { ...bracket, rounds: normalizeRounds(bracket.rounds) };
+}
+
+function normalizeStandings(rows: StandingRow[] = []) {
+  return rows.map((row, index) => ({
+    ...row,
+    rank: row.rank ?? index + 1,
+    drawn: row.drawn ?? 0,
+    bonusPoints: row.bonusPoints ?? 0,
+    byes: row.byes ?? 0,
+    heatWins: row.heatWins ?? row.won ?? 0,
+    podiums: row.podiums ?? 0,
+    averagePlacement: row.averagePlacement ?? 0,
+    rawScore: row.rawScore ?? row.framesFor ?? 0,
+  }));
+}
+
+function normalizeCompetition(
+  competition?: TournamentCompetition,
+): TournamentCompetition | undefined {
+  if (!competition) return undefined;
+  if (competition.type === "round_robin") {
+    return {
+      ...competition,
+      rounds: normalizeRounds(competition.rounds),
+      standings: normalizeStandings(competition.standings),
+      legs: competition.legs ?? 1,
+    };
+  }
+  if (competition.type === "swiss") {
+    return {
+      ...competition,
+      rounds: normalizeRounds(competition.rounds),
+      standings: normalizeStandings(competition.standings),
+      currentRound: competition.currentRound ?? competition.rounds.length,
+    };
+  }
+  if (competition.type === "leaderboard") {
+    return {
+      ...competition,
+      rounds: normalizeRounds(competition.rounds),
+      standings: normalizeStandings(competition.standings),
+      adjustments: competition.adjustments ?? {},
+    };
+  }
+  if (competition.type === "free_for_all") {
+    return {
+      ...competition,
+      heats: (competition.heats ?? []).map((heat) => ({
+        ...heat,
+        entries: (heat.entries ?? []).map((entry) => ({
+          ...entry,
+          points: entry.points ?? 0,
+          placement: entry.placement ?? null,
+          score: entry.score ?? null,
+        })),
+      })),
+      standings: normalizeStandings(competition.standings),
+      tieRule: competition.tieRule ?? "split_points",
     };
   }
   return {
+    ...competition,
+    groups: (competition.groups ?? []).map((group) => ({
+      ...group,
+      rounds: normalizeRounds(group.rounds),
+      standings: normalizeStandings(group.standings),
+    })),
+    finalBracket: normalizeBracket(competition.finalBracket),
+  };
+}
+
+function normalizeTournament(tournament: Tournament): Tournament {
+  return {
     ...tournament,
-    bracket: {
-      ...tournament.bracket,
-      rounds: normalizeRounds(tournament.bracket.rounds),
-    },
+    type: tournament.type ?? "single_stage",
+    options: { ...DEFAULT_TOURNAMENT_OPTIONS, ...(tournament.options ?? {}) },
+    bracketSize: Number(tournament.bracketSize) || 8,
+    players: Array.isArray(tournament.players) ? tournament.players : [],
+    bracket: normalizeBracket(tournament.bracket),
+    competition: normalizeCompetition(tournament.competition),
   };
 }
 
@@ -161,11 +399,13 @@ export function createTournament(input: TournamentInput): Tournament {
     id: makeId(),
     name: input.name.trim(),
     venue: input.venue.trim(),
-    format: input.format,
-    raceTo: input.raceTo,
-    bracketSize: input.bracketSize,
+    type: input.type,
+    format: input.type === "two_stage" ? "round_robin" : input.format,
+    raceTo: Math.max(1, Math.floor(input.raceTo)),
+    bracketSize: Math.max(2, Math.min(128, Math.floor(input.bracketSize))),
     status: "draft",
     players: [],
+    options: { ...DEFAULT_TOURNAMENT_OPTIONS, ...(input.options ?? {}) },
     createdAt: now,
     updatedAt: now,
   };
@@ -208,6 +448,7 @@ export function duplicateTournament(id: string): Tournament | undefined {
     status: "draft",
     players: [...source.players],
     bracket: undefined,
+    competition: undefined,
     createdAt: now,
     updatedAt: now,
   };
@@ -233,8 +474,112 @@ export function getBracketRounds(bracket?: TournamentBracket): BracketRound[] {
     : [...bracket.winners, ...bracket.losers, ...bracket.grandFinal];
 }
 
+export function getCompetitionRounds(competition?: TournamentCompetition): BracketRound[] {
+  if (!competition) return [];
+  if (
+    competition.type === "round_robin" ||
+    competition.type === "swiss" ||
+    competition.type === "leaderboard"
+  ) {
+    return competition.rounds;
+  }
+  if (competition.type === "two_stage") {
+    return [
+      ...competition.groups.flatMap((group) => group.rounds),
+      ...getBracketRounds(competition.finalBracket),
+    ];
+  }
+  return [];
+}
+
 export function getAllMatches(tournament: Tournament): BracketMatch[] {
-  return getBracketRounds(tournament.bracket).flatMap((round) => round.matches);
+  if (tournament.bracket) return getBracketRounds(tournament.bracket).flatMap((round) => round.matches);
+  return getCompetitionRounds(tournament.competition).flatMap((round) => round.matches);
+}
+
+export function getTournamentChampion(tournament: Tournament) {
+  return tournament.bracket?.champion ?? tournament.competition?.champion ?? null;
+}
+
+export function hasTournamentStructure(tournament: Tournament) {
+  return Boolean(tournament.bracket || tournament.competition);
+}
+
+export function getTournamentEventCounts(tournament: Tournament) {
+  if (tournament.competition?.type === "free_for_all") {
+    const total = tournament.competition.heats.length;
+    const completed = tournament.competition.heats.filter((heat) => heat.completed).length;
+    return { total, completed, byes: 0, fixtures: total };
+  }
+
+  const fixtures = getAllMatches(tournament).filter((match) => match.player1 || match.player2);
+  const playable = fixtures.filter((match) => match.player1 && match.player2);
+  const byes = fixtures.filter((match) => Boolean(match.player1) !== Boolean(match.player2));
+  return {
+    total: playable.length,
+    completed: playable.filter((match) => match.completed).length,
+    byes: byes.length,
+    fixtures: fixtures.length,
+  };
+}
+
+function formatStandingPoints(points: number) {
+  return Number.isInteger(points) ? String(points) : points.toFixed(1).replace(/\.0$/, "");
+}
+
+export function getTournamentChampionDescription(tournament: Tournament) {
+  const champion = getTournamentChampion(tournament);
+  if (!champion) return "";
+
+  const competition = tournament.competition;
+  if (!competition) {
+    if (tournament.bracket?.type === "double") {
+      const resetPlayed = Boolean(tournament.bracket.grandFinal[1]?.matches[0]?.completed);
+      return resetPlayed
+        ? `${champion} wins the double-elimination tournament after a bracket-reset final.`
+        : `${champion} wins the double-elimination tournament.`;
+    }
+    return `${champion} wins the single-elimination tournament.`;
+  }
+
+  const top = "standings" in competition
+    ? competition.standings.find((row) => row.player === champion) ?? competition.standings[0]
+    : undefined;
+
+  if (competition.type === "round_robin" && top) {
+    const second = competition.standings.find((row) => row.player !== top.player);
+    if (second && top.points === second.points) {
+      let reason = "the configured tiebreakers";
+      if ((top.headToHeadPoints ?? 0) !== (second.headToHeadPoints ?? 0)) reason = "head-to-head points";
+      else if ((top.headToHeadDifference ?? 0) !== (second.headToHeadDifference ?? 0)) reason = "head-to-head frame difference";
+      else if (top.frameDifference !== second.frameDifference) reason = `overall frame difference (${top.frameDifference > 0 ? "+" : ""}${top.frameDifference})`;
+      else if (top.framesFor !== second.framesFor) reason = `frames won (${top.framesFor})`;
+      return `${champion} wins the round-robin tournament on ${reason} after finishing level on ${formatStandingPoints(top.points)} points.`;
+    }
+    return `${champion} wins the round-robin tournament with ${formatStandingPoints(top.points)} points and a ${top.frameDifference > 0 ? "+" : ""}${top.frameDifference} frame difference.`;
+  }
+
+  if (competition.type === "swiss" && top) {
+    const unbeaten = top.lost === 0 && top.drawn === 0;
+    return `${champion} wins the Swiss tournament${unbeaten ? " undefeated" : ""} with ${formatStandingPoints(top.points)} points and a Buchholz score of ${top.buchholz ?? 0}.`;
+  }
+
+  if (competition.type === "free_for_all" && top) {
+    return `${champion} wins the Free For All with ${formatStandingPoints(top.points)} placement points, ${top.heatWins ?? top.won} heat win${(top.heatWins ?? top.won) === 1 ? "" : "s"} and ${top.podiums ?? 0} podium finish${(top.podiums ?? 0) === 1 ? "" : "es"}.`;
+  }
+
+  if (competition.type === "leaderboard" && top) {
+    return `${champion} finishes top of the leaderboard with ${formatStandingPoints(top.points)} points.`;
+  }
+
+  if (competition.type === "two_stage") {
+    const resetPlayed = competition.finalBracket?.type === "double" && Boolean(competition.finalBracket.grandFinal[1]?.matches[0]?.completed);
+    return resetPlayed
+      ? `${champion} wins the groups-to-finals tournament after a bracket-reset final.`
+      : `${champion} wins the groups-to-finals tournament and the ${competition.finalFormat === "double" ? "double-elimination" : "single-elimination"} final stage.`;
+  }
+
+  return `${champion} wins the tournament.`;
 }
 
 export function formatDuration(milliseconds: number) {

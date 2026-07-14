@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   getAllMatches,
+  getTournamentChampion,
+  getTournamentEventCounts,
   getTournaments,
   subscribeToTournamentChanges,
   Tournament,
@@ -32,8 +34,12 @@ export function OrganizerOverview() {
       (total, match) => total + (match.score1 ?? 0) + (match.score2 ?? 0),
       0,
     );
-    const completionRate = matches.length
-      ? Math.round((completedMatches.length / matches.length) * 100)
+    const eventCounts = tournaments.reduce((total, tournament) => {
+      const counts = getTournamentEventCounts(tournament);
+      return { total: total.total + counts.total, completed: total.completed + counts.completed };
+    }, { total: 0, completed: 0 });
+    const completionRate = eventCounts.total
+      ? Math.round((eventCounts.completed / eventCounts.total) * 100)
       : 0;
     const biggestField = tournaments.reduce(
       (largest, tournament) => Math.max(largest, tournament.players.length),
@@ -48,7 +54,7 @@ export function OrganizerOverview() {
       completedMatches: completedMatches.length,
       totalFrames,
       completionRate,
-      champions: tournaments.filter((tournament) => tournament.bracket?.champion).length,
+      champions: tournaments.filter((tournament) => getTournamentChampion(tournament)).length,
       biggestField,
     };
   }, [tournaments]);
@@ -85,7 +91,7 @@ export function OrganizerOverview() {
     {
       label: "Completion",
       value: `${stats.completionRate}%`,
-      helper: "Of generated matches",
+      helper: "Of generated events",
       symbol: "↗",
       tone: "text-amber-200 bg-amber-400/10 ring-amber-400/20",
     },

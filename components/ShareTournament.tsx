@@ -28,7 +28,7 @@ export function ShareTournament({ tournamentId, tournamentName }: { tournamentId
           <p className="text-sm font-black uppercase tracking-[0.2em] text-cyan-400">Share tournament</p>
           <h2 className="mt-2 text-2xl font-black">Public live view</h2>
           <p className="mt-2 max-w-2xl text-sm text-slate-400">
-            Share the spectator link. This Phase 5 version auto-refreshes from browser storage; true cross-device live updates arrive when Supabase cloud sync is connected.
+            Share the spectator link or QR code. Cloud-published tournaments update spectators in realtime across phones, laptops and TV screens.
           </p>
           <div className="mt-5 flex flex-col gap-3 sm:flex-row">
             <input readOnly value={liveUrl} className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-slate-300" />

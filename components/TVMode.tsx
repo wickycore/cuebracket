@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { getAllMatches, getTournament, subscribeToTournamentChanges, Tournament } from "@/lib/tournaments";
+import { getAllMatches, getTournament, getTournamentChampion, subscribeToTournamentChanges, Tournament } from "@/lib/tournaments";
 
 export function TVMode({ tournamentId }: { tournamentId: string }) {
   const [tournament, setTournament] = useState<Tournament | null>(null);
@@ -110,10 +110,10 @@ export function TVMode({ tournamentId }: { tournamentId: string }) {
           <p className="mt-3 text-sm text-slate-500">{data.completed} of {data.playable} playable matches complete</p>
         </section>
 
-        {tournament.bracket?.champion ? (
+        {getTournamentChampion(tournament) ? (
           <div className="mt-8 rounded-[2rem] border border-amber-300/25 bg-amber-300/10 p-7 text-center">
             <p className="text-sm font-black uppercase tracking-[0.3em] text-amber-300">Tournament champion</p>
-            <p className="mt-3 text-6xl font-black">🏆 {tournament.bracket.champion}</p>
+            <p className="mt-3 text-6xl font-black">🏆 {getTournamentChampion(tournament)}</p>
           </div>
         ) : null}
       </div>

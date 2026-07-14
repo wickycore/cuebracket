@@ -8,6 +8,7 @@ import {
   Tournament,
   updateTournament,
   formatDuration,
+  getTournamentChampionDescription,
 } from "@/lib/tournaments";
 import {
   buildDoubleEliminationBracket,
@@ -472,7 +473,7 @@ export function DoubleEliminationManager({ tournament, onTournamentChange }: Pro
         </p>
       ) : null}
 
-      {bracket.champion ? <ChampionCelebration champion={bracket.champion} /> : null}
+      {bracket.champion ? <ChampionCelebration champion={bracket.champion} description={getTournamentChampionDescription(tournament)} /> : null}
 
       <BracketSection
         title="Winners Bracket"

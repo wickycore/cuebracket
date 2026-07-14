@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ChangeEvent } from "react";
 import {
-  getAllMatches,
+  getTournamentEventCounts,
   getTournaments,
   subscribeToTournamentChanges,
   Tournament,
@@ -22,9 +22,8 @@ interface TournamentListProps {
 }
 
 function progressOf(tournament: Tournament) {
-  const matches = getAllMatches(tournament);
-  if (!matches.length) return 0;
-  return matches.filter((match) => match.completed).length / matches.length;
+  const counts = getTournamentEventCounts(tournament);
+  return counts.total ? counts.completed / counts.total : 0;
 }
 
 export function TournamentList({
@@ -193,7 +192,7 @@ export function TournamentList({
           <p className="mx-auto mt-2 max-w-md leading-7 text-slate-400">
             {hasAnyTournaments
               ? "Try another search or clear the active filters."
-              : "Create a field, add the players and CueBracket will build the bracket for you."}
+              : "Create a field, add the players and CueBracket will build the right bracket, schedule, heats or standings engine for you."}
           </p>
           {hasAnyTournaments ? (
             <button

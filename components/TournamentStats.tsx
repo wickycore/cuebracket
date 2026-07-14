@@ -1,35 +1,60 @@
 "use client";
 
 import { useMemo } from "react";
-import { getAllMatches, getBracketRounds, Tournament } from "@/lib/tournaments";
+import {
+  getAllMatches,
+  getBracketRounds,
+  getCompetitionRounds,
+  getTournamentChampion,
+  getTournamentEventCounts,
+  type Tournament,
+} from "@/lib/tournaments";
 
 export function getTournamentStats(tournament: Tournament) {
   const matches = getAllMatches(tournament).filter((match) => match.player1 || match.player2);
   const playable = matches.filter((match) => match.player1 && match.player2);
-  const completed = playable.filter((match) => match.completed);
+  const completedMatches = playable.filter((match) => match.completed);
   const active = playable.filter((match) => match.status === "live" && !match.completed);
-  const remaining = playable.length - completed.length;
-  const durations = completed
+  const eventCounts = getTournamentEventCounts(tournament);
+  const durations = completedMatches
     .map((match) => {
       if (!match.startedAt || !match.endedAt) return 0;
       return new Date(match.endedAt).getTime() - new Date(match.startedAt).getTime();
     })
-    .filter((duration) => duration > 0);
+    // Ignore timestamps created at result-entry time. Real match durations require
+    // an explicit earlier start and should comfortably exceed this threshold.
+    .filter((duration) => duration >= 30_000);
   const averageDuration = durations.length
     ? durations.reduce((sum, duration) => sum + duration, 0) / durations.length
     : 0;
-  const progress = playable.length ? Math.round((completed.length / playable.length) * 100) : 0;
-  const currentRound =
-    getBracketRounds(tournament.bracket).find((round) =>
+  const progress = eventCounts.total ? Math.round((eventCounts.completed / eventCounts.total) * 100) : 0;
+
+  let currentRound = "Not started";
+  const champion = getTournamentChampion(tournament);
+  if (champion) {
+    currentRound = "Complete";
+  } else if (tournament.competition?.type === "free_for_all") {
+    const heat = tournament.competition.heats.find((item) => !item.completed);
+    currentRound = heat ? `Heat round ${heat.round}` : "Complete";
+  } else if (tournament.competition?.type === "two_stage" && !tournament.competition.finalBracket) {
+    currentRound = "Group stage";
+  } else {
+    const rounds = tournament.bracket
+      ? getBracketRounds(tournament.bracket)
+      : getCompetitionRounds(tournament.competition);
+    currentRound = rounds.find((round) =>
       round.matches.some((match) => match.player1 && match.player2 && !match.completed),
-    )?.name ?? (tournament.bracket?.champion ? "Complete" : "Not started");
+    )?.name ?? (eventCounts.total ? "Awaiting next stage" : "Not started");
+  }
 
   return {
     totalPlayers: tournament.players.length,
-    totalMatches: playable.length,
-    completedMatches: completed.length,
+    totalMatches: eventCounts.total,
+    completedMatches: eventCounts.completed,
+    byes: eventCounts.byes,
+    fixtures: eventCounts.fixtures,
     activeMatches: active.length,
-    remainingMatches: remaining,
+    remainingMatches: Math.max(0, eventCounts.total - eventCounts.completed),
     averageDuration,
     progress,
     currentRound,
@@ -38,16 +63,18 @@ export function getTournamentStats(tournament: Tournament) {
 
 export function TournamentStats({ tournament }: { tournament: Tournament }) {
   const stats = useMemo(() => getTournamentStats(tournament), [tournament]);
-  const minutes = stats.averageDuration ? Math.round(stats.averageDuration / 60000) : 0;
+  const minutes = stats.averageDuration ? Math.max(1, Math.round(stats.averageDuration / 60000)) : 0;
+  const isFreeForAll = tournament.competition?.type === "free_for_all";
 
-  const cards = [
+  const cards: Array<[string, string | number]> = [
     ["Players", stats.totalPlayers],
-    ["Total matches", stats.totalMatches],
+    [isFreeForAll ? "Total heats" : "Played matches", stats.totalMatches],
     ["Completed", stats.completedMatches],
     ["Remaining", stats.remainingMatches],
-    ["Current round", stats.currentRound],
-    ["Avg. match", minutes ? `${minutes} min` : "—"],
   ];
+  if (!isFreeForAll && stats.byes > 0) cards.push(["BYEs", stats.byes]);
+  cards.push(["Current stage", stats.currentRound]);
+  cards.push(["Avg. timed match", minutes ? `${minutes} min` : "—"]);
 
   return (
     <section className="mt-8 rounded-[2rem] border border-white/10 bg-white/[0.04] p-6 sm:p-8">
@@ -59,10 +86,7 @@ export function TournamentStats({ tournament }: { tournament: Tournament }) {
         <p className="text-3xl font-black text-cyan-300">{stats.progress}%</p>
       </div>
       <div className="mt-5 h-3 overflow-hidden rounded-full bg-slate-950/80 ring-1 ring-white/10">
-        <div
-          className="h-full rounded-full bg-gradient-to-r from-cyan-400 via-blue-400 to-violet-400 transition-all duration-500"
-          style={{ width: `${stats.progress}%` }}
-        />
+        <div className="h-full rounded-full bg-gradient-to-r from-cyan-400 via-blue-400 to-violet-400 transition-all duration-500" style={{ width: `${stats.progress}%` }} />
       </div>
       <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {cards.map(([label, value]) => (
@@ -72,6 +96,7 @@ export function TournamentStats({ tournament }: { tournament: Tournament }) {
           </div>
         ))}
       </div>
+      {!minutes ? <p className="mt-4 text-xs text-slate-500">Average duration appears only for matches that were explicitly started before the result was saved.</p> : null}
     </section>
   );
 }

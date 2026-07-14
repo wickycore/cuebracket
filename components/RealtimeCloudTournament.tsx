@@ -6,6 +6,7 @@ import type {
   REALTIME_SUBSCRIBE_STATES,
 } from "@supabase/supabase-js";
 import { ReadOnlyBracket } from "@/components/ReadOnlyBracket";
+import { ReadOnlyCompetition } from "@/components/ReadOnlyCompetition";
 import {
   getPublicCloudTournament,
   rowToTournament,
@@ -124,7 +125,7 @@ export function RealtimeCloudTournament({ id }: { id: string }) {
         </div>
       </div>
 
-      <ReadOnlyBracket tournament={tournament} />
+      {tournament.bracket ? <ReadOnlyBracket tournament={tournament} /> : <ReadOnlyCompetition tournament={tournament} />}
     </>
   );
 }

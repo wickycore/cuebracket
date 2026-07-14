@@ -1,7 +1,7 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
-import type { Tournament } from "@/lib/tournaments";
+import { DEFAULT_TOURNAMENT_OPTIONS, type Tournament } from "@/lib/tournaments";
 
 export class CloudTournamentOwnershipError extends Error {
   constructor(message = "This tournament belongs to another organizer account.") {
@@ -26,12 +26,15 @@ export interface CloudTournamentRow {
   club_id: string | null;
   name: string;
   venue: string;
-  format: "single" | "double";
+  stage_type?: "single_stage" | "two_stage";
+  format: Tournament["format"];
   race_to: number;
   bracket_size: number;
   status: "draft" | "live" | "completed";
   players: string[];
+  options?: Tournament["options"] | null;
   bracket: Tournament["bracket"] | null;
+  competition?: Tournament["competition"] | null;
   is_public: boolean;
   created_at: string;
   updated_at: string;
@@ -42,12 +45,15 @@ export function rowToTournament(row: CloudTournamentRow): Tournament {
     id: row.id,
     name: row.name,
     venue: row.venue,
+    type: row.stage_type ?? "single_stage",
     format: row.format,
     raceTo: row.race_to,
-    bracketSize: row.bracket_size as Tournament["bracketSize"],
+    bracketSize: row.bracket_size,
     status: row.status,
     players: row.players ?? [],
+    options: { ...DEFAULT_TOURNAMENT_OPTIONS, ...(row.options ?? {}) },
     bracket: row.bracket ?? undefined,
+    competition: row.competition ?? undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -57,12 +63,15 @@ function tournamentPayload(tournament: Tournament) {
   return {
     name: tournament.name,
     venue: tournament.venue,
+    stage_type: tournament.type,
     format: tournament.format,
     race_to: tournament.raceTo,
     bracket_size: tournament.bracketSize,
     status: tournament.status,
     players: tournament.players,
+    options: tournament.options,
     bracket: tournament.bracket ?? null,
+    competition: tournament.competition ?? null,
     updated_at: new Date().toISOString(),
   };
 }
