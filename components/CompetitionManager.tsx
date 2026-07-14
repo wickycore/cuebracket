@@ -35,7 +35,7 @@ interface Props {
 type DraftScore = { score1: string; score2: string };
 
 const TABLE_RULES = "Ranking: points → head-to-head mini-table → head-to-head frame difference → overall frame difference → frames won → wins.";
-const SWISS_RULES = "Ranking: match points → Buchholz (opponents’ earned points) → frame difference → frames won. A BYE counts as one win and receives the configured win points; it is not a played match.";
+const SWISS_RULES = "Ranking: match points → Buchholz (opponents’ earned points) → frame difference → frames won. A BYE awards the configured win points but is tracked separately; it does not increase played matches (P) or on-table wins (W).";
 
 function formatPoints(value: number) {
   return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");

@@ -60,8 +60,9 @@ function swissStandings(
     if (!player) return;
     const row = map.get(player);
     if (!row) return;
-    row.played += 1;
-    row.won += 1;
+    // A Swiss BYE awards the configured win points, but it is not an
+    // on-table match. Keep P and W as physical-match statistics and
+    // track the automatic award separately in the BYE column.
     row.byes = (row.byes ?? 0) + 1;
     row.points += options.pointsForWin;
   });

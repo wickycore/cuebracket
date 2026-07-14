@@ -31,8 +31,8 @@ export function StandingsTable({
             <tr>
               <th className="px-4 py-3">#</th>
               <th className="px-4 py-3">Player</th>
-              <th className="px-3 py-3 text-center">P</th>
-              <th className="px-3 py-3 text-center">W</th>
+              <th className="px-3 py-3 text-center" title={byesVisible ? "Played matches; BYEs are excluded and shown separately" : "Played matches"}>P</th>
+              <th className="px-3 py-3 text-center" title={byesVisible ? "On-table wins; BYEs are excluded and shown separately" : "Wins"}>W</th>
               {showDraws ? <th className="px-3 py-3 text-center">D</th> : null}
               <th className="px-3 py-3 text-center">L</th>
               {byesVisible ? <th className="px-3 py-3 text-center">BYE</th> : null}

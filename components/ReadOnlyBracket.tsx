@@ -1,7 +1,13 @@
 "use client";
 
 import { useRef } from "react";
-import { BracketRound, Tournament, formatDuration, getTournamentChampionDescription } from "@/lib/tournaments";
+import {
+  BracketMatch,
+  BracketRound,
+  Tournament,
+  formatDuration,
+  getTournamentChampionDescription,
+} from "@/lib/tournaments";
 import {
   BracketConnections,
   useBracketMatchRefs,
@@ -32,6 +38,10 @@ const toneClass: Record<Tone, { title: string; panel: string }> = {
     panel: "from-violet-400/[0.09] via-slate-950/90 to-slate-950/95",
   },
 };
+
+function isAutomaticAdvance(match: BracketMatch) {
+  return match.completed && Boolean(match.player1) !== Boolean(match.player2);
+}
 
 function Section({
   title,
@@ -78,36 +88,60 @@ function Section({
               <div key={`${title}-${round.round}`} className="w-64 shrink-0 snap-start">
                 <p className="mb-4 text-[11px] font-black uppercase tracking-[0.17em] text-slate-500">{round.name}</p>
                 <div style={{ paddingTop: topPadding, display: "grid", gap }}>
-                  {round.matches.map((match) => (
-                    <div
-                      key={match.id}
-                      ref={(node) => registerMatch(match.id, node)}
-                      className="relative z-10"
-                    >
-                      <article className={`group relative z-10 overflow-hidden rounded-xl border bg-slate-950/95 shadow-[0_14px_40px_rgba(0,0,0,.28)] transition-all duration-300 hover:-translate-y-0.5 ${match.completed ? "border-emerald-400/45 shadow-[0_0_24px_rgba(52,211,153,.08)]" : match.status === "live" ? "border-cyan-400/45 shadow-[0_0_30px_rgba(34,211,238,.12)]" : "border-white/10"}`}>
-                        <div className="flex items-center justify-between border-b border-white/10 bg-white/[0.025] px-3 py-2">
-                          <span className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">{match.tableNumber ? `Table ${match.tableNumber}` : `Match ${match.position}`}</span>
-                          <span className={`rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] ${match.completed ? "bg-emerald-400/10 text-emerald-300" : match.status === "live" ? "animate-pulse bg-rose-400/15 text-rose-300 ring-1 ring-rose-400/30" : match.player1 && match.player2 ? "bg-cyan-400/10 text-cyan-300" : "bg-white/5 text-slate-500"}`}>
-                            {match.completed ? "Finished" : match.status === "live" ? "● Live" : match.player1 && match.player2 ? "Ready" : "Waiting"}
-                          </span>
-                        </div>
-                        {[match.player1, match.player2].map((player, index) => {
-                          const winner = Boolean(match.completed && player && match.winner === player);
-                          const score = index === 0 ? match.score1 : match.score2;
-                          return (
-                            <div key={index} className={`flex min-h-12 items-center gap-3 border-b border-white/10 px-3 py-2.5 last:border-b-0 ${winner ? "bg-emerald-400/10" : ""}`}>
-                              <span className={`min-w-0 flex-1 truncate text-sm font-extrabold ${winner ? "text-emerald-300" : player ? "text-white" : "text-slate-600"}`}>{player ?? "TBD"}</span>
-                              <span className="text-sm font-black tabular-nums text-cyan-300">{score ?? "—"}</span>
+                  {round.matches.map((match) => {
+                    const automaticAdvance = isAutomaticAdvance(match);
+                    const advancingPlayer = match.player1 ?? match.player2 ?? match.winner;
+
+                    return (
+                      <div
+                        key={match.id}
+                        ref={(node) => registerMatch(match.id, node)}
+                        className="relative z-10"
+                      >
+                        {automaticAdvance ? (
+                          <article className="relative z-10 overflow-hidden rounded-xl border border-violet-400/25 bg-violet-400/[0.06] shadow-[0_14px_40px_rgba(0,0,0,.24)]">
+                            <div className="flex items-center justify-between border-b border-violet-400/15 px-3 py-2">
+                              <span className="text-[10px] font-black uppercase tracking-[0.16em] text-violet-300">Automatic BYE</span>
+                              <span className="rounded-full bg-violet-400/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] text-violet-200">Advanced</span>
                             </div>
-                          );
-                        })}
-                        <div className="flex min-h-10 items-center justify-between gap-2 px-3 py-2 text-[11px] font-bold text-slate-500">
-                          <span>Race to {raceTo}</span>
-                          <span>{match.startedAt ? formatDuration(new Date(match.endedAt ?? Date.now()).getTime() - new Date(match.startedAt).getTime()) : match.completed ? `Winner: ${match.winner}` : ""}</span>
-                        </div>
-                      </article>
-                    </div>
-                  ))}
+                            <div className="flex min-h-14 items-center gap-3 px-3 py-3">
+                              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-violet-400/15 text-sm font-black text-violet-200">✓</span>
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-sm font-black text-white">{advancingPlayer}</p>
+                                <p className="mt-0.5 text-[11px] font-bold text-slate-500">No opponent</p>
+                              </div>
+                            </div>
+                            <div className="border-t border-violet-400/15 px-3 py-2 text-[11px] font-bold text-violet-200/75">
+                              {advancingPlayer} advances automatically. This does not count as a played match.
+                            </div>
+                          </article>
+                        ) : (
+                          <article className={`group relative z-10 overflow-hidden rounded-xl border bg-slate-950/95 shadow-[0_14px_40px_rgba(0,0,0,.28)] transition-all duration-300 hover:-translate-y-0.5 ${match.completed ? "border-emerald-400/45 shadow-[0_0_24px_rgba(52,211,153,.08)]" : match.status === "live" ? "border-cyan-400/45 shadow-[0_0_30px_rgba(34,211,238,.12)]" : "border-white/10"}`}>
+                            <div className="flex items-center justify-between border-b border-white/10 bg-white/[0.025] px-3 py-2">
+                              <span className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">{match.tableNumber ? `Table ${match.tableNumber}` : `Match ${match.position + 1}`}</span>
+                              <span className={`rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] ${match.completed ? "bg-emerald-400/10 text-emerald-300" : match.status === "live" ? "animate-pulse bg-rose-400/15 text-rose-300 ring-1 ring-rose-400/30" : match.player1 && match.player2 ? "bg-cyan-400/10 text-cyan-300" : "bg-white/5 text-slate-500"}`}>
+                                {match.completed ? "Finished" : match.status === "live" ? "● Live" : match.player1 && match.player2 ? "Ready" : "Waiting"}
+                              </span>
+                            </div>
+                            {[match.player1, match.player2].map((player, index) => {
+                              const winner = Boolean(match.completed && player && match.winner === player);
+                              const score = index === 0 ? match.score1 : match.score2;
+                              return (
+                                <div key={index} className={`flex min-h-12 items-center gap-3 border-b border-white/10 px-3 py-2.5 last:border-b-0 ${winner ? "bg-emerald-400/10" : ""}`}>
+                                  <span className={`min-w-0 flex-1 truncate text-sm font-extrabold ${winner ? "text-emerald-300" : player ? "text-white" : "text-slate-600"}`}>{player ?? "TBD"}</span>
+                                  <span className="text-sm font-black tabular-nums text-cyan-300">{score ?? "—"}</span>
+                                </div>
+                              );
+                            })}
+                            <div className="flex min-h-10 items-center justify-between gap-2 px-3 py-2 text-[11px] font-bold text-slate-500">
+                              <span>Race to {raceTo}</span>
+                              <span>{match.startedAt ? formatDuration(new Date(match.endedAt ?? Date.now()).getTime() - new Date(match.startedAt).getTime()) : match.completed ? `Winner: ${match.winner}` : ""}</span>
+                            </div>
+                          </article>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             );
@@ -131,10 +165,25 @@ export function ReadOnlyBracket({ tournament }: { tournament: Tournament }) {
   }
 
   if (bracket.type === "double") {
-    const allRounds = [...bracket.winners, ...bracket.losers, ...bracket.grandFinal.filter((round) => round.round === 1 || bracket.resetRequired)];
+    const allRounds = [
+      ...bracket.winners,
+      ...bracket.losers,
+      ...bracket.grandFinal.filter((round) => round.round === 1 || bracket.resetRequired),
+    ];
     const allMatches = allRounds.flatMap((round) => round.matches);
-    const completed = allMatches.filter((match) => match.completed).length;
-    const progress = allMatches.length ? Math.round((completed / allMatches.length) * 100) : 0;
+    const completed = allMatches.filter(
+      (match) => match.completed && match.player1 && match.player2,
+    ).length;
+    const automaticAdvances = allMatches.filter(
+      (match) => match.completed && !(match.player1 && match.player2),
+    ).length;
+    const automaticByes = allMatches.filter(isAutomaticAdvance).length;
+    const totalPlayable = Math.max(completed, allMatches.length - automaticAdvances);
+    const progress = bracket.champion
+      ? 100
+      : totalPlayable
+        ? Math.min(100, Math.round((completed / totalPlayable) * 100))
+        : 0;
 
     return (
       <div>
@@ -142,7 +191,8 @@ export function ReadOnlyBracket({ tournament }: { tournament: Tournament }) {
           <div className="mb-3 flex items-end justify-between gap-3">
             <div>
               <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">Live tournament progress</p>
-              <p className="mt-1 text-sm font-bold text-white">{completed} of {allMatches.length} matches completed</p>
+              <p className="mt-1 text-sm font-bold text-white">{completed} of {totalPlayable} played matches completed</p>
+              {automaticByes ? <p className="mt-1 text-xs font-bold text-violet-300">Automatic BYEs: {automaticByes}</p> : null}
             </div>
             <p className="text-2xl font-black tabular-nums text-cyan-300">{progress}%</p>
           </div>
@@ -168,7 +218,13 @@ export function ReadOnlyBracket({ tournament }: { tournament: Tournament }) {
         />
         <Section
           title="Grand Final"
-          subtitle={bracket.resetRequired ? "Bracket reset active." : "Winners champion versus losers champion."}
+          subtitle={
+            bracket.resetRequired
+              ? bracket.champion
+                ? "The bracket-reset match decided the tournament champion."
+                : "The bracket reset is active."
+              : "Winners champion versus losers champion."
+          }
           rounds={bracket.grandFinal.filter((round) => round.round === 1 || bracket.resetRequired)}
           raceTo={tournament.raceTo}
           tone="violet"

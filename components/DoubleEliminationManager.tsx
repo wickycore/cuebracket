@@ -53,6 +53,10 @@ const toneStyles: Record<BracketTone, { title: string; active: string; panel: st
   },
 };
 
+function isAutomaticAdvance(match: BracketMatch) {
+  return match.completed && Boolean(match.player1) !== Boolean(match.player2);
+}
+
 function MatchCard({
   match,
   raceTo,
@@ -71,11 +75,40 @@ function MatchCard({
   tone: BracketTone;
 }) {
   const playable = Boolean(match.player1 && match.player2);
+  const automaticAdvance = isAutomaticAdvance(match);
+  const advancingPlayer = match.player1 ?? match.player2 ?? match.winner;
   const styles = toneStyles[tone];
   const isLive = match.status === "live";
   const duration = match.startedAt
     ? formatDuration(new Date(match.endedAt ?? Date.now()).getTime() - new Date(match.startedAt).getTime())
     : null;
+
+  if (automaticAdvance) {
+    return (
+      <article className="relative z-10 overflow-hidden rounded-xl border border-violet-400/25 bg-violet-400/[0.06] shadow-[0_14px_40px_rgba(0,0,0,.24)]">
+        <div className="flex items-center justify-between border-b border-violet-400/15 px-3 py-2">
+          <span className="text-[10px] font-black uppercase tracking-[0.16em] text-violet-300">
+            Automatic BYE
+          </span>
+          <span className="rounded-full bg-violet-400/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] text-violet-200">
+            Advanced
+          </span>
+        </div>
+        <div className="flex min-h-14 items-center gap-3 px-3 py-3">
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-violet-400/15 text-sm font-black text-violet-200">
+            ✓
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-black text-white">{advancingPlayer}</p>
+            <p className="mt-0.5 text-[11px] font-bold text-slate-500">No opponent</p>
+          </div>
+        </div>
+        <div className="border-t border-violet-400/15 px-3 py-2 text-[11px] font-bold text-violet-200/75">
+          {advancingPlayer} advances automatically. This does not count as a played match.
+        </div>
+      </article>
+    );
+  }
 
   return (
     <article
@@ -89,7 +122,7 @@ function MatchCard({
     >
       <div className="flex items-center justify-between border-b border-white/10 bg-white/[0.025] px-3 py-2">
         <span className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
-          {match.tableNumber ? `Table ${match.tableNumber}` : `Match ${match.position}`}
+          {match.tableNumber ? `Table ${match.tableNumber}` : `Match ${match.position + 1}`}
         </span>
         <span className={`rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] ${
           match.completed
@@ -321,21 +354,33 @@ export function DoubleEliminationManager({ tournament, onTournamentChange }: Pro
       .filter((match) => match.completed && match.player1 && match.player2).length;
   }, [bracket]);
 
-  const totalPlayable = useMemo(() => {
-    if (!bracket) return 0;
-    return [
+  const { totalPlayable, automaticByes } = useMemo(() => {
+    if (!bracket) return { totalPlayable: 0, automaticByes: 0 };
+    const structuralMatches = [
       ...bracket.winners,
       ...bracket.losers,
       ...bracket.grandFinal.filter((round) => round.round === 1 || bracket.resetRequired),
-    ].flatMap((round) => round.matches).length;
-  }, [bracket]);
+    ].flatMap((round) => round.matches);
+    const automaticAdvances = structuralMatches.filter(
+      (match) => match.completed && !(match.player1 && match.player2),
+    ).length;
+    const byes = structuralMatches.filter(isAutomaticAdvance).length;
+    return {
+      totalPlayable: Math.max(completed, structuralMatches.length - automaticAdvances),
+      automaticByes: byes,
+    };
+  }, [bracket, completed]);
 
-  const progress = totalPlayable ? Math.min(100, Math.round((completed / totalPlayable) * 100)) : 0;
+  const progress = bracket?.champion
+    ? 100
+    : totalPlayable
+      ? Math.min(100, Math.round((completed / totalPlayable) * 100))
+      : 0;
 
   function saveBracket(next: DoubleEliminationBracket | undefined) {
     const updated = updateTournament(tournament.id, {
       bracket: next,
-      status: next ? "live" : "draft",
+      status: next?.champion ? "completed" : next ? "live" : "draft",
     });
     if (updated) onTournamentChange(updated);
   }
@@ -425,7 +470,7 @@ export function DoubleEliminationManager({ tournament, onTournamentChange }: Pro
           <p className="text-sm font-bold uppercase tracking-[0.2em] text-cyan-400">Double elimination</p>
           <h2 className="mt-2 text-2xl font-black">Separated winners and losers brackets</h2>
           <p className="mt-2 text-sm text-slate-400">
-            {completed} completed matches · {bracket.champion ? `Champion: ${bracket.champion}` : bracket.resetRequired ? "Bracket reset required" : "Tournament in progress"}
+            {completed} played match{completed === 1 ? "" : "es"}{automaticByes ? ` · ${automaticByes} automatic BYE${automaticByes === 1 ? "" : "s"}` : ""} · {bracket.champion ? `Champion: ${bracket.champion}` : bracket.resetRequired ? "Bracket reset required" : "Tournament in progress"}
           </p>
         </div>
 
@@ -446,7 +491,7 @@ export function DoubleEliminationManager({ tournament, onTournamentChange }: Pro
             }}
             className="rounded-xl border border-rose-400/20 px-4 py-3 text-sm font-bold text-rose-300 hover:bg-rose-400/10"
           >
-            Reset bracket
+            Reset competition
           </button>
         </div>
       </div>
@@ -455,7 +500,7 @@ export function DoubleEliminationManager({ tournament, onTournamentChange }: Pro
         <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
           <div>
             <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">Tournament progress</p>
-            <p className="mt-1 text-sm font-bold text-white">{completed} of {totalPlayable} playable matches completed</p>
+            <p className="mt-1 text-sm font-bold text-white">{completed} of {totalPlayable} played matches completed</p>
           </div>
           <p className="text-2xl font-black tabular-nums text-cyan-300">{progress}%</p>
         </div>
@@ -501,7 +546,13 @@ export function DoubleEliminationManager({ tournament, onTournamentChange }: Pro
 
       <BracketSection
         title="Grand Final"
-        subtitle={bracket.resetRequired ? "The reset match is now active." : "Winners champion versus losers champion."}
+        subtitle={
+          bracket.resetRequired
+            ? bracket.champion
+              ? "The bracket-reset match decided the tournament champion."
+              : "The reset match is now active."
+            : "Winners champion versus losers champion."
+        }
         rounds={grandFinalRounds}
         tournament={tournament}
         drafts={drafts}
