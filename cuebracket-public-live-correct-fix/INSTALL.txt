@@ -1,0 +1,18 @@
+CueBracket public spectator link correction
+
+This patch fixes the exact legacy route folder used by your project:
+app/live/[tournamentId]/page.tsx
+
+It also changes newly copied spectator links to:
+/cloud/live/TOURNAMENT_ID
+
+Install:
+1. Extract this ZIP into C:\project\cuebracket
+2. Choose Replace the files in the destination
+3. Run: npm run build
+4. Commit and push to GitHub
+5. Wait for the new Vercel deployment to become Ready
+6. On the live website, sign in and open /cloud
+7. Confirm the tournament says Synced
+8. Click Make public
+9. Copy the tournament link again. It must contain /cloud/live/
