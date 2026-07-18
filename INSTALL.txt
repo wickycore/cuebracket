@@ -1,0 +1,16 @@
+CueBracket 0.9E.2 — Mobile bracket pinch fix
+
+1. Extract this ZIP directly into C:\project\cuebracket
+2. Replace the existing file when Windows asks.
+3. Confirm the file changed by running:
+   Select-String -Path .\components\BracketViewport.tsx -Pattern "MIN_ZOOM = 0.25"
+4. Delete .next and build:
+   Remove-Item -Recurse -Force .next -ErrorAction SilentlyContinue
+   npm run build
+5. Commit and push to main.
+6. Wait for Vercel to show Ready, then hard-refresh the phone browser.
+
+Visible proof that the new component loaded:
+- The instruction says "Pinch with two fingers to zoom"
+- A Fit button appears
+- Zoom can reach 25%
