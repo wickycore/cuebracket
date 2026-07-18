@@ -1,0 +1,19 @@
+CueBracket 0.9E.3 — Mobile bracket polish and connector repair
+
+1. Stop the development server.
+2. Extract this ZIP directly into C:\project\cuebracket
+3. Choose "Replace the files in the destination".
+4. Clear the Next.js cache and build:
+
+   cd C:\project\cuebracket
+   Remove-Item -Recurse -Force .next -ErrorAction SilentlyContinue
+   npm run build
+
+5. Start locally and test a bracket at 25%, Fit, 50%, 100%, and 200%.
+6. Commit and push after the test passes.
+
+Visible changes:
+- The mobile instruction sentence is removed.
+- Pinch zoom, one-finger movement, Fit, +/- and percentage controls remain.
+- Connector lines stay attached to match cards at every zoom level.
+- Connector strokes remain visible at small zoom levels.
