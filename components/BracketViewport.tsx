@@ -319,14 +319,10 @@ export function BracketViewport({ children, label }: Props) {
   const compensatedHeight = contentSize.height * (zoom - 1);
 
   return (
-    <div>
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-4 py-3 sm:px-7">
-        <p className="text-[11px] font-bold leading-5 text-slate-400">
-          One finger moves the bracket · Pinch with two fingers to zoom
-        </p>
-
+    <div data-bracket-viewport-version="0.9e4">
+      <div className="flex items-center justify-end border-b border-white/10 px-3 py-2 sm:px-7">
         <div
-          className="flex items-center gap-1 rounded-xl border border-white/10 bg-slate-950/80 p-1"
+          className="flex w-full items-center justify-between gap-1 rounded-xl border border-white/10 bg-slate-950/80 p-1 sm:w-auto sm:justify-start"
           aria-label={`${label} zoom controls`}
         >
           <button

@@ -18,6 +18,13 @@ type ConnectorPath = {
   d: string;
 };
 
+type ElementBox = {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+};
+
 const strokeByTone: Record<ConnectorTone, string> = {
   cyan: "#22d3ee",
   rose: "#fb7185",
@@ -27,12 +34,49 @@ const strokeByTone: Record<ConnectorTone, string> = {
 export function useBracketMatchRefs() {
   const matchRefs = useRef(new Map<string, HTMLDivElement>());
 
-  const registerMatch = useCallback((matchId: string, node: HTMLDivElement | null) => {
-    if (node) matchRefs.current.set(matchId, node);
-    else matchRefs.current.delete(matchId);
-  }, []);
+  const registerMatch = useCallback(
+    (matchId: string, node: HTMLDivElement | null) => {
+      if (node) matchRefs.current.set(matchId, node);
+      else matchRefs.current.delete(matchId);
+    },
+    [],
+  );
 
   return { matchRefs, registerMatch };
+}
+
+/**
+ * Returns coordinates in the bracket container's unscaled coordinate system.
+ * BracketViewport uses CSS transforms for pinch zoom. getBoundingClientRect()
+ * includes that transform, so using its values directly makes connector paths
+ * shrink twice and disconnect from match cards on phones. Dividing by the
+ * measured scale keeps cards and SVG lines in the same coordinate system.
+ */
+function getUnscaledBox(
+  element: HTMLElement,
+  container: HTMLDivElement,
+): ElementBox {
+  const containerBox = container.getBoundingClientRect();
+  const elementBox = element.getBoundingClientRect();
+
+  const scaleX =
+    container.offsetWidth > 0 && containerBox.width > 0
+      ? containerBox.width / container.offsetWidth
+      : 1;
+  const scaleY =
+    container.offsetHeight > 0 && containerBox.height > 0
+      ? containerBox.height / container.offsetHeight
+      : scaleX;
+
+  const safeScaleX = Number.isFinite(scaleX) && scaleX > 0 ? scaleX : 1;
+  const safeScaleY = Number.isFinite(scaleY) && scaleY > 0 ? scaleY : 1;
+
+  return {
+    left: (elementBox.left - containerBox.left) / safeScaleX,
+    top: (elementBox.top - containerBox.top) / safeScaleY,
+    width: elementBox.width / safeScaleX,
+    height: elementBox.height / safeScaleY,
+  };
 }
 
 export function BracketConnections({
@@ -50,7 +94,9 @@ export function BracketConnections({
   const [size, setSize] = useState({ width: 0, height: 0 });
 
   const connections = useMemo(() => {
-    const ids = new Set(rounds.flatMap((round) => round.matches.map((match) => match.id)));
+    const ids = new Set(
+      rounds.flatMap((round) => round.matches.map((match) => match.id)),
+    );
     const result: Array<{ from: string; to: string }> = [];
 
     for (const round of rounds) {
@@ -79,7 +125,6 @@ export function BracketConnections({
     const measure = () => {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
-        const containerBox = container.getBoundingClientRect();
         const width = Math.max(container.scrollWidth, container.clientWidth);
         const height = Math.max(container.scrollHeight, container.clientHeight);
 
@@ -88,13 +133,13 @@ export function BracketConnections({
           const target = matchRefs.current.get(to);
           if (!source || !target) return [];
 
-          const sourceBox = source.getBoundingClientRect();
-          const targetBox = target.getBoundingClientRect();
+          const sourceBox = getUnscaledBox(source, container);
+          const targetBox = getUnscaledBox(target, container);
 
-          const startX = sourceBox.right - containerBox.left;
-          const startY = sourceBox.top + sourceBox.height / 2 - containerBox.top;
-          const endX = targetBox.left - containerBox.left;
-          const endY = targetBox.top + targetBox.height / 2 - containerBox.top;
+          const startX = sourceBox.left + sourceBox.width;
+          const startY = sourceBox.top + sourceBox.height / 2;
+          const endX = targetBox.left;
+          const endY = targetBox.top + targetBox.height / 2;
 
           if (endX <= startX) return [];
 
@@ -117,6 +162,9 @@ export function BracketConnections({
     matchRefs.current.forEach((node) => observer.observe(node));
     window.addEventListener("resize", measure);
 
+    // Fonts can finish loading after the first layout measurement.
+    void document.fonts?.ready.then(measure);
+
     return () => {
       cancelAnimationFrame(frame);
       observer.disconnect();
@@ -131,6 +179,7 @@ export function BracketConnections({
 
   return (
     <svg
+      data-bracket-connectors-version="0.9e4"
       aria-hidden="true"
       className="pointer-events-none absolute left-0 top-0 z-0 overflow-visible"
       width={size.width}
@@ -153,18 +202,20 @@ export function BracketConnections({
           <path
             d={path.d}
             stroke={stroke}
-            strokeOpacity="0.16"
-            strokeWidth="4.5"
+            strokeOpacity="0.22"
+            strokeWidth="5"
             strokeLinecap="round"
             strokeLinejoin="round"
+            vectorEffect="non-scaling-stroke"
           />
           <path
             d={path.d}
             stroke={stroke}
-            strokeOpacity="0.82"
-            strokeWidth="1.8"
+            strokeOpacity="0.95"
+            strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
+            vectorEffect="non-scaling-stroke"
             filter={`url(#${filterId})`}
           />
         </g>
