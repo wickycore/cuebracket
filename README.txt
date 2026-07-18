@@ -1,11 +1,12 @@
-CueBracket environment fix
+CueBracket production build fix
 
-Extract this ZIP into:
-C:\project
+Files included:
+- components/AuthNav.tsx
+- lib/supabase/client.ts
 
-It will place:
-C:\project\cuebracket\.env.local
-
-Then stop and restart the server:
-Ctrl + C
-npm run dev -- --webpack
+Installation:
+1. Extract this ZIP into C:\project\cuebracket
+2. Choose "Replace the files in the destination"
+3. Run:
+   Remove-Item -Recurse -Force .next -ErrorAction SilentlyContinue
+   npm run build

@@ -2,7 +2,12 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import type { User } from "@supabase/supabase-js";
+import type {
+  AuthChangeEvent,
+  Session,
+  User,
+} from "@supabase/supabase-js";
+
 import { createClient } from "@/lib/supabase/client";
 
 interface AuthNavProps {
@@ -17,21 +22,29 @@ export function AuthNav({ compact = false }: AuthNavProps) {
   useEffect(() => {
     let active = true;
 
-    supabase.auth.getUser().then(({ data }) => {
+    async function loadUser() {
+      const { data } = await supabase.auth.getUser();
+
       if (!active) return;
+
       setUser(data.user);
       setReady(true);
-    });
+    }
 
-    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!active) return;
-      setUser(session?.user ?? null);
-      setReady(true);
-    });
+    void loadUser();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (_event: AuthChangeEvent, session: Session | null) => {
+        if (!active) return;
+
+        setUser(session?.user ?? null);
+        setReady(true);
+      },
+    );
 
     return () => {
       active = false;
-      data.subscription.unsubscribe();
+      authListener.subscription.unsubscribe();
     };
   }, [supabase]);
 
