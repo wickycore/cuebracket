@@ -5,7 +5,14 @@ import type {
   MatchSource,
   Tournament,
 } from "@/lib/tournaments";
+import {
+  clearBracketMatch,
+  hasPlayedOrStartedMatch,
+  type LateEntryByeSlot,
+  type LateEntryResult,
+} from "@/lib/bracket/lateEntry";
 
+// CueBracket 0.9E.9 — double elimination with safe late-entry BYE replacement.
 function id(prefix: string, round: number, position: number) {
   return `${prefix}-r${round}-m${position}`;
 }
@@ -63,7 +70,9 @@ function cloneRounds(rounds: BracketRound[]) {
 }
 
 function loserOf(match: BracketMatch) {
-  if (!match.completed || !match.winner || !match.player1 || !match.player2) return null;
+  if (!match.completed || !match.winner || !match.player1 || !match.player2) {
+    return null;
+  }
   return match.winner === match.player1 ? match.player2 : match.player1;
 }
 
@@ -72,10 +81,14 @@ function resolveSource(
   matches: Map<string, BracketMatch>,
 ) {
   if (!source) return { ready: false, player: null as string | null };
-  if (source.kind === "seed") return { ready: true, player: source.player ?? null };
+  if (source.kind === "seed") {
+    return { ready: true, player: source.player ?? null };
+  }
 
   const match = matches.get(source.matchId);
-  if (!match || !match.completed) return { ready: false, player: null as string | null };
+  if (!match || !match.completed) {
+    return { ready: false, player: null as string | null };
+  }
 
   return {
     ready: true,
@@ -94,18 +107,7 @@ function applyParticipants(
   match.player1 = player1;
   match.player2 = player2;
 
-  if (changed) {
-    match.score1 = null;
-    match.score2 = null;
-    match.winner = null;
-    match.completed = false;
-    match.status = "pending";
-    match.startedAt = null;
-    match.endedAt = null;
-    match.breakPlayer = null;
-    match.scoreHistory = [];
-  }
-
+  if (changed) clearBracketMatch(match);
   if (!ready1 || !ready2 || match.completed) return;
 
   if (player1 && !player2) {
@@ -117,23 +119,17 @@ function applyParticipants(
     match.completed = true;
     match.status = "finished";
   } else if (!player1 && !player2) {
-    // An empty bracket slot is still resolved. Marking it complete lets the
-    // next round receive a ready null source instead of remaining stuck on TBD.
     match.winner = null;
     match.completed = true;
     match.status = "finished";
   }
 }
 
-/**
- * Return evenly spread match positions.
- *
- * Example: total 4, count 2 => [1, 3]
- */
 function spreadPositions(total: number, count: number) {
   if (count <= 0) return new Set<number>();
-  if (count >= total) return new Set(Array.from({ length: total }, (_, index) => index));
-
+  if (count >= total) {
+    return new Set(Array.from({ length: total }, (_, index) => index));
+  }
   return new Set(
     Array.from({ length: count }, (_, index) =>
       Math.min(total - 1, Math.floor(((index + 0.5) * total) / count)),
@@ -141,17 +137,10 @@ function spreadPositions(total: number, count: number) {
   );
 }
 
-/**
- * Build first-round slots so BYEs are spread across the bracket instead of
- * collecting at the bottom as BYE-vs-BYE matches.
- */
 function buildBalancedFirstRoundSlots(players: string[], size: number) {
   const matchCount = size / 2;
   const playerCount = Math.min(players.length, size);
 
-  // When there are at least as many players as first-round matches, every
-  // match receives at least one player. The remaining players create the
-  // normal two-player matches.
   if (playerCount >= matchCount) {
     const fullMatchCount = playerCount - matchCount;
     const fullPositions = spreadPositions(matchCount, fullMatchCount);
@@ -161,7 +150,6 @@ function buildBalancedFirstRoundSlots(players: string[], size: number) {
     for (let matchIndex = 0; matchIndex < matchCount; matchIndex += 1) {
       slots.push(players[playerIndex] ?? null);
       playerIndex += 1;
-
       if (fullPositions.has(matchIndex)) {
         slots.push(players[playerIndex] ?? null);
         playerIndex += 1;
@@ -169,12 +157,9 @@ function buildBalancedFirstRoundSlots(players: string[], size: number) {
         slots.push(null);
       }
     }
-
     return slots;
   }
 
-  // Very sparse manually selected bracket sizes can still contain empty
-  // matches. Spread the occupied matches so progression remains balanced.
   const occupiedPositions = spreadPositions(matchCount, playerCount);
   const slots: Array<string | null> = [];
   let playerIndex = 0;
@@ -187,7 +172,6 @@ function buildBalancedFirstRoundSlots(players: string[], size: number) {
       slots.push(null, null);
     }
   }
-
   return slots;
 }
 
@@ -217,7 +201,6 @@ export function buildDoubleEliminationBracket(
   for (let round = 2; round <= roundsCount; round += 1) {
     const count = size / 2 ** round;
     const previous = winners[round - 2].matches;
-
     winners.push({
       round,
       name: round === roundsCount ? "Winners Final" : `Winners Round ${round}`,
@@ -252,12 +235,10 @@ export function buildDoubleEliminationBracket(
   });
 
   let previousLosersRound = losers[0];
-
   for (let wbRoundIndex = 2; wbRoundIndex <= roundsCount; wbRoundIndex += 1) {
     losersRoundNumber += 1;
     const wbRound = winners[wbRoundIndex - 1];
     const majorCount = wbRound.matches.length;
-
     const majorRound: BracketRound = {
       round: losersRoundNumber,
       name:
@@ -274,13 +255,11 @@ export function buildDoubleEliminationBracket(
         ),
       ),
     };
-
     losers.push(majorRound);
     previousLosersRound = majorRound;
 
     if (wbRoundIndex < roundsCount) {
       losersRoundNumber += 1;
-
       const minorRound: BracketRound = {
         round: losersRoundNumber,
         name: `Losers Round ${losersRoundNumber}`,
@@ -294,7 +273,6 @@ export function buildDoubleEliminationBracket(
           ),
         ),
       };
-
       losers.push(minorRound);
       previousLosersRound = minorRound;
     }
@@ -379,17 +357,12 @@ export function recomputeDoubleEliminationBracket(
   );
 
   next.resetRequired = resetNeeded;
-
   if (resetNeeded && winnersChampion && losersChampion) {
     applyParticipants(gf2, winnersChampion, losersChampion, true, true);
     if (gf2.completed) next.champion = gf2.winner;
   } else {
     applyParticipants(gf2, null, null, true, true);
-    gf2.completed = false;
-    gf2.winner = null;
-    gf2.score1 = null;
-    gf2.score2 = null;
-    gf2.status = "pending";
+    clearBracketMatch(gf2);
     if (gf1.completed) next.champion = gf1.winner;
   }
 
@@ -418,10 +391,89 @@ export function updateDoubleMatch(
     losers: cloneRounds(bracket.losers),
     grandFinal: cloneRounds(bracket.grandFinal),
   };
-
   const match = findDoubleMatch(next, matchId);
   if (!match) return bracket;
-
   updater(match);
   return recomputeDoubleEliminationBracket(next);
+}
+
+function directDoubleDependents(
+  bracket: DoubleEliminationBracket,
+  sourceMatchId: string,
+) {
+  return [
+    ...bracket.winners.flatMap((round) => round.matches),
+    ...bracket.losers.flatMap((round) => round.matches),
+    ...bracket.grandFinal.flatMap((round) => round.matches),
+  ].filter((match) =>
+    [match.source1, match.source2].some(
+      (source) =>
+        source &&
+        source.kind !== "seed" &&
+        source.matchId === sourceMatchId,
+    ),
+  );
+}
+
+export function getDoubleEliminationLateEntrySlots(
+  bracket: DoubleEliminationBracket,
+): LateEntryByeSlot[] {
+  const repaired = recomputeDoubleEliminationBracket(bracket);
+  const firstRound = repaired.winners[0];
+  if (!firstRound || repaired.champion) return [];
+
+  return firstRound.matches.flatMap((match, index) => {
+    const hasExactlyOnePlayer = Boolean(match.player1) !== Boolean(match.player2);
+    if (!hasExactlyOnePlayer || !match.completed || !match.winner) return [];
+
+    const dependents = directDoubleDependents(repaired, match.id);
+    const locked = dependents.some(hasPlayedOrStartedMatch);
+
+    return [
+      {
+        matchId: match.id,
+        matchNumber: index + 1,
+        roundName: firstRound.name,
+        advancingPlayer: match.player1 ?? match.player2 ?? match.winner,
+        available: !locked,
+        lockedReason: locked
+          ? "A winners- or losers-bracket match affected by this BYE has already started or has a saved score."
+          : undefined,
+      },
+    ];
+  });
+}
+
+export function fillDoubleEliminationByeSlot(
+  bracket: DoubleEliminationBracket,
+  matchId: string,
+  latePlayer: string,
+): LateEntryResult<DoubleEliminationBracket> {
+  const repaired = recomputeDoubleEliminationBracket(bracket);
+  const slot = getDoubleEliminationLateEntrySlots(repaired).find(
+    (item) => item.matchId === matchId,
+  );
+
+  if (!slot) {
+    return { ok: false, reason: "That automatic BYE is no longer available." };
+  }
+  if (!slot.available) {
+    return {
+      ok: false,
+      reason: slot.lockedReason ?? "That BYE slot is locked.",
+    };
+  }
+
+  const next = updateDoubleMatch(repaired, matchId, (match) => {
+    if (match.player1 && !match.player2) {
+      match.player2 = latePlayer;
+      match.source2 = seed(latePlayer);
+    } else if (!match.player1 && match.player2) {
+      match.player1 = latePlayer;
+      match.source1 = seed(latePlayer);
+    }
+    clearBracketMatch(match);
+  });
+
+  return { ok: true, bracket: next };
 }

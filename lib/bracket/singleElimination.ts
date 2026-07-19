@@ -3,11 +3,17 @@ import type {
   BracketRound,
   SingleEliminationBracket,
 } from "@/lib/tournaments";
+import {
+  clearBracketMatch,
+  hasPlayedOrStartedMatch,
+  type LateEntryByeSlot,
+  type LateEntryResult,
+} from "@/lib/bracket/lateEntry";
 
-// CueBracket 0.9E.8 — canonical single-elimination engine.
+// CueBracket 0.9E.9 — canonical single-elimination engine with late-entry BYE replacement.
 const MAX_BRACKET_SIZE = 128;
 
-type MatchSource = NonNullable<BracketMatch["source1"]>;
+type MatchSourceValue = NonNullable<BracketMatch["source1"]>;
 
 function nextPowerOfTwo(value: number) {
   let size = 2;
@@ -41,10 +47,7 @@ function spreadPositions(total: number, count: number) {
   );
 }
 
-/**
- * Keeps the supplied draw order while spreading first-round BYEs.
- * This prevents all BYEs from collapsing onto one side of the bracket.
- */
+/** Keeps the supplied draw order while spreading first-round BYEs. */
 function balancedSlots(players: string[], requestedSize?: number) {
   const size = normalizeBracketSize(players.length, requestedSize);
   const firstRoundMatches = size / 2;
@@ -57,8 +60,8 @@ function balancedSlots(players: string[], requestedSize?: number) {
       firstRoundMatches,
       twoPlayerMatchCount,
     );
-
     let playerIndex = 0;
+
     for (let matchIndex = 0; matchIndex < firstRoundMatches; matchIndex += 1) {
       slots.push(players[playerIndex] ?? null);
       playerIndex += 1;
@@ -89,11 +92,11 @@ function balancedSlots(players: string[], requestedSize?: number) {
   return slots;
 }
 
-function seedSource(player: string | null): MatchSource {
+function seedSource(player: string | null): MatchSourceValue {
   return { kind: "seed", player };
 }
 
-function winnerSource(matchId: string): MatchSource {
+function winnerSource(matchId: string): MatchSourceValue {
   return { kind: "winner", matchId };
 }
 
@@ -123,22 +126,10 @@ function makeMatch(
 function cloneMatch(match: BracketMatch): BracketMatch {
   return {
     ...match,
+    source1: match.source1 ? { ...match.source1 } : undefined,
+    source2: match.source2 ? { ...match.source2 } : undefined,
     scoreHistory: [...(match.scoreHistory ?? [])],
   };
-}
-
-function clearResult(match: BracketMatch) {
-  match.score1 = null;
-  match.score2 = null;
-  match.winner = null;
-  match.completed = false;
-  match.status = "pending";
-  match.startedAt = null;
-  match.endedAt = null;
-  match.breakPlayer = null;
-  match.tableNumber = undefined;
-  match.notes = undefined;
-  match.scoreHistory = [];
 }
 
 function resolveKnownParticipants(match: BracketMatch) {
@@ -160,7 +151,7 @@ function resolveKnownParticipants(match: BracketMatch) {
     return;
   }
 
-  // A fully empty branch is resolved, but it is not a played match or a BYE.
+  // Fully empty branches are structurally resolved, not played.
   match.score1 = null;
   match.score2 = null;
   match.winner = null;
@@ -210,7 +201,6 @@ export function buildSingleEliminationBracket(
     .map((player) => player.trim())
     .filter(Boolean)
     .slice(0, MAX_BRACKET_SIZE);
-
   const slots = balancedSlots(cleanPlayers, requestedSize);
   const firstRoundCount = slots.length / 2;
 
@@ -235,7 +225,6 @@ export function buildSingleEliminationBracket(
 
   while (matchCount >= 1) {
     const previousRound = rounds[rounds.length - 1];
-
     rounds.push({
       round: roundNumber,
       name: roundName(matchCount),
@@ -248,7 +237,6 @@ export function buildSingleEliminationBracket(
         return match;
       }),
     });
-
     matchCount /= 2;
     roundNumber += 1;
   }
@@ -261,10 +249,7 @@ export function buildSingleEliminationBracket(
   });
 }
 
-/**
- * Rebuilds every downstream participant from completed feeder matches.
- * It also repairs brackets saved by older CueBracket engine versions.
- */
+/** Rebuild every downstream participant from completed feeder matches. */
 export function recomputeSingleEliminationBracket(
   bracket: SingleEliminationBracket,
 ): SingleEliminationBracket {
@@ -279,7 +264,6 @@ export function recomputeSingleEliminationBracket(
     })),
   }));
 
-  // Normalize the first round and preserve only legitimate played results.
   rounds[0]?.matches.forEach((match) => {
     match.source1 = seedSource(match.player1);
     match.source2 = seedSource(match.player2);
@@ -287,7 +271,7 @@ export function recomputeSingleEliminationBracket(
     if (!match.player1 || !match.player2) {
       resolveKnownParticipants(match);
     } else if (match.completed && !hasValidStoredWinner(match)) {
-      clearResult(match);
+      clearBracketMatch(match);
     }
   });
 
@@ -298,26 +282,24 @@ export function recomputeSingleEliminationBracket(
     current.forEach((match, position) => {
       const feeder1 = previous[position * 2];
       const feeder2 = previous[position * 2 + 1];
-
       match.source1 = feeder1 ? winnerSource(feeder1.id) : undefined;
       match.source2 = feeder2 ? winnerSource(feeder2.id) : undefined;
 
       const feeder1Resolved = Boolean(feeder1?.completed);
       const feeder2Resolved = Boolean(feeder2?.completed);
       const bothFeedersResolved = feeder1Resolved && feeder2Resolved;
-
       const nextPlayer1 = feeder1Resolved ? feeder1?.winner ?? null : null;
       const nextPlayer2 = feeder2Resolved ? feeder2?.winner ?? null : null;
       const participantsChanged =
         match.player1 !== nextPlayer1 || match.player2 !== nextPlayer2;
 
-      if (participantsChanged) clearResult(match);
+      if (participantsChanged) clearBracketMatch(match);
       match.player1 = nextPlayer1;
       match.player2 = nextPlayer2;
 
-      // A missing player is not a BYE until both feeder matches are resolved.
+      // Never treat an unfinished feeder as a BYE.
       if (!bothFeedersResolved) {
-        clearResult(match);
+        clearBracketMatch(match);
         match.player1 = nextPlayer1;
         match.player2 = nextPlayer2;
         return;
@@ -326,7 +308,7 @@ export function recomputeSingleEliminationBracket(
       if (!match.player1 || !match.player2) {
         resolveKnownParticipants(match);
       } else if (match.completed && !hasValidStoredWinner(match)) {
-        clearResult(match);
+        clearBracketMatch(match);
       }
     });
   }
@@ -340,11 +322,7 @@ export function recomputeSingleEliminationBracket(
       ? final.winner
       : null;
 
-  return {
-    ...bracket,
-    rounds,
-    champion,
-  };
+  return { ...bracket, rounds, champion };
 }
 
 export function updateSingleEliminationMatch(
@@ -365,9 +343,87 @@ export function updateSingleEliminationMatch(
     .find((item) => item.id === matchId);
 
   if (!match) return recomputeSingleEliminationBracket(next);
-
   updater(match);
   return recomputeSingleEliminationBracket(next);
+}
+
+function findDependentSingleMatch(
+  bracket: SingleEliminationBracket,
+  sourceMatchId: string,
+) {
+  return bracket.rounds
+    .slice(1)
+    .flatMap((round) => round.matches)
+    .find((match) =>
+      [match.source1, match.source2].some(
+        (source) =>
+          source?.kind === "winner" && source.matchId === sourceMatchId,
+      ),
+    );
+}
+
+export function getSingleEliminationLateEntrySlots(
+  bracket: SingleEliminationBracket,
+): LateEntryByeSlot[] {
+  const repaired = recomputeSingleEliminationBracket(bracket);
+  const firstRound = repaired.rounds[0];
+  if (!firstRound || repaired.champion) return [];
+
+  return firstRound.matches.flatMap((match, index) => {
+    const hasExactlyOnePlayer = Boolean(match.player1) !== Boolean(match.player2);
+    if (!hasExactlyOnePlayer || !match.completed || !match.winner) return [];
+
+    const dependent = findDependentSingleMatch(repaired, match.id);
+    const locked = hasPlayedOrStartedMatch(dependent);
+
+    return [
+      {
+        matchId: match.id,
+        matchNumber: index + 1,
+        roundName: firstRound.name,
+        advancingPlayer: match.player1 ?? match.player2 ?? match.winner,
+        available: !locked,
+        lockedReason: locked
+          ? "The BYE recipient's next match has already started or has a saved score."
+          : undefined,
+      },
+    ];
+  });
+}
+
+export function fillSingleEliminationByeSlot(
+  bracket: SingleEliminationBracket,
+  matchId: string,
+  latePlayer: string,
+): LateEntryResult<SingleEliminationBracket> {
+  const repaired = recomputeSingleEliminationBracket(bracket);
+  const slot = getSingleEliminationLateEntrySlots(repaired).find(
+    (item) => item.matchId === matchId,
+  );
+
+  if (!slot) {
+    return { ok: false, reason: "That automatic BYE is no longer available." };
+  }
+
+  if (!slot.available) {
+    return {
+      ok: false,
+      reason: slot.lockedReason ?? "That BYE slot is locked.",
+    };
+  }
+
+  const next = updateSingleEliminationMatch(repaired, matchId, (match) => {
+    if (match.player1 && !match.player2) {
+      match.player2 = latePlayer;
+      match.source2 = seedSource(latePlayer);
+    } else if (!match.player1 && match.player2) {
+      match.player1 = latePlayer;
+      match.source1 = seedSource(latePlayer);
+    }
+    clearBracketMatch(match);
+  });
+
+  return { ok: true, bracket: next };
 }
 
 export function countSingleEliminationPlayedMatches(
@@ -376,8 +432,7 @@ export function countSingleEliminationPlayedMatches(
   return bracket.rounds
     .flatMap((round) => round.matches)
     .filter(
-      (match) =>
-        match.completed && Boolean(match.player1) && Boolean(match.player2),
+      (match) => match.completed && Boolean(match.player1) && Boolean(match.player2),
     ).length;
 }
 
@@ -387,7 +442,6 @@ export function countSingleEliminationAutomaticByes(
   return bracket.rounds
     .flatMap((round) => round.matches)
     .filter(
-      (match) =>
-        match.completed && Boolean(match.player1) !== Boolean(match.player2),
+      (match) => match.completed && Boolean(match.player1) !== Boolean(match.player2),
     ).length;
 }

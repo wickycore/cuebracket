@@ -1,19 +1,31 @@
 "use client";
 
-import { useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import {
+  useMemo,
+  useRef,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
+import type {
   BracketMatch,
   BracketRound,
   DoubleEliminationBracket,
   Tournament,
-  updateTournament,
+} from "@/lib/tournaments";
+import {
   formatDuration,
   getTournamentChampionDescription,
+  updateTournament,
 } from "@/lib/tournaments";
 import {
   buildDoubleEliminationBracket,
+  fillDoubleEliminationByeSlot,
+  getDoubleEliminationLateEntrySlots,
+  recomputeDoubleEliminationBracket,
   updateDoubleMatch,
 } from "@/lib/bracket/doubleElimination";
+import { isValidRaceResult } from "@/lib/bracket/singleElimination";
 import {
   BracketConnections,
   useBracketMatchRefs,
@@ -21,6 +33,7 @@ import {
 } from "@/components/BracketConnections";
 import { BracketViewport } from "@/components/BracketViewport";
 import { ChampionCelebration } from "@/components/ChampionCelebration";
+import { LateEntryPanel } from "@/components/LateEntryPanel";
 
 interface Props {
   tournament: Tournament;
@@ -28,6 +41,7 @@ interface Props {
 }
 
 type BracketTone = "winners" | "losers" | "final";
+type Draft = { score1: string; score2: string };
 
 const connectorTone: Record<BracketTone, ConnectorTone> = {
   winners: "cyan",
@@ -35,7 +49,10 @@ const connectorTone: Record<BracketTone, ConnectorTone> = {
   final: "violet",
 };
 
-const toneStyles: Record<BracketTone, { title: string; active: string; panel: string }> = {
+const toneStyles: Record<
+  BracketTone,
+  { title: string; active: string; panel: string }
+> = {
   winners: {
     title: "text-cyan-300",
     active: "border-cyan-400/40",
@@ -57,6 +74,10 @@ function isAutomaticAdvance(match: BracketMatch) {
   return match.completed && Boolean(match.player1) !== Boolean(match.player2);
 }
 
+function isInactive(match: BracketMatch) {
+  return match.completed && !match.player1 && !match.player2;
+}
+
 function MatchCard({
   match,
   raceTo,
@@ -68,136 +89,145 @@ function MatchCard({
 }: {
   match: BracketMatch;
   raceTo: number;
-  draft: { score1: string; score2: string };
-  setDraft: (value: { score1: string; score2: string }) => void;
+  draft: Draft;
+  setDraft: (value: Draft) => void;
   save: () => void;
   undo: () => void;
   tone: BracketTone;
 }) {
   const playable = Boolean(match.player1 && match.player2);
   const automaticAdvance = isAutomaticAdvance(match);
+  const inactive = isInactive(match);
   const advancingPlayer = match.player1 ?? match.player2 ?? match.winner;
   const styles = toneStyles[tone];
   const isLive = match.status === "live";
   const duration = match.startedAt
-    ? formatDuration(new Date(match.endedAt ?? Date.now()).getTime() - new Date(match.startedAt).getTime())
+    ? formatDuration(
+        new Date(match.endedAt ?? Date.now()).getTime() -
+          new Date(match.startedAt).getTime(),
+      )
     : null;
+
+  if (inactive) {
+    return (
+      <article className="rounded-2xl border border-white/5 bg-slate-950/70 p-4 opacity-40">
+        <span className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-600">
+          Inactive branch
+        </span>
+        <p className="mt-2 text-sm font-bold text-slate-600">No players</p>
+      </article>
+    );
+  }
 
   if (automaticAdvance) {
     return (
-      <article className="relative z-10 overflow-hidden rounded-xl border border-violet-400/25 bg-violet-400/[0.06] shadow-[0_14px_40px_rgba(0,0,0,.24)]">
-        <div className="flex items-center justify-between border-b border-violet-400/15 px-3 py-2">
-          <span className="text-[10px] font-black uppercase tracking-[0.16em] text-violet-300">
+      <article
+        className={`rounded-2xl border ${styles.active} bg-slate-950/95 p-4 shadow-xl`}
+      >
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-300">
             Automatic BYE
           </span>
-          <span className="rounded-full bg-violet-400/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] text-violet-200">
-            Advanced
-          </span>
+          <span className="text-xs font-black text-emerald-300">Advanced</span>
         </div>
-        <div className="flex min-h-14 items-center gap-3 px-3 py-3">
-          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-violet-400/15 text-sm font-black text-violet-200">
-            ✓
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-black text-white">{advancingPlayer}</p>
-            <p className="mt-0.5 text-[11px] font-bold text-slate-500">No opponent</p>
-          </div>
-        </div>
-        <div className="border-t border-violet-400/15 px-3 py-2 text-[11px] font-bold text-violet-200/75">
-          {advancingPlayer} advances automatically. This does not count as a played match.
-        </div>
+        <strong className="mt-3 block text-base text-white">
+          {advancingPlayer}
+        </strong>
+        <span className="mt-1 block text-xs text-slate-500">No opponent</span>
+        <p className="mt-3 text-xs leading-5 text-slate-500">
+          {advancingPlayer} advances automatically. This does not count as a
+          played match.
+        </p>
       </article>
     );
   }
 
   return (
     <article
-      className={`group relative z-10 overflow-hidden rounded-xl border bg-slate-950/95 shadow-[0_14px_40px_rgba(0,0,0,.28)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_48px_rgba(0,0,0,.38)] ${
-        match.completed
-          ? "border-emerald-400/45 shadow-[0_0_24px_rgba(52,211,153,.08)]"
-          : isLive
-            ? `${styles.active} shadow-[0_0_30px_rgba(34,211,238,.12)]`
-            : "border-white/10"
+      className={`overflow-hidden rounded-2xl border bg-slate-950/95 shadow-xl ${
+        match.completed ? styles.active : "border-white/10"
       }`}
     >
-      <div className="flex items-center justify-between border-b border-white/10 bg-white/[0.025] px-3 py-2">
-        <span className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
+      <div className="flex items-center justify-between border-b border-white/5 px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
+        <span>
           {match.tableNumber ? `Table ${match.tableNumber}` : `Match ${match.position + 1}`}
         </span>
-        <span className={`rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] ${
-          match.completed
-            ? "bg-emerald-400/10 text-emerald-300"
+        <span>
+          {match.completed
+            ? "Finished"
             : isLive
-              ? "animate-pulse bg-rose-400/15 text-rose-300 ring-1 ring-rose-400/30"
+              ? "● Live"
               : playable
-                ? "bg-cyan-400/10 text-cyan-300"
-                : "bg-white/5 text-slate-500"
-        }`}>
-          {match.completed ? "Finished" : isLive ? "● Live" : playable ? "Ready" : "Waiting"}
+                ? "Ready"
+                : "Waiting"}
         </span>
       </div>
-      {[match.player1, match.player2].map((player, index) => {
-        const isWinner = Boolean(match.completed && player && match.winner === player);
-        const score = index === 0 ? draft.score1 : draft.score2;
 
-        return (
-          <div
-            key={index}
-            className={`flex min-h-12 items-center gap-3 border-b border-white/10 px-3 py-2.5 last:border-b-0 ${
-              isWinner ? "bg-emerald-400/10" : ""
-            }`}
-          >
-            <span
-              className={`min-w-0 flex-1 truncate text-sm font-extrabold ${
-                isWinner ? "text-emerald-300" : player ? "text-white" : "text-slate-600"
+      <div className="divide-y divide-white/5">
+        {[match.player1, match.player2].map((player, index) => {
+          const isWinner = Boolean(
+            match.completed && player && match.winner === player,
+          );
+          const score = index === 0 ? draft.score1 : draft.score2;
+          return (
+            <div
+              key={`${match.id}-${index}`}
+              className={`flex min-h-12 items-center justify-between gap-3 px-3 py-2 ${
+                isWinner ? "bg-emerald-400/10" : ""
               }`}
             >
-              {player ?? "TBD"}
-            </span>
+              <span
+                className={`min-w-0 truncate text-sm font-bold ${
+                  isWinner ? "text-emerald-200" : "text-slate-200"
+                }`}
+              >
+                {player ?? "TBD"}
+              </span>
+              {playable ? (
+                <input
+                  inputMode="numeric"
+                  value={score}
+                  onChange={(event) =>
+                    setDraft(
+                      index === 0
+                        ? { ...draft, score1: event.target.value }
+                        : { ...draft, score2: event.target.value },
+                    )
+                  }
+                  aria-label={`Score for ${player ?? `player ${index + 1}`}`}
+                  className="h-9 w-12 rounded-lg border border-white/10 bg-slate-900 px-1 text-center text-sm font-black text-white outline-none focus:border-cyan-400/60"
+                />
+              ) : (
+                <span className="text-slate-600">—</span>
+              )}
+            </div>
+          );
+        })}
+      </div>
 
-            {playable ? (
-              <input
-                inputMode="numeric"
-                value={score}
-                onChange={(event) =>
-                  setDraft(
-                    index === 0
-                      ? { ...draft, score1: event.target.value }
-                      : { ...draft, score2: event.target.value },
-                  )
-                }
-                aria-label={`Score for ${player ?? `player ${index + 1}`}`}
-                className="h-8 w-12 rounded-lg border border-white/10 bg-slate-900 px-1 text-center text-sm font-black text-white outline-none focus:border-cyan-400/60"
-              />
-            ) : (
-              <span className="text-xs font-bold text-slate-600">—</span>
-            )}
-          </div>
-        );
-      })}
-
-      <div className="flex min-h-10 items-center justify-between gap-2 px-3 py-2">
-        <span className="min-w-0 truncate text-[11px] font-bold text-slate-500">
+      <div className="flex items-center justify-between gap-3 px-3 py-2.5">
+        <span className="text-[11px] font-bold text-slate-500">
           {match.completed
             ? `Winner: ${match.winner}${duration ? ` · ${duration}` : ""}`
             : playable
               ? `Race to ${raceTo}${duration ? ` · ${duration}` : ""}`
               : "Waiting for players"}
         </span>
-
         {playable ? (
-          <div className="flex gap-1.5">
+          <div className="flex items-center gap-1">
             {match.completed ? (
               <button
+                type="button"
                 onClick={undo}
-                className="rounded-md px-2 py-1 text-[11px] font-bold text-slate-400 hover:bg-white/5 hover:text-white"
+                className="rounded-lg px-2 py-1 text-xs font-bold text-slate-400 hover:bg-white/5 hover:text-white"
               >
                 Undo
               </button>
             ) : null}
             <button
+              type="button"
               onClick={save}
-              className="rounded-md bg-cyan-400 px-2.5 py-1 text-[11px] font-black text-slate-950 hover:bg-cyan-300"
+              className="rounded-lg bg-cyan-400 px-2.5 py-1 text-xs font-black text-slate-950 hover:bg-cyan-300"
             >
               Save
             </button>
@@ -210,7 +240,6 @@ function MatchCard({
 
 function BracketRoundColumn({
   round,
-  title,
   tournament,
   drafts,
   setDrafts,
@@ -221,57 +250,57 @@ function BracketRoundColumn({
   registerMatch,
 }: {
   round: BracketRound;
-  title: string;
   tournament: Tournament;
-  drafts: Record<string, { score1: string; score2: string }>;
-  setDrafts: Dispatch<SetStateAction<Record<string, { score1: string; score2: string }>>>;
+  drafts: Record<string, Draft>;
+  setDrafts: Dispatch<SetStateAction<Record<string, Draft>>>;
   saveResult: (match: BracketMatch) => void;
   clearResult: (match: BracketMatch) => void;
   tone: BracketTone;
   maxMatches: number;
   registerMatch: (matchId: string, node: HTMLDivElement | null) => void;
 }) {
-  const ratio = Math.max(1, Math.floor(maxMatches / Math.max(1, round.matches.length)));
+  const ratio = Math.max(
+    1,
+    Math.floor(maxMatches / Math.max(1, round.matches.length)),
+  );
   const topPadding = ratio > 1 ? Math.min(96, (ratio - 1) * 28) : 0;
   const gap = ratio > 1 ? Math.min(120, ratio * 30) : 18;
 
   return (
-    <div className="w-64 shrink-0 snap-start">
-      <p className="mb-4 text-[11px] font-black uppercase tracking-[0.17em] text-slate-500">
+    <section className="w-64 shrink-0">
+      <h4
+        className={`mb-4 text-center text-sm font-black uppercase tracking-[0.18em] ${toneStyles[tone].title}`}
+      >
         {round.name}
-      </p>
-
-      <div style={{ paddingTop: topPadding }} className="relative">
-        <div className="space-y-0" style={{ display: "grid", gap }}>
-          {round.matches.map((match) => {
-            const draft = drafts[match.id] ?? {
-              score1: match.score1?.toString() ?? "",
-              score2: match.score2?.toString() ?? "",
-            };
-
-            return (
-              <div
-                key={match.id}
-                ref={(node) => registerMatch(match.id, node)}
-                className="relative z-10"
-              >
-                <MatchCard
-                  match={match}
-                  raceTo={tournament.raceTo}
-                  draft={draft}
-                  setDraft={(value) =>
-                    setDrafts((current) => ({ ...current, [match.id]: value }))
-                  }
-                  save={() => saveResult(match)}
-                  undo={() => clearResult(match)}
-                  tone={tone}
-                />
-              </div>
-            );
-          })}
-        </div>
+      </h4>
+      <div className="grid" style={{ paddingTop: topPadding, gap }}>
+        {round.matches.map((match) => {
+          const draft = drafts[match.id] ?? {
+            score1: match.score1?.toString() ?? "",
+            score2: match.score2?.toString() ?? "",
+          };
+          return (
+            <div
+              key={match.id}
+              ref={(node) => registerMatch(match.id, node)}
+              className="relative z-10"
+            >
+              <MatchCard
+                match={match}
+                raceTo={tournament.raceTo}
+                draft={draft}
+                setDraft={(value) =>
+                  setDrafts((current) => ({ ...current, [match.id]: value }))
+                }
+                save={() => saveResult(match)}
+                undo={() => clearResult(match)}
+                tone={tone}
+              />
+            </div>
+          );
+        })}
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -290,68 +319,74 @@ function BracketSection({
   subtitle: string;
   rounds: BracketRound[];
   tournament: Tournament;
-  drafts: Record<string, { score1: string; score2: string }>;
-  setDrafts: Dispatch<SetStateAction<Record<string, { score1: string; score2: string }>>>;
+  drafts: Record<string, Draft>;
+  setDrafts: Dispatch<SetStateAction<Record<string, Draft>>>;
   saveResult: (match: BracketMatch) => void;
   clearResult: (match: BracketMatch) => void;
   tone: BracketTone;
 }) {
   const styles = toneStyles[tone];
-  const maxMatches = Math.max(1, ...rounds.map((round) => round.matches.length));
+  const maxMatches = Math.max(
+    1,
+    ...rounds.map((round) => round.matches.length),
+  );
   const contentRef = useRef<HTMLDivElement>(null);
   const { matchRefs, registerMatch } = useBracketMatchRefs();
 
   return (
     <section
-      className={`overflow-hidden rounded-[1.75rem] border border-white/10 bg-gradient-to-br ${styles.panel}`}
+      className={`rounded-3xl border border-white/10 bg-gradient-to-br ${styles.panel} p-4 shadow-2xl sm:p-5`}
     >
-      <header className="flex flex-col gap-1 border-b border-white/10 px-5 py-5 sm:px-7">
-        <p className={`text-sm font-black uppercase tracking-[0.22em] ${styles.title}`}>{title}</p>
-        <p className="text-xs text-slate-500">{subtitle}</p>
-      </header>
+      <h3 className={`text-xl font-black ${styles.title}`}>{title}</h3>
+      <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
 
-      <BracketViewport label={title}>
-        <div
-          ref={contentRef}
-          className="relative flex min-w-max snap-x snap-mandatory items-start gap-14 pb-4 pr-12"
-        >
-          <BracketConnections
-            rounds={rounds}
-            containerRef={contentRef}
-            matchRefs={matchRefs}
-            tone={connectorTone[tone]}
-          />
-          {rounds.map((round) => (
-            <BracketRoundColumn
-              key={`${title}-${round.round}`}
-              round={round}
-              title={title}
-              tournament={tournament}
-              drafts={drafts}
-              setDrafts={setDrafts}
-              saveResult={saveResult}
-              clearResult={clearResult}
-              tone={tone}
-              maxMatches={maxMatches}
-              registerMatch={registerMatch}
+      <div className="mt-4">
+        <BracketViewport label={`${title} bracket`}>
+          <div ref={contentRef} className="relative min-w-max p-4">
+            <BracketConnections
+              rounds={rounds}
+              containerRef={contentRef}
+              matchRefs={matchRefs}
+              tone={connectorTone[tone]}
             />
-          ))}
-        </div>
-      </BracketViewport>
+            <div className="relative z-10 flex items-start gap-8">
+              {rounds.map((round) => (
+                <BracketRoundColumn
+                  key={`${tone}-${round.round}-${round.name}`}
+                  round={round}
+                  tournament={tournament}
+                  drafts={drafts}
+                  setDrafts={setDrafts}
+                  saveResult={saveResult}
+                  clearResult={clearResult}
+                  tone={tone}
+                  maxMatches={maxMatches}
+                  registerMatch={registerMatch}
+                />
+              ))}
+            </div>
+          </div>
+        </BracketViewport>
+      </div>
     </section>
   );
 }
 
-export function DoubleEliminationManager({ tournament, onTournamentChange }: Props) {
+export function DoubleEliminationManager({
+  tournament,
+  onTournamentChange,
+}: Props) {
   const [message, setMessage] = useState("");
-  const [drafts, setDrafts] = useState<Record<string, { score1: string; score2: string }>>({});
-  const bracket = tournament.bracket?.type === "double" ? tournament.bracket : undefined;
+  const [drafts, setDrafts] = useState<Record<string, Draft>>({});
+  const bracket =
+    tournament.bracket?.type === "double" ? tournament.bracket : undefined;
 
   const completed = useMemo(() => {
     if (!bracket) return 0;
     return [...bracket.winners, ...bracket.losers, ...bracket.grandFinal]
       .flatMap((round) => round.matches)
-      .filter((match) => match.completed && match.player1 && match.player2).length;
+      .filter((match) => match.completed && match.player1 && match.player2)
+      .length;
   }, [bracket]);
 
   const { totalPlayable, automaticByes } = useMemo(() => {
@@ -359,17 +394,27 @@ export function DoubleEliminationManager({ tournament, onTournamentChange }: Pro
     const structuralMatches = [
       ...bracket.winners,
       ...bracket.losers,
-      ...bracket.grandFinal.filter((round) => round.round === 1 || bracket.resetRequired),
+      ...bracket.grandFinal.filter(
+        (round) => round.round === 1 || bracket.resetRequired,
+      ),
     ].flatMap((round) => round.matches);
     const automaticAdvances = structuralMatches.filter(
       (match) => match.completed && !(match.player1 && match.player2),
     ).length;
     const byes = structuralMatches.filter(isAutomaticAdvance).length;
     return {
-      totalPlayable: Math.max(completed, structuralMatches.length - automaticAdvances),
+      totalPlayable: Math.max(
+        completed,
+        structuralMatches.length - automaticAdvances,
+      ),
       automaticByes: byes,
     };
   }, [bracket, completed]);
+
+  const lateEntrySlots = useMemo(
+    () => (bracket ? getDoubleEliminationLateEntrySlots(bracket) : []),
+    [bracket],
+  );
 
   const progress = bracket?.champion
     ? 100
@@ -403,12 +448,10 @@ export function DoubleEliminationManager({ tournament, onTournamentChange }: Pro
     const score1 = Number(draft.score1);
     const score2 = Number(draft.score2);
 
-    if (!Number.isInteger(score1) || !Number.isInteger(score2) || score1 < 0 || score2 < 0) {
-      setMessage("Scores must be whole numbers of zero or more.");
-      return;
-    }
-    if (score1 === score2) {
-      setMessage("A match cannot finish as a draw.");
+    if (!isValidRaceResult(score1, score2, tournament.raceTo)) {
+      setMessage(
+        `A completed race-to-${tournament.raceTo} result must have exactly one player on ${tournament.raceTo}, with the opponent below ${tournament.raceTo}.`,
+      );
       return;
     }
 
@@ -427,7 +470,10 @@ export function DoubleEliminationManager({ tournament, onTournamentChange }: Pro
 
   function clearResult(match: BracketMatch) {
     if (!bracket) return;
-    setDrafts((current) => ({ ...current, [match.id]: { score1: "", score2: "" } }));
+    setDrafts((current) => ({
+      ...current,
+      [match.id]: { score1: "", score2: "" },
+    }));
     saveBracket(
       updateDoubleMatch(bracket, match.id, (target) => {
         target.score1 = null;
@@ -435,23 +481,67 @@ export function DoubleEliminationManager({ tournament, onTournamentChange }: Pro
         target.winner = null;
         target.completed = false;
         target.status = "pending";
+        target.startedAt = null;
         target.endedAt = null;
+        target.scoreHistory = [];
       }),
     );
   }
 
+  function addLatePlayer(playerName: string, matchId: string) {
+    if (!bracket) return "The bracket has not been generated.";
+    if (tournament.players.length >= tournament.bracketSize) {
+      return `This event is full at ${tournament.bracketSize} players.`;
+    }
+    if (
+      tournament.players.some(
+        (player) => player.toLowerCase() === playerName.toLowerCase(),
+      )
+    ) {
+      return "That player is already in the tournament.";
+    }
+
+    const result = fillDoubleEliminationByeSlot(
+      bracket,
+      matchId,
+      playerName,
+    );
+    if (!result.ok) return result.reason;
+
+    const updated = updateTournament(tournament.id, {
+      players: [...tournament.players, playerName],
+      bracket: result.bracket,
+      status: tournament.status === "completed" ? "live" : tournament.status,
+    });
+    if (!updated) return "The late player could not be saved.";
+
+    setDrafts({});
+    setMessage("");
+    onTournamentChange(updated);
+    return null;
+  }
+
   if (!bracket) {
     return (
-      <section className="mt-8 rounded-[2rem] border border-dashed border-white/15 bg-white/[0.03] px-6 py-10 text-center">
-        <div className="text-4xl">♻️</div>
-        <h2 className="mt-4 text-2xl font-black">Generate the double-elimination bracket</h2>
-        <p className="mx-auto mt-2 max-w-2xl text-slate-400">
-          Each player is eliminated only after a second loss. BYEs advance automatically.
+      <section className="rounded-3xl border border-white/10 bg-slate-950/70 p-6 shadow-2xl">
+        <span className="text-3xl">♻️</span>
+        <h2 className="mt-3 text-2xl font-black text-white">
+          Generate the double-elimination bracket
+        </h2>
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">
+          Each player is eliminated only after a second loss. BYEs advance
+          automatically and may be filled by a late entry while their affected
+          matches remain untouched.
         </p>
-        {message ? <p className="mt-4 text-sm font-bold text-amber-300">{message}</p> : null}
+        {message ? (
+          <p className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/10 px-4 py-3 text-sm font-bold text-rose-200">
+            {message}
+          </p>
+        ) : null}
         <button
+          type="button"
           onClick={generate}
-          className="mt-7 rounded-2xl bg-cyan-400 px-6 py-3.5 font-black text-slate-950 hover:bg-cyan-300"
+          className="mt-5 rounded-xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950 hover:bg-cyan-300"
         >
           Generate double bracket
         </button>
@@ -464,61 +554,99 @@ export function DoubleEliminationManager({ tournament, onTournamentChange }: Pro
   );
 
   return (
-    <section className="mt-8 space-y-6">
-      <div className="flex flex-col gap-4 rounded-[2rem] border border-white/10 bg-white/[0.04] p-6 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-sm font-bold uppercase tracking-[0.2em] text-cyan-400">Double elimination</p>
-          <h2 className="mt-2 text-2xl font-black">Separated winners and losers brackets</h2>
-          <p className="mt-2 text-sm text-slate-400">
-            {completed} played match{completed === 1 ? "" : "es"}{automaticByes ? ` · ${automaticByes} automatic BYE${automaticByes === 1 ? "" : "s"}` : ""} · {bracket.champion ? `Champion: ${bracket.champion}` : bracket.resetRequired ? "Bracket reset required" : "Tournament in progress"}
-          </p>
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          <label className="flex items-center gap-2 rounded-xl border border-white/10 px-4 py-3 text-sm font-bold text-slate-300">
-            <input
-              type="checkbox"
-              checked={bracket.bracketResetEnabled}
-              onChange={(event) =>
-                saveBracket({ ...bracket, bracketResetEnabled: event.target.checked })
-              }
-            />
-            Grand-final reset
-          </label>
-          <button
-            onClick={() => {
-              if (window.confirm("Reset this bracket and remove all scores?")) saveBracket(undefined);
-            }}
-            className="rounded-xl border border-rose-400/20 px-4 py-3 text-sm font-bold text-rose-300 hover:bg-rose-400/10"
-          >
-            Reset competition
-          </button>
-        </div>
-      </div>
-
-      <div className="rounded-[1.5rem] border border-white/10 bg-slate-950/55 p-5">
-        <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+    <div className="grid gap-6">
+      <section className="rounded-3xl border border-white/10 bg-slate-950/70 p-5 shadow-2xl sm:p-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">Tournament progress</p>
-            <p className="mt-1 text-sm font-bold text-white">{completed} of {totalPlayable} played matches completed</p>
+            <span className="text-xs font-black uppercase tracking-[0.24em] text-violet-300">
+              Double elimination
+            </span>
+            <h2 className="mt-2 text-2xl font-black text-white">
+              Separated winners and losers brackets
+            </h2>
+            <p className="mt-2 text-sm text-slate-400">
+              {completed} played match{completed === 1 ? "" : "es"}
+              {automaticByes
+                ? ` · ${automaticByes} automatic BYE${automaticByes === 1 ? "" : "s"}`
+                : ""}
+              {" · "}
+              {bracket.champion
+                ? `Champion: ${bracket.champion}`
+                : bracket.resetRequired
+                  ? "Bracket reset required"
+                  : "Tournament in progress"}
+            </p>
           </div>
-          <p className="text-2xl font-black tabular-nums text-cyan-300">{progress}%</p>
-        </div>
-        <div className="h-2.5 overflow-hidden rounded-full bg-white/5 ring-1 ring-white/10">
-          <div
-            className="h-full rounded-full bg-gradient-to-r from-cyan-400 via-violet-400 to-emerald-400 transition-[width] duration-700 ease-out"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-      </div>
 
-      {message ? (
-        <p className="rounded-2xl bg-amber-400/10 px-4 py-3 text-sm font-bold text-amber-200 ring-1 ring-amber-400/20">
-          {message}
-        </p>
-      ) : null}
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex min-h-11 items-center gap-2 rounded-xl border border-white/10 px-3 text-sm font-bold text-slate-300">
+              <input
+                type="checkbox"
+                checked={bracket.bracketResetEnabled}
+                onChange={(event) =>
+                  saveBracket(
+                    recomputeDoubleEliminationBracket({
+                      ...bracket,
+                      bracketResetEnabled: event.target.checked,
+                    }),
+                  )
+                }
+              />
+              Grand-final reset
+            </label>
+            <button
+              type="button"
+              onClick={() => {
+                if (
+                  window.confirm("Reset this competition and remove all scores?")
+                ) {
+                  saveBracket(undefined);
+                }
+              }}
+              className="min-h-11 rounded-xl border border-rose-400/20 px-4 text-sm font-bold text-rose-300 hover:bg-rose-400/10"
+            >
+              Reset competition
+            </button>
+          </div>
+        </div>
 
-      {bracket.champion ? <ChampionCelebration champion={bracket.champion} description={getTournamentChampionDescription(tournament)} /> : null}
+        <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+          <div className="flex items-center justify-between text-sm">
+            <strong className="text-white">Tournament progress</strong>
+            <span className="font-black text-cyan-300">{progress}%</span>
+          </div>
+          <p className="mt-1 text-xs text-slate-500">
+            {completed} of {totalPlayable} played matches completed
+          </p>
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-900">
+            <div
+              className="h-full rounded-full bg-cyan-400 transition-[width]"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
+
+        {message ? (
+          <p className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/10 px-4 py-3 text-sm font-bold text-rose-200">
+            {message}
+          </p>
+        ) : null}
+
+        {bracket.champion ? (
+          <div className="mt-5">
+            <ChampionCelebration
+              champion={bracket.champion}
+              description={getTournamentChampionDescription(tournament)}
+            />
+          </div>
+        ) : null}
+      </section>
+
+      <LateEntryPanel
+        slots={lateEntrySlots}
+        remainingCapacity={tournament.bracketSize - tournament.players.length}
+        onAdd={addLatePlayer}
+      />
 
       <BracketSection
         title="Winners Bracket"
@@ -548,10 +676,8 @@ export function DoubleEliminationManager({ tournament, onTournamentChange }: Pro
         title="Grand Final"
         subtitle={
           bracket.resetRequired
-            ? bracket.champion
-              ? "The bracket-reset match decided the tournament champion."
-              : "The reset match is now active."
-            : "Winners champion versus losers champion."
+            ? "The losers-bracket winner forced a bracket-reset match."
+            : "The winners-bracket finalist meets the survivor of the losers bracket."
         }
         rounds={grandFinalRounds}
         tournament={tournament}
@@ -561,6 +687,6 @@ export function DoubleEliminationManager({ tournament, onTournamentChange }: Pro
         clearResult={clearResult}
         tone="final"
       />
-    </section>
+    </div>
   );
 }
