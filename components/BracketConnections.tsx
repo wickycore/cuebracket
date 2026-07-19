@@ -18,6 +18,11 @@ type ConnectorPath = {
   d: string;
 };
 
+type ConnectorPair = {
+  from: string;
+  to: string;
+};
+
 type ElementBox = {
   left: number;
   top: number;
@@ -48,9 +53,8 @@ export function useBracketMatchRefs() {
 /**
  * Returns coordinates in the bracket container's unscaled coordinate system.
  * BracketViewport uses CSS transforms for pinch zoom. getBoundingClientRect()
- * includes that transform, so using its values directly makes connector paths
- * shrink twice and disconnect from match cards on phones. Dividing by the
- * measured scale keeps cards and SVG lines in the same coordinate system.
+ * includes that transform, so dividing by the measured scale keeps the match
+ * cards and the SVG paths in the same coordinate system.
  */
 function getUnscaledBox(
   element: HTMLElement,
@@ -79,6 +83,69 @@ function getUnscaledBox(
   };
 }
 
+function connectionKey(pair: ConnectorPair) {
+  return `${pair.from}->${pair.to}`;
+}
+
+/**
+ * Older and current single-elimination brackets do not always store source1 /
+ * source2 metadata. In a standard single-elimination bracket, every match in
+ * the next round is fed by two adjacent matches from the previous round.
+ * Infer those links only for clean 2-to-1 round transitions and only when that
+ * target match does not already have explicit source metadata.
+ */
+function buildConnections(rounds: BracketRound[]): ConnectorPair[] {
+  const ids = new Set(
+    rounds.flatMap((round) => round.matches.map((match) => match.id)),
+  );
+  const result: ConnectorPair[] = [];
+  const seen = new Set<string>();
+  const explicitTargets = new Set<string>();
+
+  const add = (pair: ConnectorPair) => {
+    if (!ids.has(pair.from) || !ids.has(pair.to)) return;
+    const key = connectionKey(pair);
+    if (seen.has(key)) return;
+    seen.add(key);
+    result.push(pair);
+  };
+
+  for (const round of rounds) {
+    for (const match of round.matches) {
+      for (const source of [match.source1, match.source2]) {
+        if (
+          source &&
+          (source.kind === "winner" || source.kind === "loser") &&
+          ids.has(source.matchId)
+        ) {
+          explicitTargets.add(match.id);
+          add({ from: source.matchId, to: match.id });
+        }
+      }
+    }
+  }
+
+  for (let roundIndex = 1; roundIndex < rounds.length; roundIndex += 1) {
+    const previous = rounds[roundIndex - 1]?.matches ?? [];
+    const current = rounds[roundIndex]?.matches ?? [];
+
+    // This is the normal single-elimination shape: 8 -> 4 -> 2 -> 1.
+    if (!current.length || previous.length !== current.length * 2) continue;
+
+    current.forEach((target, position) => {
+      if (explicitTargets.has(target.id)) return;
+
+      const firstFeeder = previous[position * 2];
+      const secondFeeder = previous[position * 2 + 1];
+
+      if (firstFeeder) add({ from: firstFeeder.id, to: target.id });
+      if (secondFeeder) add({ from: secondFeeder.id, to: target.id });
+    });
+  }
+
+  return result;
+}
+
 export function BracketConnections({
   rounds,
   containerRef,
@@ -93,34 +160,14 @@ export function BracketConnections({
   const [paths, setPaths] = useState<ConnectorPath[]>([]);
   const [size, setSize] = useState({ width: 0, height: 0 });
 
-  const connections = useMemo(() => {
-    const ids = new Set(
-      rounds.flatMap((round) => round.matches.map((match) => match.id)),
-    );
-    const result: Array<{ from: string; to: string }> = [];
-
-    for (const round of rounds) {
-      for (const match of round.matches) {
-        for (const source of [match.source1, match.source2]) {
-          if (
-            source &&
-            (source.kind === "winner" || source.kind === "loser") &&
-            ids.has(source.matchId)
-          ) {
-            result.push({ from: source.matchId, to: match.id });
-          }
-        }
-      }
-    }
-
-    return result;
-  }, [rounds]);
+  const connections = useMemo(() => buildConnections(rounds), [rounds]);
 
   useLayoutEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
     let frame = 0;
+    const timers: number[] = [];
 
     const measure = () => {
       cancelAnimationFrame(frame);
@@ -157,18 +204,35 @@ export function BracketConnections({
 
     measure();
 
-    const observer = new ResizeObserver(measure);
-    observer.observe(container);
-    matchRefs.current.forEach((node) => observer.observe(node));
-    window.addEventListener("resize", measure);
+    const resizeObserver = new ResizeObserver(measure);
+    resizeObserver.observe(container);
+    matchRefs.current.forEach((node) => resizeObserver.observe(node));
 
-    // Fonts can finish loading after the first layout measurement.
+    // Public cloud data and fonts can finish rendering after the first layout.
+    // These extra measurements make the connectors reliable after hydration,
+    // realtime updates, orientation changes and mobile zoom fitting.
+    const mutationObserver = new MutationObserver(measure);
+    mutationObserver.observe(container, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+    });
+
+    window.addEventListener("resize", measure);
+    window.addEventListener("orientationchange", measure);
     void document.fonts?.ready.then(measure);
+
+    timers.push(window.setTimeout(measure, 80));
+    timers.push(window.setTimeout(measure, 250));
+    timers.push(window.setTimeout(measure, 700));
 
     return () => {
       cancelAnimationFrame(frame);
-      observer.disconnect();
+      timers.forEach((timer) => window.clearTimeout(timer));
+      resizeObserver.disconnect();
+      mutationObserver.disconnect();
       window.removeEventListener("resize", measure);
+      window.removeEventListener("orientationchange", measure);
     };
   }, [connections, containerRef, matchRefs, rounds]);
 
@@ -179,7 +243,7 @@ export function BracketConnections({
 
   return (
     <svg
-      data-bracket-connectors-version="0.9e4"
+      data-bracket-connectors-version="0.9e6"
       aria-hidden="true"
       className="pointer-events-none absolute left-0 top-0 z-0 overflow-visible"
       width={size.width}
