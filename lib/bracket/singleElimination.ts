@@ -4,8 +4,10 @@ import type {
   SingleEliminationBracket,
 } from "@/lib/tournaments";
 
-// CueBracket 0.9E.7 — stable single-elimination engine.
+// CueBracket 0.9E.8 — canonical single-elimination engine.
 const MAX_BRACKET_SIZE = 128;
+
+type MatchSource = NonNullable<BracketMatch["source1"]>;
 
 function nextPowerOfTwo(value: number) {
   let size = 2;
@@ -40,8 +42,8 @@ function spreadPositions(total: number, count: number) {
 }
 
 /**
- * Keeps the supplied player order while spreading BYEs across the first round.
- * This prevents a large block of BYEs from collapsing one side of the bracket.
+ * Keeps the supplied draw order while spreading first-round BYEs.
+ * This prevents all BYEs from collapsing onto one side of the bracket.
  */
 function balancedSlots(players: string[], requestedSize?: number) {
   const size = normalizeBracketSize(players.length, requestedSize);
@@ -55,8 +57,8 @@ function balancedSlots(players: string[], requestedSize?: number) {
       firstRoundMatches,
       twoPlayerMatchCount,
     );
-    let playerIndex = 0;
 
+    let playerIndex = 0;
     for (let matchIndex = 0; matchIndex < firstRoundMatches; matchIndex += 1) {
       slots.push(players[playerIndex] ?? null);
       playerIndex += 1;
@@ -85,6 +87,14 @@ function balancedSlots(players: string[], requestedSize?: number) {
   }
 
   return slots;
+}
+
+function seedSource(player: string | null): MatchSource {
+  return { kind: "seed", player };
+}
+
+function winnerSource(matchId: string): MatchSource {
+  return { kind: "winner", matchId };
 }
 
 function makeMatch(
@@ -117,7 +127,7 @@ function cloneMatch(match: BracketMatch): BracketMatch {
   };
 }
 
-function resetMatch(match: BracketMatch) {
+function clearResult(match: BracketMatch) {
   match.score1 = null;
   match.score2 = null;
   match.winner = null;
@@ -133,7 +143,6 @@ function resetMatch(match: BracketMatch) {
 
 function resolveKnownParticipants(match: BracketMatch) {
   if (match.player1 && match.player2) {
-    // Preserve a legitimate completed result. Otherwise this is playable.
     if (!match.completed) match.status = match.status ?? "pending";
     return;
   }
@@ -162,6 +171,19 @@ function resolveKnownParticipants(match: BracketMatch) {
   match.scoreHistory = [];
 }
 
+function hasValidStoredWinner(match: BracketMatch) {
+  return Boolean(
+    match.completed &&
+      match.player1 &&
+      match.player2 &&
+      match.winner &&
+      [match.player1, match.player2].includes(match.winner) &&
+      Number.isInteger(match.score1) &&
+      Number.isInteger(match.score2) &&
+      match.score1 !== match.score2,
+  );
+}
+
 export function isValidRaceResult(
   score1: number,
   score2: number,
@@ -188,6 +210,7 @@ export function buildSingleEliminationBracket(
     .map((player) => player.trim())
     .filter(Boolean)
     .slice(0, MAX_BRACKET_SIZE);
+
   const slots = balancedSlots(cleanPlayers, requestedSize);
   const firstRoundCount = slots.length / 2;
 
@@ -199,8 +222,8 @@ export function buildSingleEliminationBracket(
         const player1 = slots[position * 2] ?? null;
         const player2 = slots[position * 2 + 1] ?? null;
         const match = makeMatch(1, position, player1, player2);
-        match.source1 = { kind: "seed", player: player1 };
-        match.source2 = { kind: "seed", player: player2 };
+        match.source1 = seedSource(player1);
+        match.source2 = seedSource(player2);
         resolveKnownParticipants(match);
         return match;
       }),
@@ -212,22 +235,20 @@ export function buildSingleEliminationBracket(
 
   while (matchCount >= 1) {
     const previousRound = rounds[rounds.length - 1];
+
     rounds.push({
       round: roundNumber,
       name: roundName(matchCount),
       matches: Array.from({ length: matchCount }, (_, position) => {
         const match = makeMatch(roundNumber, position, null, null);
-        match.source1 = {
-          kind: "winner",
-          matchId: previousRound.matches[position * 2].id,
-        };
-        match.source2 = {
-          kind: "winner",
-          matchId: previousRound.matches[position * 2 + 1].id,
-        };
+        match.source1 = winnerSource(previousRound.matches[position * 2].id);
+        match.source2 = winnerSource(
+          previousRound.matches[position * 2 + 1].id,
+        );
         return match;
       }),
     });
+
     matchCount /= 2;
     roundNumber += 1;
   }
@@ -240,29 +261,33 @@ export function buildSingleEliminationBracket(
   });
 }
 
+/**
+ * Rebuilds every downstream participant from completed feeder matches.
+ * It also repairs brackets saved by older CueBracket engine versions.
+ */
 export function recomputeSingleEliminationBracket(
   bracket: SingleEliminationBracket,
 ): SingleEliminationBracket {
-  const rounds = bracket.rounds.map((round) => ({
+  const rounds = bracket.rounds.map((round, roundIndex) => ({
     ...round,
-    matches: round.matches.map(cloneMatch),
+    round: roundIndex + 1,
+    name: roundName(round.matches.length),
+    matches: round.matches.map((match, position) => ({
+      ...cloneMatch(match),
+      round: roundIndex + 1,
+      position,
+    })),
   }));
 
-  // Normalize first-round seed sources and genuine BYEs.
+  // Normalize the first round and preserve only legitimate played results.
   rounds[0]?.matches.forEach((match) => {
-    match.source1 = { kind: "seed", player: match.player1 };
-    match.source2 = { kind: "seed", player: match.player2 };
+    match.source1 = seedSource(match.player1);
+    match.source2 = seedSource(match.player2);
 
     if (!match.player1 || !match.player2) {
       resolveKnownParticipants(match);
-    } else if (
-      match.completed &&
-      (match.score1 === null ||
-        match.score2 === null ||
-        match.winner === null ||
-        ![match.player1, match.player2].includes(match.winner))
-    ) {
-      resetMatch(match);
+    } else if (match.completed && !hasValidStoredWinner(match)) {
+      clearResult(match);
     }
   });
 
@@ -273,55 +298,44 @@ export function recomputeSingleEliminationBracket(
     current.forEach((match, position) => {
       const feeder1 = previous[position * 2];
       const feeder2 = previous[position * 2 + 1];
+
+      match.source1 = feeder1 ? winnerSource(feeder1.id) : undefined;
+      match.source2 = feeder2 ? winnerSource(feeder2.id) : undefined;
+
       const feeder1Resolved = Boolean(feeder1?.completed);
       const feeder2Resolved = Boolean(feeder2?.completed);
       const bothFeedersResolved = feeder1Resolved && feeder2Resolved;
-      const player1 = feeder1Resolved ? feeder1?.winner ?? null : null;
-      const player2 = feeder2Resolved ? feeder2?.winner ?? null : null;
 
-      match.source1 = feeder1
-        ? { kind: "winner", matchId: feeder1.id }
-        : undefined;
-      match.source2 = feeder2
-        ? { kind: "winner", matchId: feeder2.id }
-        : undefined;
-
+      const nextPlayer1 = feeder1Resolved ? feeder1?.winner ?? null : null;
+      const nextPlayer2 = feeder2Resolved ? feeder2?.winner ?? null : null;
       const participantsChanged =
-        match.player1 !== player1 || match.player2 !== player2;
-      match.player1 = player1;
-      match.player2 = player2;
+        match.player1 !== nextPlayer1 || match.player2 !== nextPlayer2;
 
-      if (participantsChanged) resetMatch(match);
+      if (participantsChanged) clearResult(match);
+      match.player1 = nextPlayer1;
+      match.player2 = nextPlayer2;
 
-      // Never treat an unfinished feeder as a BYE. This prevents a player from
-      // travelling through the semi-final and final before opponents qualify.
+      // A missing player is not a BYE until both feeder matches are resolved.
       if (!bothFeedersResolved) {
-        resetMatch(match);
-        match.player1 = player1;
-        match.player2 = player2;
+        clearResult(match);
+        match.player1 = nextPlayer1;
+        match.player2 = nextPlayer2;
         return;
       }
 
       if (!match.player1 || !match.player2) {
         resolveKnownParticipants(match);
-      } else if (
-        match.completed &&
-        (match.score1 === null ||
-          match.score2 === null ||
-          match.winner === null ||
-          ![match.player1, match.player2].includes(match.winner))
-      ) {
-        resetMatch(match);
+      } else if (match.completed && !hasValidStoredWinner(match)) {
+        clearResult(match);
       }
     });
   }
 
   const final = rounds.at(-1)?.matches[0];
   const champion =
-    final?.completed &&
-    Boolean(final.player1) &&
-    Boolean(final.player2) &&
-    Boolean(final.winner) &&
+    final &&
+    hasValidStoredWinner(final) &&
+    final.winner &&
     [final.player1, final.player2].includes(final.winner)
       ? final.winner
       : null;
@@ -350,7 +364,8 @@ export function updateSingleEliminationMatch(
     .flatMap((round) => round.matches)
     .find((item) => item.id === matchId);
 
-  if (!match) return bracket;
+  if (!match) return recomputeSingleEliminationBracket(next);
+
   updater(match);
   return recomputeSingleEliminationBracket(next);
 }
@@ -363,5 +378,16 @@ export function countSingleEliminationPlayedMatches(
     .filter(
       (match) =>
         match.completed && Boolean(match.player1) && Boolean(match.player2),
+    ).length;
+}
+
+export function countSingleEliminationAutomaticByes(
+  bracket: SingleEliminationBracket,
+) {
+  return bracket.rounds
+    .flatMap((round) => round.matches)
+    .filter(
+      (match) =>
+        match.completed && Boolean(match.player1) !== Boolean(match.player2),
     ).length;
 }
