@@ -4,6 +4,8 @@ import type {
   SingleEliminationBracket,
 } from "@/lib/tournaments";
 
+// CueBracket 0.9E.5 — prevent premature single-elimination champions.
+
 function nextPowerOfTwo(value: number) {
   let size = 2;
   while (size < value && size < 128) size *= 2;
@@ -40,7 +42,10 @@ function makeMatch(
 
 function spreadPositions(total: number, count: number) {
   if (count <= 0) return new Set<number>();
-  if (count >= total) return new Set(Array.from({ length: total }, (_, index) => index));
+  if (count >= total) {
+    return new Set(Array.from({ length: total }, (_, index) => index));
+  }
+
   return new Set(
     Array.from({ length: count }, (_, index) =>
       Math.min(total - 1, Math.floor(((index + 0.5) * total) / count)),
@@ -58,9 +63,11 @@ function balancedSlots(players: string[], requestedSize?: number) {
     const fullMatchCount = playerCount - matchCount;
     const fullPositions = spreadPositions(matchCount, fullMatchCount);
     let playerIndex = 0;
+
     for (let matchIndex = 0; matchIndex < matchCount; matchIndex += 1) {
       slots.push(players[playerIndex] ?? null);
       playerIndex += 1;
+
       if (fullPositions.has(matchIndex)) {
         slots.push(players[playerIndex] ?? null);
         playerIndex += 1;
@@ -68,11 +75,13 @@ function balancedSlots(players: string[], requestedSize?: number) {
         slots.push(null);
       }
     }
+
     return slots;
   }
 
   const occupied = spreadPositions(matchCount, playerCount);
   let playerIndex = 0;
+
   for (let matchIndex = 0; matchIndex < matchCount; matchIndex += 1) {
     if (occupied.has(matchIndex)) {
       slots.push(players[playerIndex] ?? null, null);
@@ -81,7 +90,19 @@ function balancedSlots(players: string[], requestedSize?: number) {
       slots.push(null, null);
     }
   }
+
   return slots;
+}
+
+function resetMatch(match: BracketMatch) {
+  match.score1 = null;
+  match.score2 = null;
+  match.winner = null;
+  match.completed = false;
+  match.status = "pending";
+  match.startedAt = null;
+  match.endedAt = null;
+  match.scoreHistory = [];
 }
 
 function autoResolve(match: BracketMatch) {
@@ -101,7 +122,10 @@ function autoResolve(match: BracketMatch) {
 }
 
 function cloneMatch(match: BracketMatch): BracketMatch {
-  return { ...match, scoreHistory: [...(match.scoreHistory ?? [])] };
+  return {
+    ...match,
+    scoreHistory: [...(match.scoreHistory ?? [])],
+  };
 }
 
 export function buildSingleEliminationBracket(
@@ -110,12 +134,20 @@ export function buildSingleEliminationBracket(
 ): SingleEliminationBracket {
   const slots = balancedSlots(players, requestedSize);
   const firstCount = slots.length / 2;
+
   const rounds: BracketRound[] = [
     {
       round: 1,
       name: roundName(firstCount),
       matches: Array.from({ length: firstCount }, (_, position) => {
-        const match = makeMatch(1, position, slots[position * 2], slots[position * 2 + 1]);
+        const match = makeMatch(
+          1,
+          position,
+          slots[position * 2],
+          slots[position * 2 + 1],
+        );
+
+        // Only first-round empty slots are genuine seeded BYEs.
         autoResolve(match);
         return match;
       }),
@@ -124,6 +156,7 @@ export function buildSingleEliminationBracket(
 
   let count = firstCount / 2;
   let round = 2;
+
   while (count >= 1) {
     rounds.push({
       round,
@@ -157,30 +190,46 @@ export function recomputeSingleEliminationBracket(
     const current = rounds[roundIndex].matches;
 
     current.forEach((match, position) => {
-      const player1 = previous[position * 2]?.winner ?? null;
-      const player2 = previous[position * 2 + 1]?.winner ?? null;
-      const changed = match.player1 !== player1 || match.player2 !== player2;
+      const feeder1 = previous[position * 2];
+      const feeder2 = previous[position * 2 + 1];
+      const feedersResolved = Boolean(feeder1?.completed && feeder2?.completed);
+
+      const player1 = feeder1?.completed ? feeder1.winner ?? null : null;
+      const player2 = feeder2?.completed ? feeder2.winner ?? null : null;
+      const participantsChanged =
+        match.player1 !== player1 || match.player2 !== player2;
+
       match.player1 = player1;
       match.player2 = player2;
-      if (changed) {
-        match.score1 = null;
-        match.score2 = null;
-        match.winner = null;
-        match.completed = false;
-        match.status = "pending";
-        match.startedAt = null;
-        match.endedAt = null;
-        match.scoreHistory = [];
+
+      // A missing player in a later round is not automatically a BYE while
+      // either feeder match is still unfinished. This was the bug that let a
+      // first-round winner travel through the semi-final and final immediately.
+      if (!feedersResolved) {
+        resetMatch(match);
+        return;
       }
-      if (!match.completed) autoResolve(match);
+
+      if (participantsChanged) {
+        resetMatch(match);
+      }
+
+      // Once both feeder matches are resolved, a genuine downstream BYE can
+      // safely advance. A normal two-player match remains pending for a score.
+      if (!match.completed) {
+        autoResolve(match);
+      }
     });
   }
 
   const final = rounds.at(-1)?.matches[0];
+  const champion =
+    final?.completed && final.player1 && final.player2 ? final.winner : null;
+
   return {
     ...bracket,
     rounds,
-    champion: final?.completed ? final.winner : null,
+    champion,
   };
 }
 
@@ -196,7 +245,11 @@ export function updateSingleEliminationMatch(
       matches: round.matches.map(cloneMatch),
     })),
   };
-  const match = next.rounds.flatMap((round) => round.matches).find((item) => item.id === matchId);
+
+  const match = next.rounds
+    .flatMap((round) => round.matches)
+    .find((item) => item.id === matchId);
+
   if (!match) return bracket;
   updater(match);
   return recomputeSingleEliminationBracket(next);
