@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { CloudAutoSyncProvider } from "@/components/CloudAutoSyncProvider";
+
 import "./globals.css";
 
 const geistSans = Geist({
@@ -15,26 +15,12 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "CueBracket Pro — Pool Tournament Control",
-    template: "%s | CueBracket Pro",
+    default: "CueBracket Pro",
+    template: "%s · CueBracket Pro",
   },
   description:
-    "Create pool tournaments, score matches, manage tables and share live brackets from one professional control room.",
-  keywords: [
-    "pool tournament",
-    "billiards bracket",
-    "live pool scores",
-    "double elimination",
-    "tournament manager",
-  ],
+    "Run pool tournaments, live scores, brackets, tables, leagues and cloud spectator views.",
   applicationName: "CueBracket Pro",
-  authors: [{ name: "CueBracket Pro" }],
-  creator: "CueBracket Pro",
-  openGraph: {
-    title: "CueBracket Pro",
-    description: "Professional pool tournament management and live scoring.",
-    type: "website",
-  },
 };
 
 export const viewport: Viewport = {
@@ -52,12 +38,11 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      className={`${geistSans.variable} ${geistMono.variable}`}
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      data-scroll-behavior="smooth"
     >
-      <body suppressHydrationWarning className="min-h-full flex flex-col">
-        <CloudAutoSyncProvider>{children}</CloudAutoSyncProvider>
-      </body>
+      <body className="min-h-full">{children}</body>
     </html>
   );
 }

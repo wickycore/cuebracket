@@ -1,8 +1,20 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import type { FormEvent } from "react";
+import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+
 import { createClient } from "@/lib/supabase/client";
+
+function callbackUrl() {
+  const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/+$/, "");
+  const origin =
+    process.env.NODE_ENV === "production" && configured
+      ? configured
+      : window.location.origin;
+
+  return `${origin}/auth/callback?next=/dashboard`;
+}
 
 export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const router = useRouter();
@@ -13,54 +25,63 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState(
-    searchParams.get("error") ?? "",
-  );
+  const [message, setMessage] = useState(searchParams.get("error") ?? "");
+  const [success, setSuccess] = useState(false);
 
-  async function submit(event: FormEvent) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (busy) return;
+
     setBusy(true);
     setMessage("");
+    setSuccess(false);
 
-    if (mode === "signup") {
-      const redirectTo = `${window.location.origin}/auth/callback?next=/dashboard`;
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: redirectTo,
-          data: { display_name: displayName.trim() || email.split("@")[0] },
-        },
-      });
+    try {
+      if (mode === "signup") {
+        const { error } = await supabase.auth.signUp({
+          email: email.trim(),
+          password,
+          options: {
+            emailRedirectTo: callbackUrl(),
+            data: {
+              display_name: displayName.trim() || email.split("@")[0],
+            },
+          },
+        });
 
-      if (error) {
-        setMessage(error.message);
+        if (error) {
+          setMessage(error.message);
+        } else {
+          setSuccess(true);
+          setMessage("Account created. Check your email to confirm your account.");
+        }
       } else {
-        setMessage(
-          "Account created. Check your email to confirm your account.",
-        );
-      }
-    } else {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+        const { error } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        });
 
-      if (error) {
-        setMessage(error.message);
-      } else {
-        router.push(searchParams.get("next") ?? "/dashboard");
-        router.refresh();
+        if (error) {
+          setMessage(error.message);
+        } else {
+          router.push(searchParams.get("next") ?? "/dashboard");
+          router.refresh();
+        }
       }
+    } catch {
+      setMessage("Something went wrong. Please try again.");
+    } finally {
+      setBusy(false);
     }
-
-    setBusy(false);
   }
+
+  const inputClass =
+    "mt-2 min-h-12 w-full rounded-2xl border border-white/10 bg-slate-950/75 px-4 py-3 text-base text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-400/60 focus:ring-4 focus:ring-cyan-400/10";
 
   return (
     <form
       onSubmit={submit}
-      className="mt-8 space-y-4 rounded-[2rem] border border-white/10 bg-slate-900/75 p-6 shadow-2xl shadow-black/30"
+      className="mt-7 space-y-5 rounded-[1.75rem] border border-white/10 bg-slate-900/75 p-5 shadow-2xl shadow-black/35 backdrop-blur-xl sm:p-6"
     >
       {mode === "signup" ? (
         <label className="block text-sm font-bold text-slate-300">
@@ -69,7 +90,8 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
             value={displayName}
             onChange={(event) => setDisplayName(event.target.value)}
             required
-            className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-white outline-none focus:border-cyan-400/50"
+            autoComplete="name"
+            className={inputClass}
           />
         </label>
       ) : null}
@@ -81,7 +103,9 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           required
-          className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-white outline-none focus:border-cyan-400/50"
+          autoComplete="email"
+          inputMode="email"
+          className={inputClass}
         />
       </label>
 
@@ -93,25 +117,35 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           required
-          className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-white outline-none focus:border-cyan-400/50"
+          autoComplete={mode === "signup" ? "new-password" : "current-password"}
+          className={inputClass}
         />
+        {mode === "signup" ? (
+          <span className="mt-2 block text-xs leading-5 text-slate-500">
+            Use at least 6 characters.
+          </span>
+        ) : null}
       </label>
 
       {message ? (
-        <p className="rounded-xl bg-cyan-400/10 p-3 text-sm font-bold text-cyan-200">
+        <div
+          role="status"
+          className={`rounded-2xl border px-4 py-3 text-sm font-bold leading-6 ${
+            success
+              ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-200"
+              : "border-rose-400/20 bg-rose-400/10 text-rose-200"
+          }`}
+        >
           {message}
-        </p>
+        </div>
       ) : null}
 
       <button
+        type="submit"
         disabled={busy}
-        className="w-full rounded-2xl bg-cyan-400 px-5 py-3 font-black text-slate-950 disabled:opacity-50"
+        className="flex min-h-13 w-full items-center justify-center rounded-2xl bg-cyan-400 px-5 py-3.5 text-sm font-black text-slate-950 shadow-lg shadow-cyan-500/15 transition hover:bg-cyan-300 disabled:cursor-wait disabled:opacity-60"
       >
-        {busy
-          ? "Please wait..."
-          : mode === "login"
-            ? "Sign in"
-            : "Create account"}
+        {busy ? "Please wait..." : mode === "login" ? "Sign in" : "Create account"}
       </button>
     </form>
   );

@@ -2,16 +2,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
 import { AuthNav } from "@/components/AuthNav";
 
 const navigation = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/tournaments", label: "Tournaments" },
-  { href: "/leagues", label: "Leagues" },
-  { href: "/tables", label: "Tables" },
-  { href: "/hall-of-champions", label: "Champions" },
-  { href: "/cloud", label: "Cloud" },
+  { href: "/dashboard", label: "Dashboard", shortLabel: "Home" },
+  { href: "/tournaments", label: "Tournaments", shortLabel: "Events" },
+  { href: "/leagues", label: "Leagues", shortLabel: "Leagues" },
+  { href: "/tables", label: "Tables", shortLabel: "Tables" },
+  { href: "/hall-of-champions", label: "Champions", shortLabel: "Winners" },
+  { href: "/cloud", label: "Cloud", shortLabel: "Cloud" },
 ];
 
 function isActivePath(pathname: string, href: string) {
@@ -23,103 +24,202 @@ export function AppHeader() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
 
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMenuOpen(false);
+    };
+
+    window.addEventListener("keydown", closeOnEscape);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [menuOpen]);
+
   return (
-    <header className="no-print sticky top-0 z-50 border-b border-white/10 bg-slate-950/82 shadow-2xl shadow-black/10 backdrop-blur-2xl">
-      <div className="mx-auto flex h-[4.5rem] max-w-7xl items-center justify-between gap-4 px-4 sm:px-5">
-        <Link
-          href="/"
-          className="group flex shrink-0 items-center gap-3 font-black tracking-tight text-white"
-          onClick={() => setMenuOpen(false)}
-        >
-          <span className="relative grid h-10 w-10 place-items-center overflow-hidden rounded-2xl bg-cyan-400 text-base text-slate-950 shadow-lg shadow-cyan-400/20 transition group-hover:rotate-3 group-hover:scale-105">
-            <span className="absolute inset-1 rounded-full border-2 border-slate-950/35" />
-            <span className="relative">8</span>
-          </span>
-          <span className="hidden text-lg sm:inline">
-            CueBracket <span className="text-cyan-300">Pro</span>
-          </span>
-        </Link>
+    <>
+      <header className="no-print sticky top-0 z-[120] border-b border-white/10 bg-[#020617]/95 backdrop-blur-xl">
+        <div className="cb-safe-top">
+          <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-3 sm:h-[4.5rem] sm:px-6 lg:px-8">
+            <Link
+              href="/"
+              className="flex min-w-0 items-center gap-2.5 rounded-xl pr-2 font-black text-white"
+              aria-label="CueBracket Pro home"
+            >
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-cyan-400 text-sm font-black text-slate-950 shadow-lg shadow-cyan-500/20">
+                8
+              </span>
+              <span className="truncate text-sm sm:text-base">
+                CueBracket Pro
+              </span>
+            </Link>
 
-        <nav className="hidden items-center gap-1 lg:flex" aria-label="Primary navigation">
-          {navigation.map((item) => {
-            const active = isActivePath(pathname, item.href);
-            return (
+            <nav className="hidden items-center gap-1 lg:flex">
+              {navigation.map((item) => {
+                const active = isActivePath(pathname, item.href);
+
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`rounded-xl px-3 py-2.5 text-sm font-bold transition ${
+                      active
+                        ? "bg-cyan-400/10 text-cyan-200 ring-1 ring-cyan-400/20"
+                        : "text-slate-400 hover:bg-white/[0.05] hover:text-white"
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
+
               <Link
-                key={item.href}
-                href={item.href}
-                aria-current={active ? "page" : undefined}
-                className={`relative rounded-xl px-3 py-2 text-sm font-bold transition ${
-                  active
-                    ? "bg-cyan-400/10 text-cyan-200"
-                    : "text-slate-400 hover:bg-white/5 hover:text-white"
-                }`}
+                href="/tournaments/new"
+                className="ml-2 rounded-xl bg-cyan-400 px-4 py-2.5 text-sm font-black text-slate-950 transition hover:bg-cyan-300"
               >
-                {item.label}
-                {active ? (
-                  <span className="absolute inset-x-3 -bottom-[1.14rem] h-0.5 rounded-full bg-cyan-300 shadow-[0_0_12px_rgba(34,211,238,0.8)]" />
-                ) : null}
+                + New event
               </Link>
-            );
-          })}
-        </nav>
 
-        <div className="hidden items-center gap-3 lg:flex">
-          <Link
-            href="/tournaments/new"
-            className="rounded-xl bg-cyan-400 px-4 py-2 text-sm font-black text-slate-950 shadow-lg shadow-cyan-400/10 transition hover:bg-cyan-300"
-          >
-            + New event
-          </Link>
-          <AuthNav />
+              <div className="ml-2">
+                <AuthNav />
+              </div>
+            </nav>
+
+            <div className="flex items-center gap-2 lg:hidden">
+              <div className="hidden min-[360px]:block">
+                <AuthNav compact />
+              </div>
+
+              <Link
+                href="/tournaments/new"
+                aria-label="Create new tournament"
+                className="grid h-11 w-11 place-items-center rounded-xl bg-cyan-400 text-xl font-black text-slate-950 shadow-lg shadow-cyan-500/15 active:scale-95"
+              >
+                +
+              </Link>
+
+              <button
+                type="button"
+                aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"}
+                aria-expanded={menuOpen}
+                aria-controls="mobile-navigation"
+                onClick={() => setMenuOpen((open) => !open)}
+                className="grid h-11 w-11 place-items-center rounded-xl border border-white/10 bg-white/[0.045] text-white transition active:scale-95"
+              >
+                {menuOpen ? (
+                  <svg viewBox="0 0 24 24" className="h-6 w-6" aria-hidden="true">
+                    <path
+                      d="M6 6l12 12M18 6L6 18"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 24 24" className="h-6 w-6" aria-hidden="true">
+                    <path
+                      d="M4 7h16M4 12h16M4 17h16"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
+      </header>
 
-        <div className="flex items-center gap-2 lg:hidden">
-          <AuthNav compact />
-          <Link
-            href="/tournaments/new"
-            aria-label="Create tournament"
-            className="grid h-9 w-9 place-items-center rounded-xl bg-cyan-400 text-lg font-black text-slate-950"
-          >
-            +
-          </Link>
+      <div
+        className={`fixed inset-0 z-[125] bg-black/70 backdrop-blur-sm transition-opacity duration-200 lg:hidden ${
+          menuOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
+        }`}
+        onClick={() => setMenuOpen(false)}
+        aria-hidden="true"
+      />
+
+      <aside
+        id="mobile-navigation"
+        aria-hidden={!menuOpen}
+        className={`fixed right-0 top-0 z-[130] flex h-dvh w-[min(88vw,22rem)] flex-col border-l border-white/10 bg-[#020817] shadow-2xl shadow-black/70 transition-transform duration-200 lg:hidden ${
+          menuOpen ? "translate-x-0" : "translate-x-full"
+        }`}
+      >
+        <div className="cb-safe-top flex items-center justify-between border-b border-white/10 px-5 py-4">
+          <div>
+            <p className="text-[0.68rem] font-black uppercase tracking-[0.24em] text-cyan-300">
+              Organizer menu
+            </p>
+            <p className="mt-1 text-lg font-black text-white">CueBracket Pro</p>
+          </div>
+
           <button
             type="button"
-            aria-label={menuOpen ? "Close navigation" : "Open navigation"}
-            aria-expanded={menuOpen}
-            onClick={() => setMenuOpen((open) => !open)}
-            className="grid h-9 w-9 place-items-center rounded-xl border border-white/10 bg-white/[0.04] text-lg text-white"
+            aria-label="Close navigation menu"
+            onClick={() => setMenuOpen(false)}
+            className="grid h-11 w-11 place-items-center rounded-xl border border-white/10 bg-white/[0.04] text-white"
           >
-            {menuOpen ? "×" : "≡"}
+            <svg viewBox="0 0 24 24" className="h-6 w-6" aria-hidden="true">
+              <path
+                d="M6 6l12 12M18 6L6 18"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
           </button>
         </div>
-      </div>
 
-      {menuOpen ? (
-        <nav
-          className="border-t border-white/10 bg-slate-950/96 px-4 py-4 lg:hidden"
-          aria-label="Mobile navigation"
-        >
-          <div className="mx-auto grid max-w-7xl grid-cols-2 gap-2 sm:grid-cols-3">
+        <div className="flex-1 overflow-y-auto px-4 py-5">
+          <Link
+            href="/tournaments/new"
+            className="mb-5 flex min-h-12 items-center justify-center rounded-2xl bg-cyan-400 px-4 py-3 font-black text-slate-950"
+          >
+            + Create new event
+          </Link>
+
+          <nav className="space-y-2">
             {navigation.map((item) => {
               const active = isActivePath(pathname, item.href);
+
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  onClick={() => setMenuOpen(false)}
-                  className={`rounded-2xl border px-4 py-3 text-sm font-bold transition ${
+                  className={`flex min-h-12 items-center justify-between rounded-2xl px-4 py-3.5 text-base font-bold transition ${
                     active
-                      ? "border-cyan-400/25 bg-cyan-400/10 text-cyan-200"
-                      : "border-white/10 bg-white/[0.035] text-slate-300"
+                      ? "bg-cyan-400/10 text-cyan-200 ring-1 ring-cyan-400/20"
+                      : "bg-white/[0.035] text-slate-200 hover:bg-white/[0.07]"
                   }`}
                 >
-                  {item.label}
+                  <span>{item.label}</span>
+                  <span aria-hidden="true" className="text-xl text-slate-500">
+                    ›
+                  </span>
                 </Link>
               );
             })}
-          </div>
-        </nav>
-      ) : null}
-    </header>
+          </nav>
+        </div>
+
+        <div className="cb-safe-bottom border-t border-white/10 p-4">
+          <AuthNav />
+        </div>
+      </aside>
+    </>
   );
 }
