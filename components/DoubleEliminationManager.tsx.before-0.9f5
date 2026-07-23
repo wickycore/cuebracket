@@ -15,7 +15,6 @@ import type {
 } from "@/lib/tournaments";
 import {
   formatDuration,
-  getTournament,
   getTournamentChampionDescription,
   updateTournament,
 } from "@/lib/tournaments";
@@ -489,61 +488,31 @@ export function DoubleEliminationManager({
     );
   }
 
-  // 0.9F.5 fresh-state double late entry
   function addLatePlayer(playerName: string, matchId: string) {
-    const latestTournament = getTournament(tournament.id) ?? tournament;
-    const latestBracket =
-      latestTournament.bracket?.type === "double"
-        ? latestTournament.bracket
-        : bracket;
-
-    if (!latestBracket) {
-      return "The bracket has not been generated.";
+    if (!bracket) return "The bracket has not been generated.";
+    if (tournament.players.length >= tournament.bracketSize) {
+      return `This event is full at ${tournament.bracketSize} players.`;
     }
-
-    if (latestTournament.players.length >= latestTournament.bracketSize) {
-      return `This event is full at ${latestTournament.bracketSize} players.`;
-    }
-
-    const normalizedName = playerName.trim();
-
-    if (!normalizedName) {
-      return "Enter the late player's name.";
-    }
-
     if (
-      latestTournament.players.some(
-        (player) => player.toLowerCase() === normalizedName.toLowerCase(),
+      tournament.players.some(
+        (player) => player.toLowerCase() === playerName.toLowerCase(),
       )
     ) {
       return "That player is already in the tournament.";
     }
 
-    const availableSlot = getDoubleEliminationLateEntrySlots(
-      latestBracket,
-    ).find((slot) => slot.matchId === matchId && slot.available);
-
-    if (!availableSlot) {
-      return "That BYE slot is no longer available. Refresh the tournament and choose another open slot.";
-    }
-
     const result = fillDoubleEliminationByeSlot(
-      latestBracket,
+      bracket,
       matchId,
-      normalizedName,
+      playerName,
     );
-
     if (!result.ok) return result.reason;
 
-    const updated = updateTournament(latestTournament.id, {
-      players: [...latestTournament.players, normalizedName],
+    const updated = updateTournament(tournament.id, {
+      players: [...tournament.players, playerName],
       bracket: result.bracket,
-      status:
-        latestTournament.status === "completed"
-          ? "live"
-          : latestTournament.status,
+      status: tournament.status === "completed" ? "live" : tournament.status,
     });
-
     if (!updated) return "The late player could not be saved.";
 
     setDrafts({});
