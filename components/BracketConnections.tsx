@@ -2,6 +2,7 @@
 
 import {
   useCallback,
+  useId,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -38,7 +39,7 @@ const strokeByTone: Record<ConnectorTone, string> = {
 };
 
 export function useBracketMatchRefs() {
-  const matchRefs = useRef(new Map<string, HTMLDivElement>());
+  const matchRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   const registerMatch = useCallback(
     (matchId: string, node: HTMLDivElement | null) => {
@@ -55,19 +56,21 @@ function buildConnections(rounds: BracketRound[]): ConnectorPair[] {
   const ids = new Set(
     rounds.flatMap((round) => round.matches.map((match) => match.id)),
   );
+
   const pairs: ConnectorPair[] = [];
   const seen = new Set<string>();
   const explicitTargets = new Set<string>();
 
   const add = (from: string, to: string) => {
     if (!ids.has(from) || !ids.has(to)) return;
+
     const key = `${from}->${to}`;
     if (seen.has(key)) return;
+
     seen.add(key);
     pairs.push({ from, to });
   };
 
-  // Prefer explicit engine metadata.
   for (const round of rounds) {
     for (const match of round.matches) {
       for (const source of [match.source1, match.source2]) {
@@ -83,7 +86,7 @@ function buildConnections(rounds: BracketRound[]): ConnectorPair[] {
     }
   }
 
-  // Repair old single-elimination data that predates source metadata.
+  // Older single-elimination tournaments may not contain source metadata.
   for (let roundIndex = 1; roundIndex < rounds.length; roundIndex += 1) {
     const previous = rounds[roundIndex - 1]?.matches ?? [];
     const current = rounds[roundIndex]?.matches ?? [];
@@ -92,8 +95,10 @@ function buildConnections(rounds: BracketRound[]): ConnectorPair[] {
 
     current.forEach((target, position) => {
       if (explicitTargets.has(target.id)) return;
+
       const first = previous[position * 2];
       const second = previous[position * 2 + 1];
+
       if (first) add(first.id, target.id);
       if (second) add(second.id, target.id);
     });
@@ -138,9 +143,18 @@ function makePath(source: ElementBox, target: ElementBox) {
   if (![startX, startY, endX, endY].every(Number.isFinite)) return null;
   if (endX <= startX) return null;
 
-  // Orthogonal bracket lines stay crisp and readable at 25% mobile zoom.
   const middleX = startX + (endX - startX) / 2;
+
   return `M ${startX} ${startY} H ${middleX} V ${endY} H ${endX}`;
+}
+
+function pathsAreEqual(current: ConnectorPath[], next: ConnectorPath[]) {
+  if (current.length !== next.length) return false;
+
+  return current.every(
+    (path, index) =>
+      path.id === next[index]?.id && path.d === next[index]?.d,
+  );
 }
 
 export function BracketConnections({
@@ -157,6 +171,8 @@ export function BracketConnections({
   const [paths, setPaths] = useState<ConnectorPath[]>([]);
   const [size, setSize] = useState({ width: 0, height: 0 });
   const connections = useMemo(() => buildConnections(rounds), [rounds]);
+  const rawId = useId();
+  const filterId = `bracket-glow-${tone}-${rawId.replace(/:/g, "")}`;
 
   useLayoutEffect(() => {
     const container = containerRef.current;
@@ -167,6 +183,7 @@ export function BracketConnections({
 
     const measure = () => {
       cancelAnimationFrame(animationFrame);
+
       animationFrame = requestAnimationFrame(() => {
         const width = Math.max(container.scrollWidth, container.clientWidth);
         const height = Math.max(container.scrollHeight, container.clientHeight);
@@ -174,17 +191,26 @@ export function BracketConnections({
         const nextPaths = connections.flatMap(({ from, to }) => {
           const source = matchRefs.current.get(from);
           const target = matchRefs.current.get(to);
+
           if (!source || !target) return [];
 
           const d = makePath(
             getUnscaledBox(source, container),
             getUnscaledBox(target, container),
           );
+
           return d ? [{ id: `${from}-${to}`, d }] : [];
         });
 
-        setSize({ width, height });
-        setPaths(nextPaths);
+        setSize((current) =>
+          current.width === width && current.height === height
+            ? current
+            : { width, height },
+        );
+
+        setPaths((current) =>
+          pathsAreEqual(current, nextPaths) ? current : nextPaths,
+        );
       });
     };
 
@@ -194,49 +220,47 @@ export function BracketConnections({
     resizeObserver.observe(container);
     matchRefs.current.forEach((node) => resizeObserver.observe(node));
 
-    const mutationObserver = new MutationObserver(measure);
-    mutationObserver.observe(container, {
-      childList: true,
-      subtree: true,
-    });
-
     window.addEventListener("resize", measure);
     window.addEventListener("orientationchange", measure);
+
     void document.fonts?.ready.then(measure);
 
-    timers.push(window.setTimeout(measure, 50));
-    timers.push(window.setTimeout(measure, 180));
-    timers.push(window.setTimeout(measure, 500));
-    timers.push(window.setTimeout(measure, 1000));
+    timers.push(window.setTimeout(measure, 60));
+    timers.push(window.setTimeout(measure, 240));
+    timers.push(window.setTimeout(measure, 800));
 
     return () => {
       cancelAnimationFrame(animationFrame);
       timers.forEach((timer) => window.clearTimeout(timer));
       resizeObserver.disconnect();
-      mutationObserver.disconnect();
       window.removeEventListener("resize", measure);
       window.removeEventListener("orientationchange", measure);
     };
-  }, [connections, containerRef, matchRefs, rounds]);
+  }, [connections, containerRef, matchRefs]);
 
   if (!paths.length || !size.width || !size.height) return null;
 
   const stroke = strokeByTone[tone];
-  const filterId = `bracket-glow-${tone}`;
 
   return (
     <svg
-      data-bracket-connectors-version="0.9e8"
+      data-bracket-connectors-version="0.9f4"
       aria-hidden="true"
       className="pointer-events-none absolute left-0 top-0 z-0 overflow-visible"
       width={size.width}
       height={size.height}
       viewBox={`0 0 ${size.width} ${size.height}`}
-      fill="none"
+      style={{ width: size.width, height: size.height }}
     >
       <defs>
-        <filter id={filterId} x="-40%" y="-40%" width="180%" height="180%">
-          <feGaussianBlur stdDeviation="2" result="blur" />
+        <filter
+          id={filterId}
+          x="-30%"
+          y="-30%"
+          width="160%"
+          height="160%"
+        >
+          <feGaussianBlur stdDeviation="4" result="blur" />
           <feMerge>
             <feMergeNode in="blur" />
             <feMergeNode in="SourceGraphic" />
@@ -248,22 +272,24 @@ export function BracketConnections({
         <g key={path.id}>
           <path
             d={path.d}
+            fill="none"
             stroke={stroke}
-            strokeOpacity="0.25"
-            strokeWidth="6"
+            strokeOpacity="0.18"
+            strokeWidth="9"
             strokeLinecap="round"
             strokeLinejoin="round"
+            filter={`url(#${filterId})`}
             vectorEffect="non-scaling-stroke"
           />
           <path
             d={path.d}
+            fill="none"
             stroke={stroke}
-            strokeOpacity="0.98"
-            strokeWidth="2.25"
+            strokeOpacity="0.92"
+            strokeWidth="2.5"
             strokeLinecap="round"
             strokeLinejoin="round"
             vectorEffect="non-scaling-stroke"
-            filter={`url(#${filterId})`}
           />
         </g>
       ))}
