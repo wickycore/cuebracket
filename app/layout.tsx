@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
+import { CloudAutoSyncProvider } from "@/components/CloudAutoSyncProvider";
+
 import "./globals.css";
 
 const geistSans = Geist({
@@ -42,7 +44,9 @@ export default function RootLayout({
       suppressHydrationWarning
       data-scroll-behavior="smooth"
     >
-      <body className="min-h-full">{children}</body>
+      <body className="min-h-full">
+        <CloudAutoSyncProvider>{children}</CloudAutoSyncProvider>
+      </body>
     </html>
   );
 }

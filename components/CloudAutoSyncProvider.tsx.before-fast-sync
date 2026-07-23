@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import type { ReactNode } from "react";
 import { useEffect } from "react";
@@ -38,7 +38,7 @@ import {
   type Tournament,
 } from "@/lib/tournaments";
 
-const SYNC_DEBOUNCE_MS = 120;
+const SYNC_DEBOUNCE_MS = 650;
 const RETRY_DELAY_MS = 5000;
 
 function timestamp(value: string | undefined) {
@@ -573,4 +573,3 @@ export function CloudAutoSyncProvider({ children }: { children: ReactNode }) {
 
   return children;
 }
-
