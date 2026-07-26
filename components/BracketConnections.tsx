@@ -86,7 +86,7 @@ function buildConnections(rounds: BracketRound[]): ConnectorPair[] {
     }
   }
 
-  // Older single-elimination tournaments may not contain source metadata.
+  // Older single-elimination tournaments may not have source metadata.
   for (let roundIndex = 1; roundIndex < rounds.length; roundIndex += 1) {
     const previous = rounds[roundIndex - 1]?.matches ?? [];
     const current = rounds[roundIndex]?.matches ?? [];
@@ -148,7 +148,7 @@ function makePath(source: ElementBox, target: ElementBox) {
   return `M ${startX} ${startY} H ${middleX} V ${endY} H ${endX}`;
 }
 
-function pathsAreEqual(current: ConnectorPath[], next: ConnectorPath[]) {
+function samePaths(current: ConnectorPath[], next: ConnectorPath[]) {
   if (current.length !== next.length) return false;
 
   return current.every(
@@ -209,7 +209,7 @@ export function BracketConnections({
         );
 
         setPaths((current) =>
-          pathsAreEqual(current, nextPaths) ? current : nextPaths,
+          samePaths(current, nextPaths) ? current : nextPaths,
         );
       });
     };
@@ -222,12 +222,11 @@ export function BracketConnections({
 
     window.addEventListener("resize", measure);
     window.addEventListener("orientationchange", measure);
-
     void document.fonts?.ready.then(measure);
 
     timers.push(window.setTimeout(measure, 60));
     timers.push(window.setTimeout(measure, 240));
-    timers.push(window.setTimeout(measure, 800));
+    timers.push(window.setTimeout(measure, 700));
 
     return () => {
       cancelAnimationFrame(animationFrame);
@@ -244,13 +243,17 @@ export function BracketConnections({
 
   return (
     <svg
-      data-bracket-connectors-version="0.9f4"
+      data-bracket-connectors-version="0.9f6"
       aria-hidden="true"
       className="pointer-events-none absolute left-0 top-0 z-0 overflow-visible"
       width={size.width}
       height={size.height}
       viewBox={`0 0 ${size.width} ${size.height}`}
-      style={{ width: size.width, height: size.height }}
+      style={{
+        width: size.width,
+        height: size.height,
+        pointerEvents: "none",
+      }}
     >
       <defs>
         <filter
