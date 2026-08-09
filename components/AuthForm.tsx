@@ -2,6 +2,7 @@
 
 import type { FormEvent } from "react";
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/client";
@@ -109,9 +110,21 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         />
       </label>
 
-      <label className="block text-sm font-bold text-slate-300">
-        Password
+      <div>
+        <div className="flex items-center justify-between gap-4 text-sm font-bold text-slate-300">
+          <label htmlFor="auth-password">Password</label>
+          {mode === "login" ? (
+            <Link
+              href="/auth/forgot-password"
+              className="text-xs font-black text-cyan-300 transition hover:text-cyan-200 sm:text-sm"
+            >
+              Forgot password?
+            </Link>
+          ) : null}
+        </div>
+
         <input
+          id="auth-password"
           type="password"
           minLength={6}
           value={password}
@@ -120,12 +133,13 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
           autoComplete={mode === "signup" ? "new-password" : "current-password"}
           className={inputClass}
         />
+
         {mode === "signup" ? (
           <span className="mt-2 block text-xs leading-5 text-slate-500">
             Use at least 6 characters.
           </span>
         ) : null}
-      </label>
+      </div>
 
       {message ? (
         <div
