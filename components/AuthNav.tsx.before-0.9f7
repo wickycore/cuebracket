@@ -1,4 +1,6 @@
 "use client";
+
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type {
   AuthChangeEvent,
@@ -62,14 +64,14 @@ export function AuthNav({ compact = false }: AuthNavProps) {
 
   if (!user) {
     return (
-      <a data-cb-hard-navigation="true"
+      <Link
         href="/auth/login"
         className={`inline-flex items-center justify-center border border-cyan-400/25 bg-cyan-400/[0.06] font-black text-cyan-200 transition hover:border-cyan-300/45 hover:bg-cyan-400/10 ${
           compact ? "h-9 rounded-xl px-3 text-xs" : "rounded-xl px-4 py-2 text-sm"
         }`}
       >
         Sign in
-      </a>
+      </Link>
     );
   }
 
@@ -78,20 +80,20 @@ export function AuthNav({ compact = false }: AuthNavProps) {
 
   if (compact) {
     return (
-      <a data-cb-hard-navigation="true"
+      <Link
         href="/account"
         title={label}
         aria-label="Open account"
         className="grid h-9 w-9 place-items-center rounded-xl border border-cyan-400/20 bg-cyan-400/10 text-sm font-black text-cyan-200 transition hover:border-cyan-300/40 hover:bg-cyan-400/15"
       >
         {initial}
-      </a>
+      </Link>
     );
   }
 
   return (
     <div className="flex items-center gap-2">
-      <a data-cb-hard-navigation="true"
+      <Link
         href="/account"
         className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold text-slate-300 transition hover:bg-white/5 hover:text-white"
       >
@@ -99,7 +101,7 @@ export function AuthNav({ compact = false }: AuthNavProps) {
           {initial}
         </span>
         <span className="hidden xl:inline">Account</span>
-      </a>
+      </Link>
       <button
         type="button"
         onClick={signOut}

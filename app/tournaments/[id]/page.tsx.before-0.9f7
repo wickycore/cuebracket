@@ -1,4 +1,6 @@
 "use client";
+
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -63,12 +65,12 @@ export default function TournamentDetailPage() {
           <p className="mt-3 text-slate-400">
             It may have been deleted from this browser.
           </p>
-          <a data-cb-hard-navigation="true"
+          <Link
             href="/dashboard"
             className="mt-7 inline-flex rounded-xl bg-cyan-400 px-5 py-3 font-black text-slate-950"
           >
             Return to dashboard
-          </a>
+          </Link>
         </div>
       </main>
     );
@@ -109,12 +111,12 @@ export default function TournamentDetailPage() {
 
           <div className="flex flex-wrap gap-2">
             {structureReady ? (
-              <a data-cb-hard-navigation="true"
+              <Link
                 href={`/cloud/live/${tournament.id}`}
                 className="rounded-xl bg-cyan-400 px-4 py-3 text-sm font-black text-slate-950 hover:bg-cyan-300"
               >
                 Open public view
-              </a>
+              </Link>
             ) : null}
 
             {tournament.status === "draft" && structureReady && !champion ? (
