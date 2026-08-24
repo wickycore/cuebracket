@@ -49,15 +49,20 @@ function Section({
   rounds,
   raceTo,
   tone = "cyan",
+  balancedGeometry = false,
 }: {
   title: string;
   subtitle?: string;
   rounds: BracketRound[];
   raceTo: number;
   tone?: Tone;
+  balancedGeometry?: boolean;
 }) {
   const colors = toneClass[tone];
   const maxMatches = Math.max(1, ...rounds.map((round) => round.matches.length));
+  const matchHeight = 173;
+  const matchPitch = 190;
+  const bracketBodyHeight = matchHeight + (maxMatches - 1) * matchPitch;
   const contentRef = useRef<HTMLDivElement>(null);
   const { matchRefs, registerMatch } = useBracketMatchRefs();
 
@@ -79,7 +84,7 @@ function Section({
             matchRefs={matchRefs}
             tone={connectorTone[tone]}
           />
-          {rounds.map((round) => {
+          {rounds.map((round, roundIndex) => {
             const ratio = Math.max(1, Math.floor(maxMatches / Math.max(1, round.matches.length)));
             const topPadding = ratio > 1 ? Math.min(96, (ratio - 1) * 28) : 0;
             const gap = ratio > 1 ? Math.min(120, ratio * 30) : 18;
@@ -87,10 +92,19 @@ function Section({
             return (
               <div key={`${title}-${round.round}`} className="w-64 shrink-0 snap-start">
                 <p className="mb-4 text-[11px] font-black uppercase tracking-[0.17em] text-slate-500">{round.name}</p>
-                <div style={{ paddingTop: topPadding, display: "grid", gap }}>
+                <div
+                  style={
+                    balancedGeometry
+                      ? { position: "relative", height: bracketBodyHeight }
+                      : { paddingTop: topPadding, display: "grid", gap }
+                  }
+                >
                   {round.matches.map((match) => {
                     const automaticAdvance = isAutomaticAdvance(match);
                     const advancingPlayer = match.player1 ?? match.player2 ?? match.winner;
+                    const roundSpan = 2 ** roundIndex;
+                    const centerSlot =
+                      match.position * roundSpan + (roundSpan - 1) / 2;
 
                     return (
                       <div
@@ -98,6 +112,17 @@ function Section({
                         ref={(node) => registerMatch(match.id, node)}
                         data-bracket-match-id={match.id}
                         className="relative z-10"
+                        style={
+                          balancedGeometry
+                            ? {
+                                position: "absolute",
+                                left: 0,
+                                right: 0,
+                                top: matchHeight / 2 + centerSlot * matchPitch,
+                                transform: "translateY(-50%)",
+                              }
+                            : undefined
+                        }
                       >
                         {automaticAdvance ? (
                           <article className="relative z-10 overflow-hidden rounded-xl border border-violet-400/25 bg-violet-400/[0.06] shadow-[0_14px_40px_rgba(0,0,0,.24)]">
@@ -242,6 +267,7 @@ export function ReadOnlyBracket({ tournament }: { tournament: Tournament }) {
         rounds={bracket.rounds}
         raceTo={tournament.raceTo}
         tone="cyan"
+        balancedGeometry
       />
     </div>
   );
