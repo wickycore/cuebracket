@@ -193,12 +193,15 @@ function makePath(source: ElementBox, target: ElementBox) {
   const startX = source.left + source.width;
   const startY = source.top + source.height / 2;
   const endX = target.left;
-  const endY = target.top + target.height / 2;
+  const targetCenterY = target.top + target.height / 2;
 
-  if (![startX, startY, endX, endY].every(Number.isFinite)) return null;
+  if (![startX, startY, endX, targetCenterY].every(Number.isFinite)) return null;
   if (endX <= startX) return null;
 
-  const middleX = startX + (endX - startX) / 2;
+  const laneDirection = startY <= targetCenterY ? -1 : 1;
+  const laneSpacing = Math.min(10, Math.max(5, (endX - startX) * 0.14));
+  const middleX = startX + (endX - startX) / 2 + laneDirection * laneSpacing;
+  const endY = targetCenterY + laneDirection * 5;
 
   return `M ${startX} ${startY} H ${middleX} V ${endY} H ${endX}`;
 }
@@ -315,7 +318,7 @@ export function BracketConnections({
 
   return (
     <svg
-      data-bracket-connectors-version="0.9f8"
+      data-bracket-connectors-version="0.9f9"
       aria-hidden="true"
       className="pointer-events-none absolute left-0 top-0 z-[1] overflow-visible"
       width={size.width}
@@ -352,8 +355,8 @@ export function BracketConnections({
             d={path.d}
             fill="none"
             stroke={stroke}
-            strokeOpacity="0.18"
-            strokeWidth="9"
+            strokeOpacity="0.14"
+            strokeWidth="6"
             strokeLinecap="round"
             strokeLinejoin="round"
             filter={`url(#${filterId})`}
