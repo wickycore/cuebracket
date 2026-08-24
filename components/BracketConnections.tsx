@@ -143,6 +143,29 @@ function getUnscaledBox(
   element: HTMLElement,
   container: HTMLDivElement,
 ): ElementBox {
+  let left = 0;
+  let top = 0;
+  let node: HTMLElement | null = element;
+
+  // Layout offsets are stable inside BracketViewport's transformed zoom layer.
+  // Mobile Chromium can return inconsistent transformed client rects for SVG
+  // overlays, so prefer coordinates that are independent of visual scaling.
+  while (node && node !== container) {
+    left += node.offsetLeft;
+    top += node.offsetTop;
+    node = node.offsetParent as HTMLElement | null;
+  }
+
+  if (node === container) {
+    return {
+      left,
+      top,
+      width: element.offsetWidth,
+      height: element.offsetHeight,
+    };
+  }
+
+  // Fallback for an unusual offset-parent chain.
   const containerBox = container.getBoundingClientRect();
   const elementBox = element.getBoundingClientRect();
 
@@ -301,6 +324,9 @@ export function BracketConnections({
       style={{
         width: size.width,
         height: size.height,
+        maxWidth: "none",
+        display: "block",
+        overflow: "visible",
         pointerEvents: "none",
       }}
     >
