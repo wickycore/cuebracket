@@ -52,14 +52,14 @@ export function useBracketMatchRefs() {
   return { matchRefs, registerMatch };
 }
 
-function buildConnections(rounds: BracketRound[]): ConnectorPair[] {
+export function buildConnections(rounds: BracketRound[]): ConnectorPair[] {
   const ids = new Set(
     rounds.flatMap((round) => round.matches.map((match) => match.id)),
   );
 
   const pairs: ConnectorPair[] = [];
   const seen = new Set<string>();
-  const explicitTargets = new Set<string>();
+  const incomingByTarget = new Map<string, Set<string>>();
 
   const add = (from: string, to: string) => {
     if (!ids.has(from) || !ids.has(to)) return;
@@ -69,6 +69,9 @@ function buildConnections(rounds: BracketRound[]): ConnectorPair[] {
 
     seen.add(key);
     pairs.push({ from, to });
+    const incoming = incomingByTarget.get(to) ?? new Set<string>();
+    incoming.add(from);
+    incomingByTarget.set(to, incoming);
   };
 
   for (const round of rounds) {
@@ -79,22 +82,51 @@ function buildConnections(rounds: BracketRound[]): ConnectorPair[] {
           (source.kind === "winner" || source.kind === "loser") &&
           ids.has(source.matchId)
         ) {
-          explicitTargets.add(match.id);
           add(source.matchId, match.id);
         }
       }
     }
   }
 
-  // Older single-elimination tournaments may not have source metadata.
+  // Public cloud rows can contain older bracket snapshots without complete
+  // source metadata. Reconstruct missing feeders from the players that were
+  // propagated into the next round. This also keeps completed brackets and
+  // brackets containing BYEs connected permanently.
   for (let roundIndex = 1; roundIndex < rounds.length; roundIndex += 1) {
     const previous = rounds[roundIndex - 1]?.matches ?? [];
     const current = rounds[roundIndex]?.matches ?? [];
 
-    if (!current.length || previous.length !== current.length * 2) continue;
+    if (!current.length || !previous.length) continue;
 
     current.forEach((target, position) => {
-      if (explicitTargets.has(target.id)) return;
+      if ((incomingByTarget.get(target.id)?.size ?? 0) >= 2) return;
+
+      const targetPlayers = new Set(
+        [target.player1, target.player2].filter(
+          (player): player is string => Boolean(player),
+        ),
+      );
+
+      if (targetPlayers.size) {
+        for (const source of previous) {
+          const advancingPlayer =
+            source.winner ??
+            (source.completed && Boolean(source.player1) !== Boolean(source.player2)
+              ? source.player1 ?? source.player2
+              : null);
+
+          if (advancingPlayer && targetPlayers.has(advancingPlayer)) {
+            add(source.id, target.id);
+            if ((incomingByTarget.get(target.id)?.size ?? 0) >= 2) break;
+          }
+        }
+      }
+
+      if ((incomingByTarget.get(target.id)?.size ?? 0) >= 2) return;
+
+      // Final fallback for legacy snapshots that have neither sources nor
+      // populated participants yet. Standard elimination rounds are positional.
+      if (previous.length !== current.length * 2) return;
 
       const first = previous[position * 2];
       const second = previous[position * 2 + 1];
@@ -189,8 +221,16 @@ export function BracketConnections({
         const height = Math.max(container.scrollHeight, container.clientHeight);
 
         const nextPaths = connections.flatMap(({ from, to }) => {
-          const source = matchRefs.current.get(from);
-          const target = matchRefs.current.get(to);
+          const source =
+            matchRefs.current.get(from) ??
+            container.querySelector<HTMLElement>(
+              `[data-bracket-match-id="${CSS.escape(from)}"]`,
+            );
+          const target =
+            matchRefs.current.get(to) ??
+            container.querySelector<HTMLElement>(
+              `[data-bracket-match-id="${CSS.escape(to)}"]`,
+            );
 
           if (!source || !target) return [];
 
@@ -220,6 +260,14 @@ export function BracketConnections({
     resizeObserver.observe(container);
     matchRefs.current.forEach((node) => resizeObserver.observe(node));
 
+    const mutationObserver = new MutationObserver(measure);
+    mutationObserver.observe(container, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["class", "style"],
+    });
+
     window.addEventListener("resize", measure);
     window.addEventListener("orientationchange", measure);
     void document.fonts?.ready.then(measure);
@@ -232,6 +280,7 @@ export function BracketConnections({
       cancelAnimationFrame(animationFrame);
       timers.forEach((timer) => window.clearTimeout(timer));
       resizeObserver.disconnect();
+      mutationObserver.disconnect();
       window.removeEventListener("resize", measure);
       window.removeEventListener("orientationchange", measure);
     };
@@ -243,9 +292,9 @@ export function BracketConnections({
 
   return (
     <svg
-      data-bracket-connectors-version="0.9f6"
+      data-bracket-connectors-version="0.9f8"
       aria-hidden="true"
-      className="pointer-events-none absolute left-0 top-0 z-0 overflow-visible"
+      className="pointer-events-none absolute left-0 top-0 z-[1] overflow-visible"
       width={size.width}
       height={size.height}
       viewBox={`0 0 ${size.width} ${size.height}`}
