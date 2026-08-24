@@ -77,6 +77,7 @@ function Section({
   raceTo,
   tone = "cyan",
   balancedGeometry = false,
+  playerPlaceholders,
 }: {
   title: string;
   subtitle?: string;
@@ -84,6 +85,7 @@ function Section({
   raceTo: number;
   tone?: Tone;
   balancedGeometry?: boolean;
+  playerPlaceholders?: [string, string];
 }) {
   const colors = toneClass[tone];
   const maxMatches = Math.max(1, ...rounds.map((round) => round.matches.length));
@@ -155,19 +157,19 @@ function Section({
                       >
                         {automaticAdvance ? (
                           <article data-bracket-card className="relative z-10 overflow-hidden rounded-xl border border-violet-400/25 bg-violet-400/[0.06] shadow-[0_14px_40px_rgba(0,0,0,.24)]">
-                            <div className="flex items-center justify-between border-b border-violet-400/15 px-3 py-2">
+                            <div className="flex items-center justify-between border-b border-violet-400/15 px-3 py-1.5">
                               <span className="text-[10px] font-black uppercase tracking-[0.16em] text-violet-300">Automatic BYE</span>
                               <span className="rounded-full bg-violet-400/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] text-violet-200">Advanced</span>
                             </div>
-                            <div className="flex min-h-14 items-center gap-3 px-3 py-3">
-                              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-violet-400/15 text-sm font-black text-violet-200">✓</span>
-                              <div className="min-w-0 flex-1">
-                                <p className="truncate text-sm font-black text-white">{advancingPlayer}</p>
-                                <p className="mt-0.5 text-[11px] font-bold text-slate-500">No opponent</p>
-                              </div>
+                            <div className="flex min-h-10 items-center gap-3 border-b border-violet-400/15 px-3 py-1.5">
+                              <span className="min-w-0 flex-1 truncate text-sm font-black text-violet-100">{advancingPlayer}</span>
+                              <span className="text-sm font-black text-violet-300">✓</span>
                             </div>
-                            <div className="border-t border-violet-400/15 px-3 py-2 text-[11px] font-bold text-violet-200/75">
-                              {advancingPlayer} advances automatically. This does not count as a played match.
+                            <div className="flex min-h-10 items-center border-b border-violet-400/15 px-3 py-1.5 text-sm font-extrabold text-slate-600">
+                              No opponent
+                            </div>
+                            <div className="flex min-h-9 items-center px-3 py-1.5 text-[11px] font-bold text-violet-200/75">
+                              Automatic advance
                             </div>
                           </article>
                         ) : (
@@ -181,9 +183,10 @@ function Section({
                             {[match.player1, match.player2].map((player, index) => {
                               const winner = Boolean(match.completed && player && match.winner === player);
                               const score = index === 0 ? match.score1 : match.score2;
+                              const placeholder = playerPlaceholders?.[index] ?? "TBD";
                               return (
                                 <div key={index} className={`flex min-h-10 items-center gap-3 border-b border-white/10 px-3 py-1.5 last:border-b-0 ${winner ? "bg-emerald-400/10" : ""}`}>
-                                  <span className={`min-w-0 flex-1 truncate text-sm font-extrabold ${winner ? "text-emerald-300" : player ? "text-white" : "text-slate-600"}`}>{player ?? "TBD"}</span>
+                                  <span className={`min-w-0 flex-1 truncate text-sm font-extrabold ${winner ? "text-emerald-300" : player ? "text-white" : playerPlaceholders ? "text-violet-300/80" : "text-slate-600"}`}>{player ?? placeholder}</span>
                                   <span className="text-sm font-black tabular-nums text-cyan-300">{score ?? "—"}</span>
                                 </div>
                               );
@@ -286,6 +289,10 @@ export function ReadOnlyBracket({ tournament }: { tournament: Tournament }) {
           raceTo={tournament.raceTo}
           tone="violet"
           balancedGeometry
+          playerPlaceholders={[
+            "Winners bracket winner",
+            "Losers bracket winner",
+          ]}
         />
       </div>
     );
