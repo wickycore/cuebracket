@@ -66,6 +66,10 @@ export default function NewTournamentPage() {
     setFormat(nextFormat);
     if ((nextFormat === "single" || nextFormat === "double") && !eliminationCapacities.includes(bracketSize)) {
       setBracketSize(8);
+    } else if (nextFormat === "round_robin" && bracketSize < 2) {
+      setBracketSize(2);
+    } else if (nextFormat === "swiss" && bracketSize < 4) {
+      setBracketSize(4);
     }
   }
 
@@ -79,6 +83,14 @@ export default function NewTournamentPage() {
     }
     if (!Number.isInteger(raceTo) || raceTo < 1 || raceTo > 25) {
       setError("Race target must be between 1 and 25.");
+      return;
+    }
+    if (type === "single_stage" && format === "round_robin" && (!Number.isInteger(bracketSize) || bracketSize < 2 || bracketSize > 128)) {
+      setError("Round Robin player capacity must be between 2 and 128.");
+      return;
+    }
+    if (type === "single_stage" && format === "swiss" && (!Number.isInteger(bracketSize) || bracketSize < 4 || bracketSize > 128)) {
+      setError("Swiss player capacity must be between 4 and 128.");
       return;
     }
     if (type === "two_stage") {
@@ -270,14 +282,36 @@ export default function NewTournamentPage() {
               <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-cyan-400 text-lg font-black text-slate-950">{type === "single_stage" ? 5 : 4}</span>
               <div>
                 <h2 className="text-2xl font-black">Player capacity</h2>
-                <p className="mt-1 text-sm text-slate-400">You can run with fewer players; unused knockout slots become balanced BYEs.</p>
+                <p className="mt-1 text-sm text-slate-400">
+                  {type === "single_stage" && format === "round_robin"
+                    ? "Choose any number from 2 to 128 players. Every player meets every opponent."
+                    : type === "single_stage" && format === "swiss"
+                      ? "Choose any number from 4 to 128 players. Odd fields receive one balanced BYE each round."
+                      : "You can run with fewer players; unused knockout slots become balanced BYEs."}
+                </p>
               </div>
             </div>
-            <div className="mt-6 grid grid-cols-3 gap-2 sm:grid-cols-6 lg:grid-cols-11">
-              {capacities.map((size) => (
-                <button key={size} type="button" onClick={() => setBracketSize(size)} className={`rounded-xl px-3 py-3 text-sm font-black transition ring-1 ${bracketSize === size ? "bg-cyan-400 text-slate-950 ring-cyan-300" : "bg-slate-950/60 text-slate-400 ring-white/10 hover:text-white"}`}>{size}</button>
-              ))}
-            </div>
+            {type === "single_stage" && (format === "round_robin" || format === "swiss") ? (
+              <label className="mt-6 block max-w-xs">
+                <span className="mb-2 block text-sm font-bold text-slate-300">Maximum players</span>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={format === "round_robin" ? 2 : 4}
+                  max={128}
+                  step={1}
+                  value={bracketSize}
+                  onChange={(event) => setBracketSize(Number(event.target.value))}
+                  className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3.5 text-lg font-black outline-none transition focus:border-cyan-400/60 focus:ring-2 focus:ring-cyan-400/15"
+                />
+              </label>
+            ) : (
+              <div className="mt-6 grid grid-cols-3 gap-2 sm:grid-cols-6 lg:grid-cols-11">
+                {capacities.map((size) => (
+                  <button key={size} type="button" onClick={() => setBracketSize(size)} className={`rounded-xl px-3 py-3 text-sm font-black transition ring-1 ${bracketSize === size ? "bg-cyan-400 text-slate-950 ring-cyan-300" : "bg-slate-950/60 text-slate-400 ring-white/10 hover:text-white"}`}>{size}</button>
+                ))}
+              </div>
+            )}
           </section>
 
           {error ? <p className="rounded-2xl bg-rose-400/10 px-4 py-3 text-sm font-bold text-rose-300 ring-1 ring-rose-400/20">{error}</p> : null}
