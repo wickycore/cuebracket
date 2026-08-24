@@ -14,11 +14,15 @@ import {
 interface Props {
   tournament: Tournament;
   onTournamentChange: (tournament: Tournament) => void;
+  selectedMatchId?: string;
+  onSelectedMatchChange?: (matchId: string) => void;
 }
 
 export function LiveMatchCenter({
   tournament,
   onTournamentChange,
+  selectedMatchId,
+  onSelectedMatchChange,
 }: Props) {
   const playableMatches = useMemo(
     () =>
@@ -27,16 +31,24 @@ export function LiveMatchCenter({
       ),
     [tournament],
   );
-  const [selectedId, setSelectedId] = useState(
+  const [internalSelectedId, setInternalSelectedId] = useState(
     playableMatches[0]?.id ?? "",
   );
+  const selectedId = selectedMatchId ?? internalSelectedId;
   const [, tick] = useState(0);
+
+  function selectMatch(matchId: string) {
+    setInternalSelectedId(matchId);
+    onSelectedMatchChange?.(matchId);
+  }
 
   useEffect(() => {
     if (!playableMatches.some((match) => match.id === selectedId)) {
-      setSelectedId(playableMatches[0]?.id ?? "");
+      const nextId = playableMatches[0]?.id ?? "";
+      setInternalSelectedId(nextId);
+      onSelectedMatchChange?.(nextId);
     }
-  }, [playableMatches, selectedId]);
+  }, [onSelectedMatchChange, playableMatches, selectedId]);
 
   useEffect(() => {
     const timer = window.setInterval(() => tick((value) => value + 1), 1000);
@@ -175,7 +187,7 @@ export function LiveMatchCenter({
     : "00:00";
 
   return (
-    <section className="rounded-3xl border border-white/10 bg-slate-900/70 p-5 sm:p-6">
+    <section id="live-match-center" className="scroll-mt-24 rounded-3xl border border-cyan-400/20 bg-slate-900/70 p-5 shadow-xl shadow-cyan-950/10 sm:p-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-sm font-black uppercase tracking-[0.24em] text-cyan-300">
@@ -187,7 +199,7 @@ export function LiveMatchCenter({
         </div>
         <select
           value={selectedId}
-          onChange={(event: ChangeEvent<HTMLSelectElement>) => setSelectedId(event.target.value)}
+          onChange={(event: ChangeEvent<HTMLSelectElement>) => selectMatch(event.target.value)}
           className="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-sm font-bold text-white lg:w-auto"
         >
           {playableMatches.map((item) => (

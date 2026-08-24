@@ -66,37 +66,25 @@ export function TournamentStats({ tournament }: { tournament: Tournament }) {
   const minutes = stats.averageDuration ? Math.max(1, Math.round(stats.averageDuration / 60000)) : 0;
   const isFreeForAll = tournament.competition?.type === "free_for_all";
 
-  const cards: Array<[string, string | number]> = [
-    ["Players", stats.totalPlayers],
-    [isFreeForAll ? "Total heats" : "Played matches", stats.totalMatches],
-    ["Completed", stats.completedMatches],
-    ["Remaining", stats.remainingMatches],
-  ];
-  if (!isFreeForAll && stats.byes > 0) cards.push(["BYEs", stats.byes]);
-  cards.push(["Current stage", stats.currentRound]);
-  cards.push(["Avg. timed match", minutes ? `${minutes} min` : "—"]);
-
   return (
-    <section className="mt-8 rounded-[2rem] border border-white/10 bg-white/[0.04] p-6 sm:p-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <section className="mt-6 rounded-2xl border border-white/10 bg-white/[0.04] p-5 sm:p-6">
+      <div className="flex items-center justify-between gap-4">
         <div>
-          <p className="text-sm font-black uppercase tracking-[0.2em] text-cyan-400">Tournament dashboard</p>
-          <h2 className="mt-2 text-2xl font-black">Live progress</h2>
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-400">Live progress</p>
+          <h2 className="mt-1 text-xl font-black">{stats.completedMatches} of {stats.totalMatches} {isFreeForAll ? "heats" : "matches"} completed</h2>
         </div>
-        <p className="text-3xl font-black text-cyan-300">{stats.progress}%</p>
+        <p className="text-2xl font-black text-cyan-300">{stats.progress}%</p>
       </div>
-      <div className="mt-5 h-3 overflow-hidden rounded-full bg-slate-950/80 ring-1 ring-white/10">
+      <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-950/80 ring-1 ring-white/10">
         <div className="h-full rounded-full bg-gradient-to-r from-cyan-400 via-blue-400 to-violet-400 transition-all duration-500" style={{ width: `${stats.progress}%` }} />
       </div>
-      <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {cards.map(([label, value]) => (
-          <div key={label} className="rounded-2xl border border-white/10 bg-slate-950/45 p-4">
-            <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">{label}</p>
-            <p className="mt-2 text-xl font-black text-white">{value}</p>
-          </div>
-        ))}
+      <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-400">
+        <span><strong className="text-white">{stats.activeMatches}</strong> live</span>
+        <span><strong className="text-white">{stats.remainingMatches}</strong> remaining</span>
+        <span><strong className="text-white">{stats.currentRound}</strong> stage</span>
+        {!isFreeForAll && stats.byes > 0 ? <span><strong className="text-white">{stats.byes}</strong> BYEs</span> : null}
+        {minutes ? <span><strong className="text-white">{minutes} min</strong> average</span> : null}
       </div>
-      {!minutes ? <p className="mt-4 text-xs text-slate-500">Average duration appears only for matches that were explicitly started before the result was saved.</p> : null}
     </section>
   );
 }

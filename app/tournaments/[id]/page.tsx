@@ -26,6 +26,7 @@ export default function TournamentDetailPage() {
   const router = useRouter();
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [missing, setMissing] = useState(false);
+  const [selectedMatchId, setSelectedMatchId] = useState("");
 
   useEffect(() => {
     const load = () => {
@@ -147,16 +148,16 @@ export default function TournamentDetailPage() {
               </button>
             ) : null}
 
-            <button
-              onClick={handleDelete}
-              className="rounded-xl border border-rose-400/20 px-4 py-3 text-sm font-bold text-rose-300"
-            >
-              Delete
-            </button>
+            <details className="relative">
+              <summary className="grid h-12 w-12 cursor-pointer list-none place-items-center rounded-xl border border-white/10 text-xl font-black text-slate-300 hover:bg-white/5">•••</summary>
+              <div className="absolute right-0 z-30 mt-2 min-w-48 rounded-2xl border border-white/10 bg-slate-900 p-2 shadow-2xl">
+                <button onClick={handleDelete} className="w-full rounded-xl px-3 py-2.5 text-left text-sm font-bold text-rose-300 hover:bg-rose-400/10">Delete tournament</button>
+              </div>
+            </details>
           </div>
         </div>
 
-        <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-8 grid grid-cols-2 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] sm:grid-cols-4">
           {[
             [
               "Format",
@@ -173,10 +174,10 @@ export default function TournamentDetailPage() {
           ].map(([label, value]) => (
             <div
               key={label}
-              className="rounded-3xl border border-white/10 bg-white/[0.04] p-5"
+              className="border-b border-r border-white/10 p-4 last:border-r-0 sm:border-b-0"
             >
-              <p className="text-sm font-bold text-slate-500">{label}</p>
-              <p className="mt-2 text-2xl font-black">{value}</p>
+              <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">{label}</p>
+              <p className="mt-1 text-lg font-black">{value}</p>
             </div>
           ))}
         </div>
@@ -188,11 +189,26 @@ export default function TournamentDetailPage() {
           />
         ) : null}
 
+        {elimination && tournament.bracket ? (
+          <div className="mt-6">
+            <LiveMatchCenter
+              tournament={tournament}
+              onTournamentChange={setTournament}
+              selectedMatchId={selectedMatchId}
+              onSelectedMatchChange={setSelectedMatchId}
+            />
+          </div>
+        ) : null}
+
         {elimination ? (
-          <BracketManager
-            tournament={tournament}
-            onTournamentChange={setTournament}
-          />
+          <div className="mt-6">
+            <BracketManager
+              tournament={tournament}
+              onTournamentChange={setTournament}
+              selectedMatchId={selectedMatchId}
+              onSelectMatch={setSelectedMatchId}
+            />
+          </div>
         ) : (
           <CompetitionManager
             tournament={tournament}
@@ -200,21 +216,16 @@ export default function TournamentDetailPage() {
           />
         )}
 
-        {elimination && tournament.bracket ? (
-          <div className="mt-8">
-            <LiveMatchCenter
-              tournament={tournament}
-              onTournamentChange={setTournament}
-            />
-          </div>
-        ) : null}
-
         {structureReady ? <TournamentStats tournament={tournament} /> : null}
         {structureReady ? (
-          <ShareTournament
-            tournamentId={tournament.id}
-            tournamentName={tournament.name}
-          />
+          <details className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5">
+            <summary className="cursor-pointer list-none font-black text-slate-200">
+              <span className="flex items-center justify-between gap-3"><span>Share tournament</span><span className="text-sm font-bold text-slate-500">Link · Social · QR</span></span>
+            </summary>
+            <div className="mt-4 border-t border-white/10 pt-1">
+              <ShareTournament tournamentId={tournament.id} tournamentName={tournament.name} />
+            </div>
+          </details>
         ) : null}
       </div>
     </main>

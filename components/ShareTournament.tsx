@@ -41,7 +41,7 @@ export function ShareTournament({
   }
 
   return (
-    <section className="mt-8 rounded-[2rem] border border-white/10 bg-white/[0.04] p-5 sm:p-8">
+    <section className="mt-4 rounded-2xl bg-slate-950/35 p-4 sm:p-5">
       <div className="grid gap-7 lg:grid-cols-[1fr_auto] lg:items-center">
         <div className="min-w-0">
           <p className="text-sm font-black uppercase tracking-[0.2em] text-cyan-400">
