@@ -1,13 +1,13 @@
 "use client";
 
-import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
+import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { ChampionCelebration } from "@/components/ChampionCelebration";
 import { FreeForAllStandingsTable, StandingsTable } from "@/components/StandingsTable";
 import { buildTournamentCompetition } from "@/lib/competition";
 import { isValidRaceResult } from "@/lib/bracket/singleElimination";
 import { clearFreeForAllHeat, updateFreeForAllHeat } from "@/lib/competition/freeForAll";
 import { setLeaderboardAdjustment, updateLeaderboardMatch } from "@/lib/competition/leaderboard";
-import { updateRoundRobinMatch } from "@/lib/competition/roundRobin";
+import { generateRoundRobinPlayoffRematch, updateRoundRobinMatch } from "@/lib/competition/roundRobin";
 import { canGenerateNextSwissRound, generateNextSwissRound, updateSwissMatch } from "@/lib/competition/swiss";
 import {
   areTwoStageGroupsComplete,
@@ -19,6 +19,7 @@ import {
   type BracketMatch,
   type BracketRound,
   type FreeForAllCompetition,
+  formatDuration,
   getBracketRounds,
   getFormatLabel,
   getTournamentChampionDescription,
@@ -35,8 +36,19 @@ interface Props {
 
 type DraftScore = { score1: string; score2: string };
 
-const TABLE_RULES = "Ranking: points → head-to-head mini-table → head-to-head frame difference → overall frame difference → frames won → wins.";
+const TABLE_RULES = "Ranking: points → recursive head-to-head mini-table → head-to-head frame difference → overall frame difference → frames won → wins. An unresolved first-place tie requires a championship playoff.";
 const SWISS_RULES = "Ranking: match points → Buchholz (opponents’ earned points) → frame difference → frames won. A BYE awards the configured win points but is tracked separately; it does not increase played matches (P) or on-table wins (W).";
+
+function MatchTimer({ startedAt, endedAt }: { startedAt?: string | null; endedAt?: string | null }) {
+  const [, tick] = useState(0);
+  useEffect(() => {
+    if (!startedAt || endedAt) return;
+    const timer = window.setInterval(() => tick((value) => value + 1), 1000);
+    return () => window.clearInterval(timer);
+  }, [startedAt, endedAt]);
+  if (!startedAt) return null;
+  return <span className="text-[11px] font-bold tabular-nums text-slate-500">{formatDuration(new Date(endedAt ?? Date.now()).getTime() - new Date(startedAt).getTime())}</span>;
+}
 
 function formatPoints(value: number) {
   return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
@@ -61,6 +73,7 @@ function PairRounds({
   setDrafts,
   onSave,
   onUndo,
+  onStart,
   eyebrow,
   byePoints,
 }: {
@@ -70,6 +83,7 @@ function PairRounds({
   setDrafts: Dispatch<SetStateAction<Record<string, DraftScore>>>;
   onSave: (match: BracketMatch, score1: number, score2: number) => void;
   onUndo: (match: BracketMatch) => void;
+  onStart: (match: BracketMatch) => void;
   eyebrow?: string;
   byePoints?: number;
 }) {
@@ -103,8 +117,8 @@ function PairRounds({
                       <span className="text-[0.64rem] font-black uppercase tracking-wider text-slate-500">
                         {match.tableNumber ? `Table ${match.tableNumber}` : `Match ${matchIndex + 1}`}
                       </span>
-                      <span className={`rounded-full px-2 py-0.5 text-[0.6rem] font-black uppercase ${match.completed ? "bg-emerald-400/10 text-emerald-300" : "bg-cyan-400/10 text-cyan-300"}`}>
-                        {match.completed ? "Finished" : `Race to ${raceTo}`}
+                      <span className={`rounded-full px-2 py-0.5 text-[0.6rem] font-black uppercase ${match.completed ? "bg-emerald-400/10 text-emerald-300" : match.status === "live" ? "bg-rose-400/15 text-rose-300" : "bg-cyan-400/10 text-cyan-300"}`}>
+                        {match.completed ? "Finished" : match.status === "live" ? "● Live" : `Race to ${raceTo}`}
                       </span>
                     </div>
                     {[match.player1, match.player2].map((player, index) => {
@@ -126,13 +140,19 @@ function PairRounds({
                         </div>
                       );
                     })}
-                    <div className="flex justify-end gap-2 px-4 py-3">
+                    <div className="flex items-center justify-between gap-2 px-4 py-3">
+                      <MatchTimer startedAt={match.startedAt} endedAt={match.endedAt} />
+                      <div className="flex justify-end gap-2">
+                      {!match.completed && match.status !== "live" ? (
+                        <button type="button" onClick={() => onStart(match)} className="rounded-lg px-3 py-1.5 text-xs font-bold text-cyan-300 hover:bg-cyan-400/10">Start</button>
+                      ) : null}
                       {match.completed ? (
                         <button type="button" onClick={() => onUndo(match)} className="rounded-lg px-3 py-1.5 text-xs font-bold text-slate-400 hover:bg-white/5 hover:text-white">Undo</button>
                       ) : null}
                       <button type="button" onClick={() => onSave(match, Number(draft.score1), Number(draft.score2))} className="rounded-lg bg-cyan-400 px-3 py-1.5 text-xs font-black text-slate-950 hover:bg-cyan-300">
                         Save result
                       </button>
+                      </div>
                     </div>
                   </article>
                 );
@@ -144,14 +164,14 @@ function PairRounds({
                   <article key={match.id} className="rounded-2xl border border-violet-400/20 bg-violet-400/[0.06] p-4">
                     <div className="flex items-center justify-between gap-3">
                       <div>
-                        <p className="text-[0.64rem] font-black uppercase tracking-wider text-violet-300">Automatic BYE</p>
+                        <p className="text-[0.64rem] font-black uppercase tracking-wider text-violet-300">{byePoints === undefined ? "Rest round" : "Automatic BYE"}</p>
                         <p className="mt-1 font-black text-white">{player}</p>
                       </div>
-                      <span className="rounded-full bg-violet-400/10 px-2.5 py-1 text-[0.62rem] font-black uppercase text-violet-200">No opponent</span>
+                      <span className="rounded-full bg-violet-400/10 px-2.5 py-1 text-[0.62rem] font-black uppercase text-violet-200">No fixture this round</span>
                     </div>
                     <p className="mt-3 text-xs leading-5 text-slate-400">
                       {byePoints === undefined
-                        ? `${player} advances automatically; no match is added to played-match statistics.`
+                        ? "No match or points recorded."
                         : `${player} receives one win and ${formatPoints(byePoints)} point${byePoints === 1 ? "" : "s"}; the BYE is tracked separately from played matches.`}
                     </p>
                   </article>
@@ -339,6 +359,28 @@ export function CompetitionManager({ tournament, onTournamentChange }: Props) {
     }
   }
 
+  function startPairMatch(match: BracketMatch, groupId?: string) {
+    if (!competition) return;
+    const updater = (target: BracketMatch) => {
+      target.status = "live";
+      target.startedAt = target.startedAt ?? new Date().toISOString();
+      target.score1 = target.score1 ?? 0;
+      target.score2 = target.score2 ?? 0;
+      target.scoreHistory = target.scoreHistory ?? [];
+    };
+    if (competition.type === "round_robin") {
+      saveCompetition(updateRoundRobinMatch(competition, tournament.players, tournament.options, match.id, updater));
+    } else if (competition.type === "swiss") {
+      saveCompetition(updateSwissMatch(competition, tournament.players, tournament.options, match.id, updater));
+    } else if (competition.type === "leaderboard") {
+      saveCompetition(updateLeaderboardMatch(competition, tournament.players, tournament.options, match.id, updater));
+    } else if (competition.type === "two_stage") {
+      saveCompetition(groupId
+        ? updateTwoStageGroupMatch(competition, tournament.options, groupId, match.id, updater)
+        : updateTwoStageFinalMatch(competition, match.id, updater));
+    }
+  }
+
   if (!competition) {
     return (
       <section className="mt-8 rounded-[2rem] border border-dashed border-white/15 bg-white/[0.03] px-6 py-11 text-center">
@@ -370,7 +412,20 @@ export function CompetitionManager({ tournament, onTournamentChange }: Props) {
       {competition.type === "round_robin" ? (
         <>
           <StandingsTable rows={competition.standings} rules={TABLE_RULES} />
-          <PairRounds rounds={competition.rounds} raceTo={tournament.raceTo} drafts={drafts} setDrafts={setDrafts} onSave={savePairMatch} onUndo={undoPairMatch} />
+          <PairRounds rounds={competition.rounds} raceTo={tournament.raceTo} drafts={drafts} setDrafts={setDrafts} onSave={savePairMatch} onUndo={undoPairMatch} onStart={startPairMatch} />
+          {competition.playoffRounds.length ? (
+            <section className="space-y-5 rounded-[2rem] border border-amber-300/25 bg-amber-300/[0.05] p-5 sm:p-6">
+              <div>
+                <p className="text-sm font-black uppercase tracking-[0.2em] text-amber-300">Championship playoff</p>
+                <p className="mt-2 text-sm text-slate-400">The regular table could not separate first place. The champion must be decided on the table.</p>
+              </div>
+              <StandingsTable rows={competition.playoffStandings} title="Playoff standings" rules={TABLE_RULES} />
+              <PairRounds rounds={competition.playoffRounds} raceTo={tournament.raceTo} drafts={drafts} setDrafts={setDrafts} onSave={savePairMatch} onUndo={undoPairMatch} onStart={startPairMatch} />
+              {!competition.champion && competition.playoffRounds.flatMap((round) => round.matches).filter((match) => match.player1 && match.player2).every((match) => match.completed) ? (
+                <button type="button" onClick={() => saveCompetition(generateRoundRobinPlayoffRematch(competition, tournament.options))} className="rounded-2xl bg-amber-300 px-5 py-3 font-black text-slate-950">Generate playoff rematch</button>
+              ) : null}
+            </section>
+          ) : null}
         </>
       ) : null}
 
@@ -382,7 +437,7 @@ export function CompetitionManager({ tournament, onTournamentChange }: Props) {
               <button type="button" onClick={() => saveCompetition(generateNextSwissRound(competition, tournament.players, tournament.options))} className="rounded-2xl bg-violet-400 px-5 py-3 font-black text-slate-950">Generate next round →</button>
             ) : null}
           </div>
-          <PairRounds rounds={competition.rounds} raceTo={tournament.raceTo} drafts={drafts} setDrafts={setDrafts} onSave={savePairMatch} onUndo={undoPairMatch} byePoints={tournament.options.pointsForWin} />
+          <PairRounds rounds={competition.rounds} raceTo={tournament.raceTo} drafts={drafts} setDrafts={setDrafts} onSave={savePairMatch} onUndo={undoPairMatch} onStart={startPairMatch} byePoints={tournament.options.pointsForWin} />
         </>
       ) : null}
 
@@ -400,7 +455,7 @@ export function CompetitionManager({ tournament, onTournamentChange }: Props) {
               ))}
             </div>
           </section>
-          <PairRounds rounds={competition.rounds} raceTo={tournament.raceTo} drafts={drafts} setDrafts={setDrafts} onSave={savePairMatch} onUndo={undoPairMatch} />
+          <PairRounds rounds={competition.rounds} raceTo={tournament.raceTo} drafts={drafts} setDrafts={setDrafts} onSave={savePairMatch} onUndo={undoPairMatch} onStart={startPairMatch} />
         </>
       ) : null}
 
@@ -440,7 +495,7 @@ export function CompetitionManager({ tournament, onTournamentChange }: Props) {
             {competition.groups.map((group) => (
               <div key={group.id} className="space-y-4">
                 <StandingsTable rows={group.standings} title={`${group.name} standings`} rules={TABLE_RULES} />
-                <PairRounds rounds={group.rounds} raceTo={tournament.raceTo} drafts={drafts} setDrafts={setDrafts} onSave={(match, score1, score2) => savePairMatch(match, score1, score2, group.id)} onUndo={(match) => undoPairMatch(match, group.id)} eyebrow={group.name} />
+                <PairRounds rounds={group.rounds} raceTo={tournament.raceTo} drafts={drafts} setDrafts={setDrafts} onSave={(match, score1, score2) => savePairMatch(match, score1, score2, group.id)} onUndo={(match) => undoPairMatch(match, group.id)} onStart={(match) => startPairMatch(match, group.id)} eyebrow={group.name} />
               </div>
             ))}
           </div>
@@ -468,6 +523,7 @@ export function CompetitionManager({ tournament, onTournamentChange }: Props) {
                 setDrafts={setDrafts}
                 onSave={savePairMatch}
                 onUndo={undoPairMatch}
+                onStart={startPairMatch}
                 eyebrow="Final stage"
               />
             </section>
