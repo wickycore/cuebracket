@@ -100,7 +100,7 @@ export function ReadOnlyCompetition({ tournament, showChampion = true }: { tourn
 
   return (
     <div className="space-y-6">
-      {showChampion && competition.champion ? <ChampionCelebration champion={competition.champion} description={getTournamentChampionDescription(tournament)} /> : null}
+      {showChampion && competition.champion ? <ChampionCelebration champion={competition.champion} description={getTournamentChampionDescription(tournament)} tournament={tournament} /> : null}
 
       {competition.type === "round_robin" ? (
         <>

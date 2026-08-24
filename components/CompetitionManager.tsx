@@ -416,7 +416,7 @@ export function CompetitionManager({ tournament, onTournamentChange }: Props) {
           <PlayerNameEditor tournament={tournament} onTournamentChange={onTournamentChange} />
         </div>
       </details>
-      {champion ? <ChampionCelebration champion={champion} description={getTournamentChampionDescription(tournament)} /> : null}
+      {champion ? <ChampionCelebration champion={champion} description={getTournamentChampionDescription(tournament)} tournament={tournament} /> : null}
 
       {competition.type === "round_robin" ? (
         <>

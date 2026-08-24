@@ -63,7 +63,7 @@ export default function PublicLivePage() {
           <p className="mt-3 text-slate-400">{tournament.venue || "Venue not set"} · {tournament.format === "free_for_all" ? "Score cap" : "Race to"} {tournament.raceTo}</p>
         </div>
 
-        {getTournamentChampion(tournament) ? <div className="mt-8"><ChampionCelebration champion={getTournamentChampion(tournament)!} description={getTournamentChampionDescription(tournament)} /></div> : null}
+        {getTournamentChampion(tournament) ? <div className="mt-8"><ChampionCelebration champion={getTournamentChampion(tournament)!} description={getTournamentChampionDescription(tournament)} tournament={tournament} /></div> : null}
 
         <section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {summaryCards.map(([label, value]) => <div key={label} className="rounded-3xl border border-white/10 bg-white/[0.04] p-5"><p className="text-xs font-black uppercase tracking-wider text-slate-500">{label}</p><p className="mt-2 text-2xl font-black">{value}</p></div>)}

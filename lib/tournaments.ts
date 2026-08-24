@@ -641,6 +641,65 @@ export function getTournamentChampion(tournament: Tournament) {
   return tournament.bracket?.champion ?? tournament.competition?.champion ?? null;
 }
 
+export interface TournamentPodium {
+  runnerUp: string | null;
+  thirdPlace: string[];
+}
+
+function getMatchLoser(match: BracketMatch | undefined) {
+  if (!match?.completed || !match.winner || !match.player1 || !match.player2) {
+    return null;
+  }
+  return match.winner === match.player1 ? match.player2 : match.player1;
+}
+
+function getBracketPodium(bracket: TournamentBracket): TournamentPodium {
+  if (bracket.type === "single") {
+    const final = bracket.rounds.at(-1)?.matches[0];
+    const semiFinal = bracket.rounds.at(-2);
+    return {
+      runnerUp: getMatchLoser(final),
+      // A knockout without a bronze match has two legitimate joint-third players.
+      thirdPlace: semiFinal?.matches.length === 2
+        ? semiFinal.matches.map(getMatchLoser).filter((player): player is string => Boolean(player))
+        : [],
+    };
+  }
+
+  const decidingFinal = bracket.resetRequired
+    ? bracket.grandFinal[1]?.matches[0]
+    : bracket.grandFinal[0]?.matches[0];
+  const losersFinal = bracket.losers.at(-1)?.matches[0];
+  return {
+    runnerUp: getMatchLoser(decidingFinal),
+    thirdPlace: [getMatchLoser(losersFinal)].filter((player): player is string => Boolean(player)),
+  };
+}
+
+/** Returns only placements that the tournament engine can determine fairly. */
+export function getTournamentPodium(tournament: Tournament): TournamentPodium {
+  if (tournament.bracket) return getBracketPodium(tournament.bracket);
+
+  const competition = tournament.competition;
+  if (!competition) return { runnerUp: null, thirdPlace: [] };
+  if (competition.type === "two_stage" && competition.finalBracket) {
+    return getBracketPodium(competition.finalBracket);
+  }
+
+  if ("standings" in competition) {
+    const champion = competition.champion;
+    const rankedPlayers = competition.standings
+      .map((standing) => standing.player)
+      .filter((player) => player !== champion);
+    return {
+      runnerUp: rankedPlayers[0] ?? null,
+      thirdPlace: rankedPlayers[1] ? [rankedPlayers[1]] : [],
+    };
+  }
+
+  return { runnerUp: null, thirdPlace: [] };
+}
+
 export function hasTournamentStructure(tournament: Tournament) {
   return Boolean(tournament.bracket || tournament.competition);
 }
