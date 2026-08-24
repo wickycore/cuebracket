@@ -1,18 +1,33 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { ChampionCelebration } from "@/components/ChampionCelebration";
 import { FreeForAllStandingsTable, StandingsTable } from "@/components/StandingsTable";
 import {
   type BracketRound,
+  formatDuration,
   getBracketRounds,
   getFormatLabel,
   getTournamentChampionDescription,
   type Tournament,
 } from "@/lib/tournaments";
 
-const TABLE_RULES = "Ranking: points → head-to-head mini-table → head-to-head frame difference → overall frame difference → frames won → wins.";
+const TABLE_RULES = "Ranking: points → recursive head-to-head mini-table → head-to-head frame difference → overall frame difference → frames won → wins. An unresolved first-place tie requires a championship playoff.";
 const SWISS_RULES = "Ranking: match points → Buchholz (opponents’ earned points) → frame difference → frames won. A BYE awards the configured win points but is tracked separately; it does not increase played matches (P) or on-table wins (W).";
 
 function formatPoints(value: number) {
   return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
+}
+
+function MatchTimer({ startedAt, endedAt }: { startedAt?: string | null; endedAt?: string | null }) {
+  const [, tick] = useState(0);
+  useEffect(() => {
+    if (!startedAt || endedAt) return;
+    const timer = window.setInterval(() => tick((value) => value + 1), 1000);
+    return () => window.clearInterval(timer);
+  }, [startedAt, endedAt]);
+  if (!startedAt) return null;
+  return <span className="text-[11px] font-bold tabular-nums text-slate-500">{formatDuration(new Date(endedAt ?? Date.now()).getTime() - new Date(startedAt).getTime())}</span>;
 }
 
 function ReadOnlyRounds({ rounds, raceTo, byePoints }: { rounds: BracketRound[]; raceTo: number; byePoints?: number }) {
@@ -34,8 +49,8 @@ function ReadOnlyRounds({ rounds, raceTo, byePoints }: { rounds: BracketRound[];
                 <article key={match.id} className={`overflow-hidden rounded-2xl border bg-slate-950/65 ${match.completed ? "border-emerald-400/25" : "border-white/10"}`}>
                   <div className="flex items-center justify-between border-b border-white/10 px-4 py-2.5">
                     <span className="text-[0.64rem] font-black uppercase tracking-wider text-slate-500">{match.tableNumber ? `Table ${match.tableNumber}` : `Match ${index + 1}`}</span>
-                    <span className={`rounded-full px-2 py-0.5 text-[0.6rem] font-black uppercase ${match.completed ? "bg-emerald-400/10 text-emerald-300" : "bg-cyan-400/10 text-cyan-300"}`}>
-                      {match.completed ? "Finished" : `Race to ${raceTo}`}
+                    <span className={`rounded-full px-2 py-0.5 text-[0.6rem] font-black uppercase ${match.completed ? "bg-emerald-400/10 text-emerald-300" : match.status === "live" ? "bg-rose-400/15 text-rose-300" : "bg-cyan-400/10 text-cyan-300"}`}>
+                      {match.completed ? "Finished" : match.status === "live" ? "● Live" : `Race to ${raceTo}`}
                     </span>
                   </div>
                   {[match.player1, match.player2].map((player, playerIndex) => {
@@ -47,17 +62,18 @@ function ReadOnlyRounds({ rounds, raceTo, byePoints }: { rounds: BracketRound[];
                       </div>
                     );
                   })}
+                  {match.startedAt ? <div className="flex items-center justify-between px-4 py-2 text-xs text-slate-500"><span>Race to {raceTo}</span><MatchTimer startedAt={match.startedAt} endedAt={match.endedAt} /></div> : null}
                 </article>
               ))}
               {byeMatches.map((match) => {
                 const player = match.player1 ?? match.player2;
                 return (
                   <article key={match.id} className="rounded-2xl border border-violet-400/20 bg-violet-400/[0.06] p-4">
-                    <p className="text-[0.64rem] font-black uppercase tracking-wider text-violet-300">Automatic BYE</p>
+                    <p className="text-[0.64rem] font-black uppercase tracking-wider text-violet-300">{byePoints === undefined ? "Rest round" : "Automatic BYE"}</p>
                     <p className="mt-1 font-black text-white">{player}</p>
                     <p className="mt-2 text-xs leading-5 text-slate-400">
                       {byePoints === undefined
-                        ? "Automatic advancement; no played match is recorded."
+                        ? "No fixture this round. No match or points recorded."
                         : `One win and ${formatPoints(byePoints)} point${byePoints === 1 ? "" : "s"}; tracked separately from played matches.`}
                     </p>
                   </article>
@@ -90,6 +106,16 @@ export function ReadOnlyCompetition({ tournament, showChampion = true }: { tourn
         <>
           <StandingsTable rows={competition.standings} title={getFormatLabel(tournament.format)} rules={TABLE_RULES} />
           <ReadOnlyRounds rounds={competition.rounds} raceTo={tournament.raceTo} />
+          {competition.playoffRounds.length ? (
+            <section className="space-y-5 rounded-[2rem] border border-amber-300/25 bg-amber-300/[0.05] p-5 sm:p-6">
+              <div>
+                <p className="text-sm font-black uppercase tracking-[0.2em] text-amber-300">Championship playoff</p>
+                <p className="mt-2 text-sm text-slate-400">The regular table could not separate first place. The champion will be decided here.</p>
+              </div>
+              <StandingsTable rows={competition.playoffStandings} title="Playoff standings" rules={TABLE_RULES} />
+              <ReadOnlyRounds rounds={competition.playoffRounds} raceTo={tournament.raceTo} />
+            </section>
+          ) : null}
         </>
       ) : null}
 
