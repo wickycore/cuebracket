@@ -257,9 +257,14 @@ export function BracketConnections({
 
           if (!source || !target) return [];
 
+          const sourceCard =
+            source.querySelector<HTMLElement>("[data-bracket-card]") ?? source;
+          const targetCard =
+            target.querySelector<HTMLElement>("[data-bracket-card]") ?? target;
+
           const d = makePath(
-            getUnscaledBox(source, container),
-            getUnscaledBox(target, container),
+            getUnscaledBox(sourceCard, container),
+            getUnscaledBox(targetCard, container),
           );
 
           return d ? [{ id: `${from}-${to}`, d }] : [];
@@ -315,7 +320,7 @@ export function BracketConnections({
 
   return (
     <svg
-      data-bracket-connectors-version="0.10.0"
+      data-bracket-connectors-version="0.10.1"
       aria-hidden="true"
       className="pointer-events-none absolute left-0 top-0 z-[1] overflow-visible"
       width={size.width}
