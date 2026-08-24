@@ -43,6 +43,33 @@ function isAutomaticAdvance(match: BracketMatch) {
   return match.completed && Boolean(match.player1) !== Boolean(match.player2);
 }
 
+function buildBalancedCenters(rounds: BracketRound[], maxMatches: number) {
+  const centers = new Map<string, number>();
+
+  rounds.forEach((round) => {
+    const fallbackSpan = maxMatches / Math.max(1, round.matches.length);
+
+    round.matches.forEach((match) => {
+      const feederCenters = [match.source1, match.source2]
+        .flatMap((source) => {
+          if (!source || source.kind === "seed") return [];
+          const center = centers.get(source.matchId);
+          return center === undefined ? [] : [center];
+        })
+        .filter((center, index, values) => values.indexOf(center) === index);
+
+      const center = feederCenters.length
+        ? feederCenters.reduce((total, value) => total + value, 0) /
+          feederCenters.length
+        : match.position * fallbackSpan + (fallbackSpan - 1) / 2;
+
+      centers.set(match.id, center);
+    });
+  });
+
+  return centers;
+}
+
 function Section({
   title,
   subtitle,
@@ -63,6 +90,9 @@ function Section({
   const matchHeight = 145;
   const matchPitch = 162;
   const bracketBodyHeight = matchHeight + (maxMatches - 1) * matchPitch;
+  const balancedCenters = balancedGeometry
+    ? buildBalancedCenters(rounds, maxMatches)
+    : new Map<string, number>();
   const contentRef = useRef<HTMLDivElement>(null);
   const { matchRefs, registerMatch } = useBracketMatchRefs();
 
@@ -84,7 +114,7 @@ function Section({
             matchRefs={matchRefs}
             tone={connectorTone[tone]}
           />
-          {rounds.map((round, roundIndex) => {
+          {rounds.map((round) => {
             const ratio = Math.max(1, Math.floor(maxMatches / Math.max(1, round.matches.length)));
             const topPadding = ratio > 1 ? Math.min(96, (ratio - 1) * 28) : 0;
             const gap = ratio > 1 ? Math.min(120, ratio * 30) : 18;
@@ -102,9 +132,8 @@ function Section({
                   {round.matches.map((match) => {
                     const automaticAdvance = isAutomaticAdvance(match);
                     const advancingPlayer = match.player1 ?? match.player2 ?? match.winner;
-                    const roundSpan = 2 ** roundIndex;
                     const centerSlot =
-                      match.position * roundSpan + (roundSpan - 1) / 2;
+                      balancedCenters.get(match.id) ?? match.position;
 
                     return (
                       <div
@@ -234,6 +263,7 @@ export function ReadOnlyBracket({ tournament }: { tournament: Tournament }) {
           rounds={bracket.winners}
           raceTo={tournament.raceTo}
           tone="cyan"
+          balancedGeometry
         />
         <Section
           title="Losers Bracket"
@@ -241,6 +271,7 @@ export function ReadOnlyBracket({ tournament }: { tournament: Tournament }) {
           rounds={bracket.losers}
           raceTo={tournament.raceTo}
           tone="rose"
+          balancedGeometry
         />
         <Section
           title="Grand Final"
@@ -254,6 +285,7 @@ export function ReadOnlyBracket({ tournament }: { tournament: Tournament }) {
           rounds={bracket.grandFinal.filter((round) => round.round === 1 || bracket.resetRequired)}
           raceTo={tournament.raceTo}
           tone="violet"
+          balancedGeometry
         />
       </div>
     );
