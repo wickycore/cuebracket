@@ -2,8 +2,8 @@
 
 import {
   useCallback,
+  useEffect,
   useId,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -229,7 +229,7 @@ export function BracketConnections({
   const rawId = useId();
   const filterId = `bracket-glow-${tone}-${rawId.replace(/:/g, "")}`;
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
