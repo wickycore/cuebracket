@@ -126,40 +126,73 @@ function addMatchPoints(
   return [options.pointsForLoss, options.pointsForWin] as const;
 }
 
-function applyHeadToHeadMetrics(
-  rows: StandingRow[],
+function rankHeadToHeadGroup(
+  tiedRows: StandingRow[],
   rounds: BracketRound[],
   options: Pick<TournamentOptions, "pointsForWin" | "pointsForDraw" | "pointsForLoss">,
-) {
-  const groups = new Map<number, StandingRow[]>();
-  rows.forEach((row) => groups.set(row.points, [...(groups.get(row.points) ?? []), row]));
-  const completed = rounds
-    .flatMap((round) => round.matches)
-    .filter((match) => match.completed && match.player1 && match.player2);
+): StandingRow[] {
+  if (tiedRows.length < 2) return tiedRows;
 
-  groups.forEach((tiedRows) => {
-    tiedRows.forEach((row) => {
-      row.headToHeadPoints = 0;
-      row.headToHeadDifference = 0;
-    });
-    if (tiedRows.length < 2) return;
+  const tiedPlayers = new Set(tiedRows.map((row) => row.player));
+  const metrics = new Map(
+    tiedRows.map((row) => [row.player, { points: 0, difference: 0 }]),
+  );
 
-    const tiedPlayers = new Set(tiedRows.map((row) => row.player));
-    const byPlayer = new Map(tiedRows.map((row) => [row.player, row]));
-    completed.forEach((match) => {
-      if (!tiedPlayers.has(match.player1!) || !tiedPlayers.has(match.player2!)) return;
-      const row1 = byPlayer.get(match.player1!);
-      const row2 = byPlayer.get(match.player2!);
-      if (!row1 || !row2) return;
-      const score1 = match.score1 ?? 0;
-      const score2 = match.score2 ?? 0;
-      const [points1, points2] = addMatchPoints(score1, score2, options);
-      row1.headToHeadPoints = (row1.headToHeadPoints ?? 0) + points1;
-      row2.headToHeadPoints = (row2.headToHeadPoints ?? 0) + points2;
-      row1.headToHeadDifference = (row1.headToHeadDifference ?? 0) + score1 - score2;
-      row2.headToHeadDifference = (row2.headToHeadDifference ?? 0) + score2 - score1;
-    });
+  rounds.flatMap((round) => round.matches).forEach((match) => {
+    if (!match.completed || !match.player1 || !match.player2) return;
+    if (!tiedPlayers.has(match.player1) || !tiedPlayers.has(match.player2)) return;
+    const score1 = match.score1 ?? 0;
+    const score2 = match.score2 ?? 0;
+    const [points1, points2] = addMatchPoints(score1, score2, options);
+    const first = metrics.get(match.player1)!;
+    const second = metrics.get(match.player2)!;
+    first.points += points1;
+    second.points += points2;
+    first.difference += score1 - score2;
+    second.difference += score2 - score1;
   });
+
+  tiedRows.forEach((row) => {
+    const metric = metrics.get(row.player)!;
+    row.headToHeadPoints = metric.points;
+    row.headToHeadDifference = metric.difference;
+  });
+
+  const ordered = [...tiedRows].sort((a, b) => {
+    const aMetric = metrics.get(a.player)!;
+    const bMetric = metrics.get(b.player)!;
+    return bMetric.points - aMetric.points || bMetric.difference - aMetric.difference;
+  });
+
+  const result: StandingRow[] = [];
+  for (let index = 0; index < ordered.length;) {
+    const first = ordered[index];
+    const firstMetric = metrics.get(first.player)!;
+    let end = index + 1;
+    while (end < ordered.length) {
+      const candidate = metrics.get(ordered[end].player)!;
+      if (
+        candidate.points !== firstMetric.points ||
+        candidate.difference !== firstMetric.difference
+      ) break;
+      end += 1;
+    }
+    const subgroup = ordered.slice(index, end);
+    const rankedSubgroup =
+      subgroup.length > 1 && subgroup.length < tiedRows.length
+        ? rankHeadToHeadGroup(subgroup, rounds, options)
+        : subgroup.sort(
+            (a, b) =>
+              b.frameDifference - a.frameDifference ||
+              b.framesFor - a.framesFor ||
+              b.won - a.won ||
+              a.player.localeCompare(b.player),
+          );
+    result.push(...rankedSubgroup);
+    index = end;
+  }
+
+  return result;
 }
 
 export function calculateStandings(
@@ -231,6 +264,7 @@ export function calculateStandings(
     row.frameDifference = row.framesFor - row.framesAgainst;
   });
 
+  let sorted: StandingRow[];
   if (includeBuchholz) {
     rows.forEach((row) => {
       row.buchholz = (opponents.get(row.player) ?? []).reduce(
@@ -238,25 +272,42 @@ export function calculateStandings(
         0,
       );
     });
+    sorted = Array.from(rows.values()).sort((a, b) => {
+      if (b.points !== a.points) return b.points - a.points;
+      if ((b.buchholz ?? 0) !== (a.buchholz ?? 0)) return (b.buchholz ?? 0) - (a.buchholz ?? 0);
+      if (b.frameDifference !== a.frameDifference) return b.frameDifference - a.frameDifference;
+      if (b.framesFor !== a.framesFor) return b.framesFor - a.framesFor;
+      if (b.won !== a.won) return b.won - a.won;
+      return a.player.localeCompare(b.player);
+    });
   } else {
-    applyHeadToHeadMetrics(Array.from(rows.values()), rounds, options);
+    const pointGroups = new Map<number, StandingRow[]>();
+    rows.forEach((row) => {
+      pointGroups.set(row.points, [...(pointGroups.get(row.points) ?? []), row]);
+    });
+    sorted = [...pointGroups.entries()]
+      .sort(([a], [b]) => b - a)
+      .flatMap(([, tiedRows]) => rankHeadToHeadGroup(tiedRows, rounds, options));
   }
 
-  const sorted = Array.from(rows.values()).sort((a, b) => {
-    if (b.points !== a.points) return b.points - a.points;
-    if (includeBuchholz) {
-      if ((b.buchholz ?? 0) !== (a.buchholz ?? 0)) return (b.buchholz ?? 0) - (a.buchholz ?? 0);
-    } else {
-      if ((b.headToHeadPoints ?? 0) !== (a.headToHeadPoints ?? 0)) return (b.headToHeadPoints ?? 0) - (a.headToHeadPoints ?? 0);
-      if ((b.headToHeadDifference ?? 0) !== (a.headToHeadDifference ?? 0)) return (b.headToHeadDifference ?? 0) - (a.headToHeadDifference ?? 0);
-    }
-    if (b.frameDifference !== a.frameDifference) return b.frameDifference - a.frameDifference;
-    if (b.framesFor !== a.framesFor) return b.framesFor - a.framesFor;
-    if (b.won !== a.won) return b.won - a.won;
-    return a.player.localeCompare(b.player);
+  let previous: StandingRow | undefined;
+  let previousRank = 0;
+  return sorted.map((row, index) => {
+    const tiedWithPrevious = Boolean(
+      previous &&
+      row.points === previous.points &&
+      (row.buchholz ?? 0) === (previous.buchholz ?? 0) &&
+      (row.headToHeadPoints ?? 0) === (previous.headToHeadPoints ?? 0) &&
+      (row.headToHeadDifference ?? 0) === (previous.headToHeadDifference ?? 0) &&
+      row.frameDifference === previous.frameDifference &&
+      row.framesFor === previous.framesFor &&
+      row.won === previous.won,
+    );
+    const rank = tiedWithPrevious ? previousRank : index + 1;
+    previous = row;
+    previousRank = rank;
+    return { ...row, rank };
   });
-
-  return sorted.map((row, index) => ({ ...row, rank: index + 1 }));
 }
 
 export function allPlayableMatchesComplete(rounds: BracketRound[]) {
