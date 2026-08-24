@@ -143,29 +143,9 @@ function getUnscaledBox(
   element: HTMLElement,
   container: HTMLDivElement,
 ): ElementBox {
-  let left = 0;
-  let top = 0;
-  let node: HTMLElement | null = element;
-
-  // Layout offsets are stable inside BracketViewport's transformed zoom layer.
-  // Mobile Chromium can return inconsistent transformed client rects for SVG
-  // overlays, so prefer coordinates that are independent of visual scaling.
-  while (node && node !== container) {
-    left += node.offsetLeft;
-    top += node.offsetTop;
-    node = node.offsetParent as HTMLElement | null;
-  }
-
-  if (node === container) {
-    return {
-      left,
-      top,
-      width: element.offsetWidth,
-      height: element.offsetHeight,
-    };
-  }
-
-  // Fallback for an unusual offset-parent chain.
+  // Use the rendered rectangles so CSS positioning transforms are included.
+  // Dividing by the viewport scale converts the points back into the SVG's
+  // unscaled coordinate system used by BracketViewport.
   const containerBox = container.getBoundingClientRect();
   const elementBox = element.getBoundingClientRect();
 
@@ -320,7 +300,7 @@ export function BracketConnections({
 
   return (
     <svg
-      data-bracket-connectors-version="0.10.1"
+      data-bracket-connectors-version="0.10.2"
       aria-hidden="true"
       className="pointer-events-none absolute left-0 top-0 z-[1] overflow-visible"
       width={size.width}
