@@ -125,6 +125,7 @@ export function OrganizerMatchQueue({
       <div className="mt-4 grid gap-3 lg:grid-cols-2">
         {visibleItems.map(({ match, section, roundName, matchNumber }) => {
           const selected = match.id === selectedMatchId;
+          const showScore = match.completed || match.status === "live";
           return (
             <article
               key={match.id}
@@ -144,17 +145,11 @@ export function OrganizerMatchQueue({
                 {match.tableNumber ? <span className="text-xs font-bold text-amber-200">{match.tableNumber}</span> : null}
               </div>
 
-              <div className="mt-3 flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="truncate font-black text-white">{match.player1 ?? "TBD"}</p>
-                  <p className="mt-1 truncate font-black text-white">{match.player2 ?? "TBD"}</p>
-                </div>
-                {match.completed ? (
-                  <div className="text-right text-xl font-black text-cyan-300">
-                    <p>{match.score1 ?? "—"}</p>
-                    <p>{match.score2 ?? "—"}</p>
-                  </div>
-                ) : null}
+              <div className="mt-3 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1">
+                <p className="truncate font-black text-white">{match.player1 ?? "TBD"}</p>
+                {showScore ? <p className="text-xl font-black text-cyan-300">{match.score1 ?? 0}</p> : <span />}
+                <p className="truncate font-black text-white">{match.player2 ?? "TBD"}</p>
+                {showScore ? <p className="text-xl font-black text-cyan-300">{match.score2 ?? 0}</p> : <span />}
               </div>
 
               {match.completed ? (

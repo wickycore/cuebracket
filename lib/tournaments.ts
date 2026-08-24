@@ -441,6 +441,134 @@ export function updateTournament(
   return tournaments[index];
 }
 
+function renameMatchPlayer(match: BracketMatch, oldName: string, newName: string): BracketMatch {
+  const rename = (value: string | null) => value === oldName ? newName : value;
+  const renameSource = (source?: MatchSource): MatchSource | undefined => {
+    if (!source || source.kind !== "seed") return source;
+    return { ...source, player: rename(source.player) };
+  };
+
+  return {
+    ...match,
+    player1: rename(match.player1),
+    player2: rename(match.player2),
+    winner: rename(match.winner),
+    source1: renameSource(match.source1),
+    source2: renameSource(match.source2),
+  };
+}
+
+function renamePlayerRounds(rounds: BracketRound[], oldName: string, newName: string) {
+  return rounds.map((round) => ({
+    ...round,
+    matches: round.matches.map((match) => renameMatchPlayer(match, oldName, newName)),
+  }));
+}
+
+function renamePlayerStandings(rows: StandingRow[], oldName: string, newName: string) {
+  return rows.map((row) => row.player === oldName ? { ...row, player: newName } : row);
+}
+
+function renamePlayerBracket(
+  bracket: TournamentBracket | undefined,
+  oldName: string,
+  newName: string,
+): TournamentBracket | undefined {
+  if (!bracket) return undefined;
+  if (bracket.type === "single") {
+    return {
+      ...bracket,
+      rounds: renamePlayerRounds(bracket.rounds, oldName, newName),
+      champion: bracket.champion === oldName ? newName : bracket.champion,
+    };
+  }
+  return {
+    ...bracket,
+    winners: renamePlayerRounds(bracket.winners, oldName, newName),
+    losers: renamePlayerRounds(bracket.losers, oldName, newName),
+    grandFinal: renamePlayerRounds(bracket.grandFinal, oldName, newName),
+    champion: bracket.champion === oldName ? newName : bracket.champion,
+  };
+}
+
+export function renameTournamentPlayer(
+  tournament: Tournament,
+  oldName: string,
+  requestedName: string,
+): { ok: true; updates: Partial<Tournament> } | { ok: false; reason: string } {
+  const newName = requestedName.trim().replace(/\s+/g, " ");
+  if (!newName) return { ok: false, reason: "Enter the corrected player name." };
+  if (!tournament.players.includes(oldName)) return { ok: false, reason: "That player is no longer in this tournament." };
+  if (
+    tournament.players.some(
+      (player) => player !== oldName && player.toLowerCase() === newName.toLowerCase(),
+    )
+  ) {
+    return { ok: false, reason: "Another player already uses that name." };
+  }
+
+  const players = tournament.players.map((player) => player === oldName ? newName : player);
+  const bracket = renamePlayerBracket(tournament.bracket, oldName, newName);
+  const competition = tournament.competition;
+  let renamedCompetition = competition;
+
+  if (competition?.type === "round_robin") {
+    renamedCompetition = {
+      ...competition,
+      rounds: renamePlayerRounds(competition.rounds, oldName, newName),
+      standings: renamePlayerStandings(competition.standings, oldName, newName),
+      playoffRounds: renamePlayerRounds(competition.playoffRounds, oldName, newName),
+      playoffStandings: renamePlayerStandings(competition.playoffStandings, oldName, newName),
+      playoffPlayers: competition.playoffPlayers.map((player) => player === oldName ? newName : player),
+      champion: competition.champion === oldName ? newName : competition.champion,
+    };
+  } else if (competition?.type === "swiss") {
+    renamedCompetition = {
+      ...competition,
+      rounds: renamePlayerRounds(competition.rounds, oldName, newName),
+      standings: renamePlayerStandings(competition.standings, oldName, newName),
+      champion: competition.champion === oldName ? newName : competition.champion,
+    };
+  } else if (competition?.type === "leaderboard") {
+    const adjustments = { ...competition.adjustments };
+    if (oldName in adjustments) {
+      adjustments[newName] = adjustments[oldName];
+      delete adjustments[oldName];
+    }
+    renamedCompetition = {
+      ...competition,
+      rounds: renamePlayerRounds(competition.rounds, oldName, newName),
+      standings: renamePlayerStandings(competition.standings, oldName, newName),
+      adjustments,
+      champion: competition.champion === oldName ? newName : competition.champion,
+    };
+  } else if (competition?.type === "free_for_all") {
+    renamedCompetition = {
+      ...competition,
+      heats: competition.heats.map((heat) => ({
+        ...heat,
+        entries: heat.entries.map((entry) => entry.player === oldName ? { ...entry, player: newName } : entry),
+      })),
+      standings: renamePlayerStandings(competition.standings, oldName, newName),
+      champion: competition.champion === oldName ? newName : competition.champion,
+    };
+  } else if (competition?.type === "two_stage") {
+    renamedCompetition = {
+      ...competition,
+      groups: competition.groups.map((group) => ({
+        ...group,
+        players: group.players.map((player) => player === oldName ? newName : player),
+        rounds: renamePlayerRounds(group.rounds, oldName, newName),
+        standings: renamePlayerStandings(group.standings, oldName, newName),
+      })),
+      finalBracket: renamePlayerBracket(competition.finalBracket, oldName, newName),
+      champion: competition.champion === oldName ? newName : competition.champion,
+    };
+  }
+
+  return { ok: true, updates: { players, bracket, competition: renamedCompetition } };
+}
+
 export function deleteTournament(id: string) {
   saveTournaments(getTournaments().filter((tournament) => tournament.id !== id));
 }

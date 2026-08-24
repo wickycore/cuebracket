@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { DoubleEliminationManager } from "@/components/DoubleEliminationManager";
 import { LateEntryPanel } from "@/components/LateEntryPanel";
 import { OrganizerMatchQueue } from "@/components/OrganizerMatchQueue";
+import { PlayerNameEditor } from "@/components/PlayerNameEditor";
 import {
   buildSingleEliminationBracket,
   countSingleEliminationAutomaticByes,
@@ -151,12 +152,13 @@ function SingleEliminationManager({ tournament, onTournamentChange, selectedMatc
 
       <details className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5">
         <summary className="cursor-pointer list-none font-black text-slate-200">
-          <span className="flex items-center justify-between gap-3"><span>Tournament tools</span><span className="text-sm font-bold text-slate-500">Late entry · Reset</span></span>
+            <span className="flex items-center justify-between gap-3"><span>Tournament tools</span><span className="text-sm font-bold text-slate-500">Names · Late entry · Reset</span></span>
         </summary>
         <div className="mt-5 grid gap-4 border-t border-white/10 pt-5">
           <div className="text-sm text-slate-400">
             {playedMatches} played match{playedMatches === 1 ? "" : "es"}{automaticByes ? ` · ${automaticByes} automatic BYE${automaticByes === 1 ? "" : "s"}` : ""}
           </div>
+          <PlayerNameEditor tournament={tournament} onTournamentChange={onTournamentChange} />
           <LateEntryPanel slots={lateEntrySlots} remainingCapacity={tournament.bracketSize - tournament.players.length} onAdd={addLatePlayer} />
           <button type="button" onClick={resetBracket} className="w-fit rounded-xl border border-rose-400/20 px-4 py-3 text-sm font-bold text-rose-300 hover:bg-rose-400/10">Reset competition</button>
         </div>

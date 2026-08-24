@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { ChampionCelebration } from "@/components/ChampionCelebration";
+import { PlayerNameEditor } from "@/components/PlayerNameEditor";
 import { FreeForAllStandingsTable, StandingsTable } from "@/components/StandingsTable";
 import { buildTournamentCompetition } from "@/lib/competition";
 import { isValidRaceResult } from "@/lib/bracket/singleElimination";
@@ -407,6 +408,14 @@ export function CompetitionManager({ tournament, onTournamentChange }: Props) {
       </div>
 
       {message ? <p className="rounded-2xl bg-amber-400/10 px-4 py-3 text-sm font-bold text-amber-200 ring-1 ring-amber-400/20">{message}</p> : null}
+      <details className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5">
+        <summary className="cursor-pointer list-none font-black text-slate-200">
+          <span className="flex items-center justify-between gap-3"><span>Tournament tools</span><span className="text-sm font-bold text-slate-500">Correct player names</span></span>
+        </summary>
+        <div className="mt-4 border-t border-white/10 pt-4">
+          <PlayerNameEditor tournament={tournament} onTournamentChange={onTournamentChange} />
+        </div>
+      </details>
       {champion ? <ChampionCelebration champion={champion} description={getTournamentChampionDescription(tournament)} /> : null}
 
       {competition.type === "round_robin" ? (
