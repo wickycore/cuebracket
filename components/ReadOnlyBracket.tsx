@@ -60,8 +60,8 @@ function Section({
 }) {
   const colors = toneClass[tone];
   const maxMatches = Math.max(1, ...rounds.map((round) => round.matches.length));
-  const matchHeight = 153;
-  const matchPitch = 174;
+  const matchHeight = 145;
+  const matchPitch = 162;
   const bracketBodyHeight = matchHeight + (maxMatches - 1) * matchPitch;
   const contentRef = useRef<HTMLDivElement>(null);
   const { matchRefs, registerMatch } = useBracketMatchRefs();
@@ -90,7 +90,7 @@ function Section({
             const gap = ratio > 1 ? Math.min(120, ratio * 30) : 18;
 
             return (
-              <div key={`${title}-${round.round}`} className="w-60 shrink-0 snap-start">
+              <div key={`${title}-${round.round}`} className="w-56 shrink-0 snap-start">
                 <p className="mb-4 text-[11px] font-black uppercase tracking-[0.17em] text-slate-500">{round.name}</p>
                 <div
                   style={
@@ -153,7 +153,7 @@ function Section({
                               const winner = Boolean(match.completed && player && match.winner === player);
                               const score = index === 0 ? match.score1 : match.score2;
                               return (
-                                <div key={index} className={`flex min-h-11 items-center gap-3 border-b border-white/10 px-3 py-2 last:border-b-0 ${winner ? "bg-emerald-400/10" : ""}`}>
+                                <div key={index} className={`flex min-h-10 items-center gap-3 border-b border-white/10 px-3 py-1.5 last:border-b-0 ${winner ? "bg-emerald-400/10" : ""}`}>
                                   <span className={`min-w-0 flex-1 truncate text-sm font-extrabold ${winner ? "text-emerald-300" : player ? "text-white" : "text-slate-600"}`}>{player ?? "TBD"}</span>
                                   <span className="text-sm font-black tabular-nums text-cyan-300">{score ?? "—"}</span>
                                 </div>
