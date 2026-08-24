@@ -259,7 +259,7 @@ export default function NewTournamentPage() {
             {(type === "two_stage" || ["round_robin", "swiss", "leaderboard"].includes(format)) ? (
               <div className="mt-6 grid gap-5 border-t border-white/10 pt-6 sm:grid-cols-3">
                 <label><span className="mb-2 block text-sm font-bold text-slate-300">Points for win</span><input type="number" min={0} value={options.pointsForWin} onChange={(event) => updateOption("pointsForWin", Number(event.target.value))} className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3.5" /></label>
-                <label><span className="mb-2 block text-sm font-bold text-slate-300">Points for draw</span><input type="number" min={0} value={options.pointsForDraw} onChange={(event) => updateOption("pointsForDraw", Number(event.target.value))} className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3.5" /></label>
+                {format !== "round_robin" ? <label><span className="mb-2 block text-sm font-bold text-slate-300">Points for draw</span><input type="number" min={0} value={options.pointsForDraw} onChange={(event) => updateOption("pointsForDraw", Number(event.target.value))} className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3.5" /></label> : null}
                 <label><span className="mb-2 block text-sm font-bold text-slate-300">Points for loss</span><input type="number" min={0} value={options.pointsForLoss} onChange={(event) => updateOption("pointsForLoss", Number(event.target.value))} className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3.5" /></label>
               </div>
             ) : null}
