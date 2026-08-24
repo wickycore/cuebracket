@@ -23,7 +23,6 @@ type ConnectorPath = {
 type ConnectorPair = {
   from: string;
   to: string;
-  lane: -1 | 0 | 1;
 };
 
 type ElementBox = {
@@ -69,7 +68,7 @@ export function buildConnections(rounds: BracketRound[]): ConnectorPair[] {
     if (seen.has(key)) return;
 
     seen.add(key);
-    pairs.push({ from, to, lane: 0 });
+    pairs.push({ from, to });
     const incoming = incomingByTarget.get(to) ?? new Set<string>();
     incoming.add(from);
     incomingByTarget.set(to, incoming);
@@ -137,34 +136,6 @@ export function buildConnections(rounds: BracketRound[]): ConnectorPair[] {
     });
   }
 
-  const matchOrder = new Map(
-    rounds.flatMap((round, roundIndex) =>
-      round.matches.map((match) => [
-        match.id,
-        roundIndex * 10_000 + match.position,
-      ] as const),
-    ),
-  );
-
-  const pairsByTarget = new Map<string, ConnectorPair[]>();
-  for (const pair of pairs) {
-    const targetPairs = pairsByTarget.get(pair.to) ?? [];
-    targetPairs.push(pair);
-    pairsByTarget.set(pair.to, targetPairs);
-  }
-
-  for (const targetPairs of pairsByTarget.values()) {
-    targetPairs.sort(
-      (first, second) =>
-        (matchOrder.get(first.from) ?? 0) - (matchOrder.get(second.from) ?? 0),
-    );
-
-    if (targetPairs.length >= 2) {
-      targetPairs[0].lane = -1;
-      targetPairs[1].lane = 1;
-    }
-  }
-
   return pairs;
 }
 
@@ -218,23 +189,16 @@ function getUnscaledBox(
   };
 }
 
-function makePath(
-  source: ElementBox,
-  target: ElementBox,
-  lane: ConnectorPair["lane"],
-) {
+function makePath(source: ElementBox, target: ElementBox) {
   const startX = source.left + source.width;
   const startY = source.top + source.height / 2;
   const endX = target.left;
-  const targetCenterY = target.top + target.height / 2;
+  const endY = target.top + target.height / 2;
 
-  if (![startX, startY, endX, targetCenterY].every(Number.isFinite)) return null;
+  if (![startX, startY, endX, endY].every(Number.isFinite)) return null;
   if (endX <= startX) return null;
 
-  const laneDirection = lane || (startY <= targetCenterY ? -1 : 1);
-  const laneSpacing = Math.min(10, Math.max(5, (endX - startX) * 0.14));
-  const middleX = startX + (endX - startX) / 2 + laneDirection * laneSpacing;
-  const endY = targetCenterY + laneDirection * 5;
+  const middleX = startX + (endX - startX) / 2;
 
   return `M ${startX} ${startY} H ${middleX} V ${endY} H ${endX}`;
 }
@@ -279,7 +243,7 @@ export function BracketConnections({
         const width = Math.max(container.scrollWidth, container.clientWidth);
         const height = Math.max(container.scrollHeight, container.clientHeight);
 
-        const nextPaths = connections.flatMap(({ from, to, lane }) => {
+        const nextPaths = connections.flatMap(({ from, to }) => {
           const source =
             matchRefs.current.get(from) ??
             container.querySelector<HTMLElement>(
@@ -296,7 +260,6 @@ export function BracketConnections({
           const d = makePath(
             getUnscaledBox(source, container),
             getUnscaledBox(target, container),
-            lane,
           );
 
           return d ? [{ id: `${from}-${to}`, d }] : [];
@@ -352,7 +315,7 @@ export function BracketConnections({
 
   return (
     <svg
-      data-bracket-connectors-version="0.9f10"
+      data-bracket-connectors-version="0.10.0"
       aria-hidden="true"
       className="pointer-events-none absolute left-0 top-0 z-[1] overflow-visible"
       width={size.width}
