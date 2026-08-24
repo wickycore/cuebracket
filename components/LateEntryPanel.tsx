@@ -36,8 +36,7 @@ export function LateEntryPanel({
 
   if (slots.length === 0 || remainingCapacity <= 0) return null;
 
-  function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  function assignToSlot(matchId: string, randomlyAssigned: boolean) {
     setMessage("");
 
     const cleanName = name.trim().replace(/\s+/g, " ");
@@ -45,19 +44,53 @@ export function LateEntryPanel({
       setMessage("Enter the late player's name.");
       return;
     }
-    if (!selectedMatchId) {
+    if (!matchId) {
       setMessage("No unlocked BYE slot is available.");
       return;
     }
 
-    const error = onAdd(cleanName, selectedMatchId);
+    const slot = availableSlots.find((item) => item.matchId === matchId);
+    if (!slot) {
+      setMessage("That BYE is no longer available. Refresh and try again.");
+      return;
+    }
+
+    const error = onAdd(cleanName, matchId);
     if (error) {
       setMessage(error);
       return;
     }
 
     setName("");
-    setMessage(`${cleanName} was added and the BYE was replaced.`);
+    setMessage(
+      availableSlots.length === 1
+        ? `${cleanName} was added to the only available BYE · ${slot.roundName} · Match ${slot.matchNumber}.`
+        : randomlyAssigned
+          ? `${cleanName} was randomly placed in ${slot.roundName} · Match ${slot.matchNumber}.`
+          : `${cleanName} was manually placed in ${slot.roundName} · Match ${slot.matchNumber}.`,
+    );
+  }
+
+  function submitRandom(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!availableSlots.length) {
+      setMessage("No unlocked BYE slot is available.");
+      return;
+    }
+
+    const randomValues = new Uint32Array(1);
+    if (typeof crypto !== "undefined" && crypto.getRandomValues) {
+      crypto.getRandomValues(randomValues);
+    } else {
+      randomValues[0] = Math.floor(Math.random() * 2 ** 32);
+    }
+    const slot = availableSlots[randomValues[0] % availableSlots.length];
+    assignToSlot(slot.matchId, true);
+  }
+
+  function submitManual(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    assignToSlot(selectedMatchId, false);
   }
 
   return (
@@ -83,43 +116,46 @@ export function LateEntryPanel({
       </div>
 
       {availableSlots.length > 0 ? (
-        <form
-          onSubmit={submit}
-          className="mt-5 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)_auto]"
-        >
-          <label className="grid gap-2 text-xs font-black uppercase tracking-[0.18em] text-slate-500">
-            Player name
-            <input
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              placeholder="Enter late player"
-              autoComplete="off"
-              className="h-12 min-w-0 rounded-xl border border-white/10 bg-slate-950 px-4 text-sm font-bold normal-case tracking-normal text-white outline-none placeholder:text-slate-600 focus:border-amber-300/50 focus:ring-4 focus:ring-amber-300/10"
-            />
-          </label>
+        <div className="mt-5 grid gap-4">
+          <form onSubmit={submitRandom} className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+            <label className="grid gap-2 text-xs font-black uppercase tracking-[0.18em] text-slate-500">
+              Player name
+              <input
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                placeholder="Enter late player"
+                autoComplete="off"
+                className="h-12 min-w-0 rounded-xl border border-white/10 bg-slate-950 px-4 text-sm font-bold normal-case tracking-normal text-white outline-none placeholder:text-slate-600 focus:border-amber-300/50 focus:ring-4 focus:ring-amber-300/10"
+              />
+            </label>
+            <button type="submit" className="min-h-12 self-end rounded-xl bg-amber-300 px-5 py-3 text-sm font-black text-slate-950 shadow-lg shadow-amber-300/10 hover:bg-amber-200">
+              {availableSlots.length === 1 ? "Use only available BYE" : `Randomly assign · ${availableSlots.length} BYEs`}
+            </button>
+          </form>
 
-          <label className="grid gap-2 text-xs font-black uppercase tracking-[0.18em] text-slate-500">
-            BYE to replace
-            <select
-              value={selectedMatchId}
-              onChange={(event) => setSelectedMatchId(event.target.value)}
-              className="h-12 min-w-0 rounded-xl border border-white/10 bg-slate-950 px-4 text-sm font-bold normal-case tracking-normal text-white outline-none focus:border-amber-300/50 focus:ring-4 focus:ring-amber-300/10"
-            >
-              {availableSlots.map((slot) => (
-                <option key={slot.matchId} value={slot.matchId}>
-                  {slot.advancingPlayer}&apos;s BYE · {slot.roundName} · Match {slot.matchNumber}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <button
-            type="submit"
-            className="min-h-12 self-end rounded-xl bg-amber-300 px-5 py-3 text-sm font-black text-slate-950 shadow-lg shadow-amber-300/10 hover:bg-amber-200"
-          >
-            Add late player
-          </button>
-        </form>
+          {availableSlots.length > 1 ? (
+            <details className="rounded-2xl border border-white/10 bg-black/10 p-4">
+              <summary className="cursor-pointer text-sm font-bold text-slate-300">Choose a BYE manually instead</summary>
+              <form onSubmit={submitManual} className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+                <label className="grid gap-2 text-xs font-black uppercase tracking-[0.18em] text-slate-500">
+                  BYE to replace
+                  <select
+                    value={selectedMatchId}
+                    onChange={(event) => setSelectedMatchId(event.target.value)}
+                    className="h-12 min-w-0 rounded-xl border border-white/10 bg-slate-950 px-4 text-sm font-bold normal-case tracking-normal text-white outline-none focus:border-amber-300/50 focus:ring-4 focus:ring-amber-300/10"
+                  >
+                    {availableSlots.map((slot) => (
+                      <option key={slot.matchId} value={slot.matchId}>
+                        {slot.advancingPlayer}&apos;s BYE · {slot.roundName} · Match {slot.matchNumber}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button type="submit" className="min-h-12 self-end rounded-xl border border-amber-300/30 bg-amber-300/10 px-5 py-3 text-sm font-black text-amber-100 hover:bg-amber-300/15">Add to selected BYE</button>
+              </form>
+            </details>
+          ) : null}
+        </div>
       ) : (
         <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-400">
           Every remaining BYE is locked because an affected match has already
