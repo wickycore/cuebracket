@@ -112,6 +112,10 @@ export interface RoundRobinCompetition {
   rounds: BracketRound[];
   standings: StandingRow[];
   legs: 1 | 2;
+  playoffRounds: BracketRound[];
+  playoffStandings: StandingRow[];
+  playoffPlayers: string[];
+  playoffCycle: number;
   champion: string | null;
   generatedAt: string;
 }
@@ -318,6 +322,10 @@ function normalizeCompetition(
       rounds: normalizeRounds(competition.rounds),
       standings: normalizeStandings(competition.standings),
       legs: competition.legs ?? 1,
+      playoffRounds: normalizeRounds(competition.playoffRounds ?? []),
+      playoffStandings: normalizeStandings(competition.playoffStandings ?? []),
+      playoffPlayers: competition.playoffPlayers ?? [],
+      playoffCycle: competition.playoffCycle ?? 0,
     };
   }
   if (competition.type === "swiss") {
@@ -477,7 +485,11 @@ export function getBracketRounds(bracket?: TournamentBracket): BracketRound[] {
 export function getCompetitionRounds(competition?: TournamentCompetition): BracketRound[] {
   if (!competition) return [];
   if (
-    competition.type === "round_robin" ||
+    competition.type === "round_robin"
+  ) {
+    return [...competition.rounds, ...(competition.playoffRounds ?? [])];
+  }
+  if (
     competition.type === "swiss" ||
     competition.type === "leaderboard"
   ) {
