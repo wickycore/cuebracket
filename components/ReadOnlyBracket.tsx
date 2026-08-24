@@ -71,7 +71,7 @@ function Section({
       <BracketViewport label={title}>
         <div
           ref={contentRef}
-          className="relative flex min-w-max snap-x snap-mandatory items-start gap-14 pb-4 pr-12"
+          className="relative isolate flex min-w-max snap-x snap-mandatory items-start gap-14 pb-4 pr-12"
         >
           <BracketConnections
             rounds={rounds}
@@ -96,6 +96,7 @@ function Section({
                       <div
                         key={match.id}
                         ref={(node) => registerMatch(match.id, node)}
+                        data-bracket-match-id={match.id}
                         className="relative z-10"
                       >
                         {automaticAdvance ? (
