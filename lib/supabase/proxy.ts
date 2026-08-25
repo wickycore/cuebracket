@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { getSupabaseEnv } from "@/lib/supabase/env";
+import { isProtectedOrganizerPath } from "@/lib/auth/route-protection";
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -29,14 +30,7 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const protectedPath =
-    request.nextUrl.pathname.startsWith("/dashboard") ||
-    request.nextUrl.pathname.startsWith("/account") ||
-    request.nextUrl.pathname.startsWith("/cloud");
-
-  const publicCloudView = request.nextUrl.pathname.startsWith("/cloud/live/");
-
-  if (protectedPath && !publicCloudView && !user) {
+  if (isProtectedOrganizerPath(request.nextUrl.pathname) && !user) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/auth/login";
     loginUrl.searchParams.set("next", request.nextUrl.pathname);

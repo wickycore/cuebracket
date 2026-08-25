@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import QRCode from "qrcode";
 import {
   getMyCloudTournament,
   setCloudTournamentVisibility,
@@ -24,6 +25,7 @@ export function ShareTournament({
   const [copied, setCopied] = useState(false);
   const [state, setState] = useState<"loading" | "signed_out" | "private" | "public" | "working" | "error">("loading");
   const [message, setMessage] = useState("");
+  const [qrDataUrl, setQrDataUrl] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -53,9 +55,28 @@ export function ShareTournament({
   const encodedText = encodeURIComponent(
     `Follow ${tournament.name} live on CueBracket Pro`,
   );
-  const qrUrl = liveUrl
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodedUrl}`
-    : "";
+
+  useEffect(() => {
+    let active = true;
+    if (!liveUrl || state !== "public") {
+      return () => {
+        active = false;
+      };
+    }
+    QRCode.toDataURL(liveUrl, {
+      width: 260,
+      margin: 1,
+      errorCorrectionLevel: "M",
+      color: { dark: "#020617", light: "#ffffff" },
+    }).then((value) => {
+      if (active) setQrDataUrl(value);
+    }).catch(() => {
+      if (active) setQrDataUrl("");
+    });
+    return () => {
+      active = false;
+    };
+  }, [liveUrl, state]);
 
   async function copyLink() {
     if (!liveUrl || state !== "public") return;
@@ -169,11 +190,11 @@ export function ShareTournament({
           </div> : state === "signed_out" ? <Link href={`/auth/login?next=${encodeURIComponent(`/tournaments/${tournament.id}`)}`} className="mt-4 inline-flex rounded-xl border border-cyan-400/20 bg-cyan-400/10 px-4 py-2.5 text-sm font-black text-cyan-200">Sign in to publish</Link> : null}
         </div>
 
-        {qrUrl && isPublic ? (
+        {qrDataUrl && isPublic ? (
           <div className="mx-auto rounded-3xl bg-white p-3 shadow-2xl shadow-cyan-500/10">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={qrUrl}
+              src={qrDataUrl}
               alt={`QR code for ${tournament.name}`}
               className="h-52 w-52 sm:h-56 sm:w-56"
             />

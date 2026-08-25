@@ -10,6 +10,7 @@ import {
   cloneRounds,
   currentRoundComplete,
   makeCompetitionMatch,
+  resolveChampionshipPlayoff,
 } from "@/lib/competition/common";
 
 function pairKey(a: string, b: string) {
@@ -58,19 +59,6 @@ function sortSwissRows(rows: StandingRow[]) {
     previousRank = rank;
     return { ...row, rank };
   });
-}
-
-function resolveSwissChampion(competition: SwissCompetition, standings: StandingRow[], finished: boolean) {
-  if (!finished) return { champion: null, championshipTiePlayers: [] as string[], championOverride: null };
-  const tied = standings.filter((row) => row.rank === 1).map((row) => row.player);
-  const override = tied.includes(competition.championOverride ?? "")
-    ? competition.championOverride ?? null
-    : null;
-  return {
-    championshipTiePlayers: tied.length > 1 ? tied : [],
-    championOverride: tied.length > 1 ? override : null,
-    champion: tied.length === 1 ? tied[0] : override,
-  };
 }
 
 function swissStandings(
@@ -182,6 +170,10 @@ export function buildSwissCompetition(
     currentRound: 1,
     championshipTiePlayers: [],
     championOverride: null,
+    playoffRounds: [],
+    playoffStandings: [],
+    playoffPlayers: [],
+    playoffCycle: 0,
     champion: null,
     generatedAt: new Date().toISOString(),
   };
@@ -195,17 +187,38 @@ export function updateSwissMatch(
   updater: (match: BracketMatch) => void,
 ) {
   const rounds = cloneRounds(competition.rounds);
-  const match = rounds.flatMap((round) => round.matches).find((item) => item.id === matchId);
+  const playoffRounds = cloneRounds(competition.playoffRounds ?? []);
+  const match = [...rounds, ...playoffRounds]
+    .flatMap((round) => round.matches)
+    .find((item) => item.id === matchId);
   if (!match) return competition;
   updater(match);
   const standings = swissStandings(players, rounds, options);
   const finished = competition.currentRound >= competition.totalRounds && currentRoundComplete(rounds);
-  return {
+  const next = {
     ...competition,
     rounds,
+    playoffRounds,
     standings,
-    ...resolveSwissChampion(competition, standings, finished),
+    championOverride: null,
   };
+  if (!finished) {
+    return {
+      ...next,
+      championshipTiePlayers: [],
+      playoffRounds: [],
+      playoffStandings: [],
+      playoffPlayers: [],
+      playoffCycle: 0,
+      champion: null,
+    };
+  }
+  return resolveChampionshipPlayoff(
+    next,
+    standings.filter((row) => row.rank === 1).map((row) => row.player),
+    options,
+    "sw",
+  );
 }
 
 export function canGenerateNextSwissRound(competition: SwissCompetition) {
@@ -226,5 +239,11 @@ export function generateNextSwissRound(
     rounds,
     currentRound: roundNumber,
     standings: swissStandings(players, rounds, options),
+    championshipTiePlayers: [],
+    playoffRounds: [],
+    playoffStandings: [],
+    playoffPlayers: [],
+    playoffCycle: 0,
+    champion: null,
   };
 }

@@ -1,10 +1,15 @@
 import type {
+  BracketMatch,
   FreeForAllCompetition,
   FreeForAllHeat,
   FreeForAllTieRule,
   StandingRow,
   TournamentOptions,
 } from "@/lib/tournaments";
+import {
+  cloneRounds,
+  resolveChampionshipPlayoff,
+} from "@/lib/competition/common";
 
 function pairKey(a: string, b: string) {
   return a.localeCompare(b) < 0 ? `${a}::${b}` : `${b}::${a}`;
@@ -256,17 +261,45 @@ function championshipState(
   standings: StandingRow[],
   complete: boolean,
 ) {
-  if (!complete) return { champion: null, championshipTiePlayers: [] as string[], championOverride: null };
+  if (!complete) {
+    return {
+      ...competition,
+      standings,
+      championshipTiePlayers: [],
+      playoffRounds: [],
+      playoffStandings: [],
+      playoffPlayers: [],
+      playoffCycle: 0,
+      championOverride: null,
+      champion: null,
+    };
+  }
   const tied = standings.filter((row) => row.rank === 1).map((row) => row.player);
-  const override = tied.includes(competition.championOverride ?? "")
-    ? competition.championOverride ?? null
-    : null;
-  return {
-    championshipTiePlayers: tied.length > 1 ? tied : [],
-    championOverride: tied.length > 1 ? override : null,
-    champion: tied.length === 1 ? tied[0] : override,
-  };
+  return resolveChampionshipPlayoff(
+    { ...competition, standings, championOverride: null },
+    tied,
+    // FFA championship playoffs are head-to-head pool races, so standard
+    // win/loss points are sufficient to rank a multi-player playoff.
+    { ...optionsForPlayoff, pointsForWin: 3, pointsForDraw: 0, pointsForLoss: 0 },
+    "ffa",
+  );
 }
+
+const optionsForPlayoff: TournamentOptions = {
+  roundRobinLegs: 1,
+  swissRounds: 1,
+  freeForAllRounds: 1,
+  freeForAllHeatSize: 2,
+  freeForAllTieRule: "tiebreak_required",
+  leaderboardCycles: 1,
+  pointsForWin: 3,
+  pointsForDraw: 0,
+  pointsForLoss: 0,
+  groupCount: 2,
+  qualifiersPerGroup: 1,
+  finalStageFormat: "single",
+  bracketResetEnabled: true,
+};
 
 export function buildFreeForAllCompetition(
   players: string[],
@@ -284,6 +317,10 @@ export function buildFreeForAllCompetition(
     tieRule: options.freeForAllTieRule ?? "split_points",
     championshipTiePlayers: [],
     championOverride: null,
+    playoffRounds: [],
+    playoffStandings: [],
+    playoffPlayers: [],
+    playoffCycle: 0,
     champion: null,
     generatedAt: new Date().toISOString(),
   };
@@ -308,12 +345,7 @@ export function updateFreeForAllHeat(
   heat.completed = true;
   const standings = calculateFreeForAllStandings(players, heats);
   const allComplete = heats.length > 0 && heats.every((item) => item.completed);
-  return {
-    ...competition,
-    heats,
-    standings,
-    ...championshipState(competition, standings, allComplete),
-  };
+  return championshipState({ ...competition, heats }, standings, allComplete);
 }
 
 export function clearFreeForAllHeat(
@@ -341,6 +373,29 @@ export function clearFreeForAllHeat(
     standings: calculateFreeForAllStandings(players, heats),
     championshipTiePlayers: [],
     championOverride: null,
+    playoffRounds: [],
+    playoffStandings: [],
+    playoffPlayers: [],
+    playoffCycle: 0,
     champion: null,
   };
 }
+
+export function updateFreeForAllPlayoffMatch(
+  competition: FreeForAllCompetition,
+  matchId: string,
+  updater: (match: BracketMatch) => void,
+) {
+  const playoffRounds = cloneRounds(competition.playoffRounds ?? []);
+  const match = playoffRounds.flatMap((round) => round.matches).find((item) => item.id === matchId);
+  if (!match) return competition;
+  updater(match);
+  return resolveChampionshipPlayoff(
+    { ...competition, playoffRounds, championOverride: null },
+    competition.championshipTiePlayers ?? competition.playoffPlayers,
+    optionsForPlayoff,
+    "ffa",
+  );
+}
+
+export const FREE_FOR_ALL_PLAYOFF_OPTIONS = optionsForPlayoff;

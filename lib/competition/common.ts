@@ -323,3 +323,100 @@ export function currentRoundComplete(rounds: BracketRound[]) {
   const matches = current.matches.filter((match) => match.player1 && match.player2);
   return matches.length > 0 && matches.every((match) => match.completed);
 }
+
+export interface ChampionshipPlayoffState {
+  championshipTiePlayers?: string[];
+  playoffRounds: BracketRound[];
+  playoffStandings: StandingRow[];
+  playoffPlayers: string[];
+  playoffCycle: number;
+  champion: string | null;
+}
+
+export function samePlayerSet(first: string[], second: string[]) {
+  if (first.length !== second.length) return false;
+  const left = [...first].sort((a, b) => a.localeCompare(b));
+  const right = [...second].sort((a, b) => a.localeCompare(b));
+  return left.every((player, index) => player === right[index]);
+}
+
+export function buildChampionshipPlayoffRounds(
+  players: string[],
+  cycle: number,
+  prefix: string,
+  title = "Championship Playoff",
+) {
+  return buildRoundRobinRounds(players, 1, `${prefix}-playoff-${cycle}`).map(
+    (round, index) => ({
+      ...round,
+      round: index + 1,
+      name:
+        players.length === 2
+          ? `${title} ${cycle}`
+          : `${title} ${cycle} · Round ${index + 1}`,
+      matches: round.matches.map((match) => ({ ...match, round: index + 1 })),
+    }),
+  );
+}
+
+export function resolveChampionshipPlayoff<T extends ChampionshipPlayoffState>(
+  competition: T,
+  tiedPlayers: string[],
+  options: TournamentOptions,
+  prefix: string,
+): T {
+  if (tiedPlayers.length < 2) {
+    return {
+      ...competition,
+      championshipTiePlayers: [],
+      playoffRounds: [],
+      playoffStandings: [],
+      playoffPlayers: [],
+      playoffCycle: 0,
+      champion: tiedPlayers[0] ?? null,
+    };
+  }
+
+  const reuse = samePlayerSet(competition.playoffPlayers ?? [], tiedPlayers);
+  const playoffCycle = reuse ? competition.playoffCycle || 1 : 1;
+  const playoffPlayers = reuse ? competition.playoffPlayers : tiedPlayers;
+  const playoffRounds = reuse && competition.playoffRounds.length
+    ? competition.playoffRounds
+    : buildChampionshipPlayoffRounds(tiedPlayers, playoffCycle, prefix);
+  const playoffStandings = calculateStandings(playoffPlayers, playoffRounds, options);
+  const playoffComplete = allPlayableMatchesComplete(playoffRounds);
+  const leaders = playoffStandings.filter((row) => row.rank === 1);
+
+  return {
+    ...competition,
+    championshipTiePlayers: tiedPlayers,
+    playoffRounds,
+    playoffStandings,
+    playoffPlayers,
+    playoffCycle,
+    champion: playoffComplete && leaders.length === 1 ? leaders[0].player : null,
+  };
+}
+
+export function generateChampionshipPlayoffRematch<T extends ChampionshipPlayoffState>(
+  competition: T,
+  options: TournamentOptions,
+  prefix: string,
+): T {
+  if (!allPlayableMatchesComplete(competition.playoffRounds ?? [])) return competition;
+  const tiedPlayers = competition.playoffStandings
+    .filter((row) => row.rank === 1)
+    .map((row) => row.player);
+  if (tiedPlayers.length < 2) return competition;
+  const playoffCycle = (competition.playoffCycle || 1) + 1;
+  const playoffRounds = buildChampionshipPlayoffRounds(tiedPlayers, playoffCycle, prefix);
+  return {
+    ...competition,
+    championshipTiePlayers: tiedPlayers,
+    playoffPlayers: tiedPlayers,
+    playoffCycle,
+    playoffRounds,
+    playoffStandings: calculateStandings(tiedPlayers, playoffRounds, options),
+    champion: null,
+  };
+}
