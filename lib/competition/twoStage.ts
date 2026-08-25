@@ -32,11 +32,64 @@ interface QualifiedPlayer {
   rank: number;
 }
 
+function groupQualificationState(
+  group: TwoStageCompetition["groups"][number],
+  qualifiersPerGroup: number,
+) {
+  if (!allPlayableMatchesComplete(group.rounds)) {
+    return {
+      ...group,
+      qualificationTiePlayers: [],
+      qualificationTieSlots: 0,
+      selectedTieQualifiers: [],
+    };
+  }
+
+  const cutoff = group.standings[qualifiersPerGroup - 1];
+  if (!cutoff) return group;
+  const tiedAtCutoff = group.standings
+    .filter((row) => row.rank === cutoff.rank)
+    .map((row) => row.player);
+  const guaranteed = group.standings.filter((row) => row.rank < cutoff.rank).length;
+  const availableSlots = Math.max(0, qualifiersPerGroup - guaranteed);
+  if (tiedAtCutoff.length <= availableSlots) {
+    return {
+      ...group,
+      qualificationTiePlayers: [],
+      qualificationTieSlots: 0,
+      selectedTieQualifiers: [],
+    };
+  }
+
+  return {
+    ...group,
+    qualificationTiePlayers: tiedAtCutoff,
+    qualificationTieSlots: availableSlots,
+    selectedTieQualifiers: (group.selectedTieQualifiers ?? []).filter((player) =>
+      tiedAtCutoff.includes(player),
+    ).slice(0, availableSlots),
+  };
+}
+
+function qualifiersForGroup(
+  group: TwoStageCompetition["groups"][number],
+  qualifiersPerGroup: number,
+) {
+  const tiePlayers = group.qualificationTiePlayers ?? [];
+  if (!tiePlayers.length) return group.standings.slice(0, qualifiersPerGroup).map((row) => row.player);
+  const tieRank = group.standings.find((row) => tiePlayers.includes(row.player))?.rank ?? Number.MAX_SAFE_INTEGER;
+  return [
+    ...group.standings.filter((row) => row.rank < tieRank).map((row) => row.player),
+    ...(group.selectedTieQualifiers ?? []),
+  ].slice(0, qualifiersPerGroup);
+}
+
 function buildCrossoverQualifierOrder(competition: TwoStageCompetition) {
   const remaining: QualifiedPlayer[] = [];
   competition.groups.forEach((group, groupIndex) => {
-    for (let rank = 0; rank < competition.qualifiersPerGroup; rank += 1) {
-      const player = group.standings[rank]?.player;
+    const groupQualifiers = qualifiersForGroup(group, competition.qualifiersPerGroup);
+    for (let rank = 0; rank < groupQualifiers.length; rank += 1) {
+      const player = groupQualifiers[rank];
       if (player) remaining.push({ player, groupIndex, rank });
     }
   });
@@ -131,7 +184,33 @@ export function updateTwoStageGroupMatch(
   if (!match) return competition;
   updater(match);
   group.standings = calculateStandings(group.players, group.rounds, options);
+  const groupIndex = groups.findIndex((item) => item.id === groupId);
+  groups[groupIndex] = groupQualificationState(group, competition.qualifiersPerGroup);
   return { ...competition, groups };
+}
+
+export function selectTwoStageTieQualifier(
+  competition: TwoStageCompetition,
+  groupId: string,
+  player: string,
+) {
+  const groups = competition.groups.map((group) => {
+    if (group.id !== groupId || !(group.qualificationTiePlayers ?? []).includes(player)) return group;
+    const slots = group.qualificationTieSlots ?? 0;
+    const current = group.selectedTieQualifiers ?? [];
+    const selected = current.includes(player)
+      ? current.filter((item) => item !== player)
+      : [...current, player].slice(-slots);
+    return { ...group, selectedTieQualifiers: selected };
+  });
+  return { ...competition, groups };
+}
+
+export function areTwoStageQualificationTiesResolved(competition: TwoStageCompetition) {
+  return competition.groups.every((group) => {
+    const tiePlayers = group.qualificationTiePlayers ?? [];
+    return !tiePlayers.length || (group.selectedTieQualifiers ?? []).length === (group.qualificationTieSlots ?? 0);
+  });
 }
 
 export function areTwoStageGroupsComplete(competition: TwoStageCompetition) {
@@ -144,7 +223,11 @@ export function generateTwoStageFinals(
   competition: TwoStageCompetition,
   sourceTournament: Tournament,
 ) {
-  if (!areTwoStageGroupsComplete(competition) || competition.finalBracket) return competition;
+  if (
+    !areTwoStageGroupsComplete(competition) ||
+    !areTwoStageQualificationTiesResolved(competition) ||
+    competition.finalBracket
+  ) return competition;
   // Adjacent entries become first-round opponents. Pair every group winner
   // with the weakest available qualifier from another group. With two groups
   // and two qualifiers this produces A1 vs B2 and B1 vs A2.

@@ -224,6 +224,19 @@ export async function getMyCloudTournaments() {
   return (data ?? []) as CloudTournamentRow[];
 }
 
+export async function getMyCloudTournament(id: string) {
+  const { supabase, user } = await requireUser();
+  const { data, error } = await supabase
+    .from("cloud_tournaments")
+    .select("*")
+    .eq("id", id)
+    .eq("owner_id", user.id)
+    .maybeSingle();
+
+  if (error) throw error;
+  return (data as CloudTournamentRow | null) ?? null;
+}
+
 export async function getPublicCloudTournament(id: string) {
   const supabase = createClient();
   const { data, error } = await supabase

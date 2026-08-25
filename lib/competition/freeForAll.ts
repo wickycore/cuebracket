@@ -233,7 +233,39 @@ function calculateFreeForAllStandings(players: string[], heats: FreeForAllHeat[]
     if ((b.rawScore ?? 0) !== (a.rawScore ?? 0)) return (b.rawScore ?? 0) - (a.rawScore ?? 0);
     return a.player.localeCompare(b.player);
   });
-  return sorted.map((row, index) => ({ ...row, rank: index + 1 }));
+  let previous: StandingRow | undefined;
+  let previousRank = 0;
+  return sorted.map((row, index) => {
+    const tied = Boolean(
+      previous &&
+      row.points === previous.points &&
+      (row.heatWins ?? 0) === (previous.heatWins ?? 0) &&
+      (row.podiums ?? 0) === (previous.podiums ?? 0) &&
+      (row.averagePlacement ?? 0) === (previous.averagePlacement ?? 0) &&
+      (row.rawScore ?? 0) === (previous.rawScore ?? 0),
+    );
+    const rank = tied ? previousRank : index + 1;
+    previous = row;
+    previousRank = rank;
+    return { ...row, rank };
+  });
+}
+
+function championshipState(
+  competition: FreeForAllCompetition,
+  standings: StandingRow[],
+  complete: boolean,
+) {
+  if (!complete) return { champion: null, championshipTiePlayers: [] as string[], championOverride: null };
+  const tied = standings.filter((row) => row.rank === 1).map((row) => row.player);
+  const override = tied.includes(competition.championOverride ?? "")
+    ? competition.championOverride ?? null
+    : null;
+  return {
+    championshipTiePlayers: tied.length > 1 ? tied : [],
+    championOverride: tied.length > 1 ? override : null,
+    champion: tied.length === 1 ? tied[0] : override,
+  };
 }
 
 export function buildFreeForAllCompetition(
@@ -250,6 +282,8 @@ export function buildFreeForAllCompetition(
     rounds,
     heatSize,
     tieRule: options.freeForAllTieRule ?? "split_points",
+    championshipTiePlayers: [],
+    championOverride: null,
     champion: null,
     generatedAt: new Date().toISOString(),
   };
@@ -278,7 +312,7 @@ export function updateFreeForAllHeat(
     ...competition,
     heats,
     standings,
-    champion: allComplete ? standings[0]?.player ?? null : null,
+    ...championshipState(competition, standings, allComplete),
   };
 }
 
@@ -305,6 +339,8 @@ export function clearFreeForAllHeat(
     ...competition,
     heats,
     standings: calculateFreeForAllStandings(players, heats),
+    championshipTiePlayers: [],
+    championOverride: null,
     champion: null,
   };
 }

@@ -10,6 +10,23 @@ import {
   cloneRounds,
 } from "@/lib/competition/common";
 
+function championshipState(
+  competition: LeaderboardCompetition,
+  standings: LeaderboardCompetition["standings"],
+  complete: boolean,
+) {
+  if (!complete) return { champion: null, championshipTiePlayers: [] as string[], championOverride: null };
+  const tied = standings.filter((row) => row.rank === 1).map((row) => row.player);
+  const override = tied.includes(competition.championOverride ?? "")
+    ? competition.championOverride ?? null
+    : null;
+  return {
+    championshipTiePlayers: tied.length > 1 ? tied : [],
+    championOverride: tied.length > 1 ? override : null,
+    champion: tied.length === 1 ? tied[0] : override,
+  };
+}
+
 export function buildLeaderboardCompetition(
   players: string[],
   options: TournamentOptions,
@@ -33,6 +50,8 @@ export function buildLeaderboardCompetition(
     standings,
     cycles,
     adjustments,
+    championshipTiePlayers: [],
+    championOverride: null,
     champion: null,
     generatedAt: new Date().toISOString(),
   };
@@ -54,7 +73,7 @@ export function updateLeaderboardMatch(
     ...competition,
     rounds,
     standings,
-    champion: allPlayableMatchesComplete(rounds) ? standings[0]?.player ?? null : null,
+    ...championshipState(competition, standings, allPlayableMatchesComplete(rounds)),
   };
 }
 
@@ -67,5 +86,14 @@ export function setLeaderboardAdjustment(
 ) {
   const adjustments = { ...competition.adjustments, [player]: value };
   const standings = calculateStandings(players, competition.rounds, options, adjustments);
-  return { ...competition, adjustments, standings };
+  return {
+    ...competition,
+    adjustments,
+    standings,
+    ...championshipState(
+      competition,
+      standings,
+      allPlayableMatchesComplete(competition.rounds),
+    ),
+  };
 }

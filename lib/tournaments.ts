@@ -126,6 +126,8 @@ export interface SwissCompetition {
   standings: StandingRow[];
   totalRounds: number;
   currentRound: number;
+  championshipTiePlayers?: string[];
+  championOverride?: string | null;
   champion: string | null;
   generatedAt: string;
 }
@@ -136,6 +138,8 @@ export interface LeaderboardCompetition {
   standings: StandingRow[];
   cycles: number;
   adjustments: Record<string, number>;
+  championshipTiePlayers?: string[];
+  championOverride?: string | null;
   champion: string | null;
   generatedAt: string;
 }
@@ -163,6 +167,8 @@ export interface FreeForAllCompetition {
   rounds: number;
   heatSize: number;
   tieRule: FreeForAllTieRule;
+  championshipTiePlayers?: string[];
+  championOverride?: string | null;
   champion: string | null;
   generatedAt: string;
 }
@@ -173,6 +179,9 @@ export interface TwoStageGroup {
   players: string[];
   rounds: BracketRound[];
   standings: StandingRow[];
+  qualificationTiePlayers?: string[];
+  qualificationTieSlots?: number;
+  selectedTieQualifiers?: string[];
 }
 
 export interface TwoStageCompetition {
@@ -713,7 +722,16 @@ export function getTournamentEventCounts(tournament: Tournament) {
 
   const fixtures = getAllMatches(tournament).filter((match) => match.player1 || match.player2);
   const playable = fixtures.filter((match) => match.player1 && match.player2);
-  const byes = fixtures.filter((match) => Boolean(match.player1) !== Boolean(match.player2));
+  const bracketByeMatches = tournament.bracket
+    ? getBracketRounds(tournament.bracket).flatMap((round) => round.matches)
+    : tournament.competition?.type === "two_stage" && tournament.competition.finalBracket
+      ? getBracketRounds(tournament.competition.finalBracket).flatMap((round) => round.matches)
+      : [];
+  const byes = bracketByeMatches.filter(
+    (match) =>
+      match.completed &&
+      Boolean(match.player1) !== Boolean(match.player2),
+  );
   return {
     total: playable.length,
     completed: playable.filter((match) => match.completed).length,

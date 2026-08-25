@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { ChampionCelebration } from "@/components/ChampionCelebration";
+import { ReadOnlyBracket } from "@/components/ReadOnlyBracket";
 import { FreeForAllStandingsTable, StandingsTable } from "@/components/StandingsTable";
 import {
   type BracketRound,
   formatDuration,
-  getBracketRounds,
   getFormatLabel,
   getTournamentChampionDescription,
   type Tournament,
@@ -101,6 +101,14 @@ export function ReadOnlyCompetition({ tournament, showChampion = true }: { tourn
   return (
     <div className="space-y-6">
       {showChampion && competition.champion ? <ChampionCelebration champion={competition.champion} description={getTournamentChampionDescription(tournament)} tournament={tournament} /> : null}
+      {"championshipTiePlayers" in competition &&
+      !competition.champion &&
+      (competition.championshipTiePlayers?.length ?? 0) > 1 ? (
+        <section className="rounded-[2rem] border border-amber-300/25 bg-amber-300/[0.06] p-6">
+          <p className="text-sm font-black uppercase tracking-[0.2em] text-amber-300">Championship tie</p>
+          <p className="mt-2 text-sm text-slate-300">The standings could not separate {competition.championshipTiePlayers?.join(", ")}. The organizer must record the official tiebreak winner.</p>
+        </section>
+      ) : null}
 
       {competition.type === "round_robin" ? (
         <>
@@ -166,6 +174,7 @@ export function ReadOnlyCompetition({ tournament, showChampion = true }: { tourn
             {competition.groups.map((group) => (
               <div key={group.id} className="space-y-4">
                 <StandingsTable rows={group.standings} title={`${group.name} standings`} rules={TABLE_RULES} />
+                {(group.qualificationTiePlayers?.length ?? 0) > 1 ? <p className="rounded-2xl border border-amber-300/20 bg-amber-300/[0.06] p-4 text-sm font-bold text-amber-100">Qualification tie pending organizer tiebreak.</p> : null}
                 <ReadOnlyRounds rounds={group.rounds} raceTo={tournament.raceTo} />
               </div>
             ))}
@@ -177,7 +186,7 @@ export function ReadOnlyCompetition({ tournament, showChampion = true }: { tourn
                 <h3 className="mt-2 text-2xl font-black">{competition.finalFormat === "double" ? "Double elimination" : "Single elimination"}</h3>
                 <p className="mt-2 text-sm text-slate-400">Opening matches use crossover seeding to reward group winners and avoid immediate same-group rematches whenever possible.</p>
               </div>
-              <ReadOnlyRounds rounds={getBracketRounds(competition.finalBracket).filter((round) => competition.finalBracket?.type !== "double" || round.name !== "Bracket Reset" || competition.finalBracket.resetRequired)} raceTo={tournament.raceTo} />
+              <ReadOnlyBracket tournament={tournament} bracket={competition.finalBracket} showChampion={false} />
             </section>
           ) : null}
         </>

@@ -5,6 +5,7 @@ import {
   BracketMatch,
   BracketRound,
   Tournament,
+  TournamentBracket,
   formatDuration,
   getTournamentChampionDescription,
 } from "@/lib/tournaments";
@@ -210,8 +211,16 @@ function Section({
   );
 }
 
-export function ReadOnlyBracket({ tournament }: { tournament: Tournament }) {
-  const bracket = tournament.bracket;
+export function ReadOnlyBracket({
+  tournament,
+  bracket: bracketOverride,
+  showChampion = true,
+}: {
+  tournament: Tournament;
+  bracket?: TournamentBracket;
+  showChampion?: boolean;
+}) {
+  const bracket = bracketOverride ?? tournament.bracket;
 
   if (!bracket) {
     return (
@@ -258,7 +267,7 @@ export function ReadOnlyBracket({ tournament }: { tournament: Tournament }) {
             <div className="h-full rounded-full bg-gradient-to-r from-cyan-400 via-violet-400 to-emerald-400 transition-[width] duration-700" style={{ width: `${progress}%` }} />
           </div>
         </div>
-        {bracket.champion ? <div className="mt-6"><ChampionCelebration champion={bracket.champion} description={getTournamentChampionDescription(tournament)} tournament={tournament} /></div> : null}
+        {showChampion && bracket.champion ? <div className="mt-6"><ChampionCelebration champion={bracket.champion} description={getTournamentChampionDescription(tournament)} tournament={tournament} /></div> : null}
 
         <Section
           title="Winners Bracket"
@@ -300,7 +309,7 @@ export function ReadOnlyBracket({ tournament }: { tournament: Tournament }) {
 
   return (
     <div>
-      {bracket.champion ? <div className="mb-6"><ChampionCelebration champion={bracket.champion} description={getTournamentChampionDescription(tournament)} tournament={tournament} /></div> : null}
+      {showChampion && bracket.champion ? <div className="mb-6"><ChampionCelebration champion={bracket.champion} description={getTournamentChampionDescription(tournament)} tournament={tournament} /></div> : null}
       <Section
         title="Single Elimination"
         rounds={bracket.rounds}

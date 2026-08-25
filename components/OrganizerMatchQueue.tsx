@@ -153,7 +153,16 @@ export function OrganizerMatchQueue({
               </div>
 
               {match.completed ? (
-                <p className="mt-3 text-xs font-bold text-emerald-300">Winner: {match.winner}</p>
+                <div className="mt-3 flex items-center justify-between gap-3">
+                  <p className="text-xs font-bold text-emerald-300">Winner: {match.winner}</p>
+                  <button
+                    type="button"
+                    onClick={() => controlMatch(match.id)}
+                    className="rounded-lg border border-amber-300/25 bg-amber-300/10 px-3 py-2 text-xs font-black text-amber-200 hover:bg-amber-300/15"
+                  >
+                    Correct result
+                  </button>
+                </div>
               ) : match.player1 && match.player2 ? (
                 <button
                   type="button"

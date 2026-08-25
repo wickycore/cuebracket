@@ -24,12 +24,17 @@ export function LiveMatchCenter({
   selectedMatchId,
   onSelectedMatchChange,
 }: Props) {
+  const allMatches = useMemo(() => getAllMatches(tournament), [tournament]);
   const playableMatches = useMemo(
     () =>
-      getAllMatches(tournament).filter(
+      allMatches.filter(
         (match) => match.player1 && match.player2 && !match.completed,
       ),
-    [tournament],
+    [allMatches],
+  );
+  const selectableMatches = useMemo(
+    () => allMatches.filter((match) => match.player1 && match.player2),
+    [allMatches],
   );
   const [internalSelectedId, setInternalSelectedId] = useState(
     playableMatches[0]?.id ?? "",
@@ -43,12 +48,12 @@ export function LiveMatchCenter({
   }
 
   useEffect(() => {
-    if (!playableMatches.some((match) => match.id === selectedId)) {
+    if (!selectableMatches.some((match) => match.id === selectedId)) {
       const nextId = playableMatches[0]?.id ?? "";
       setInternalSelectedId(nextId);
       onSelectedMatchChange?.(nextId);
     }
-  }, [onSelectedMatchChange, playableMatches, selectedId]);
+  }, [onSelectedMatchChange, playableMatches, selectableMatches, selectedId]);
 
   useEffect(() => {
     const timer = window.setInterval(() => tick((value) => value + 1), 1000);
@@ -56,7 +61,46 @@ export function LiveMatchCenter({
   }, []);
 
   const match =
-    playableMatches.find((item) => item.id === selectedId) ?? null;
+    selectableMatches.find((item) => item.id === selectedId) ?? null;
+
+  function hasActiveDependent(sourceMatchId: string) {
+    const visited = new Set<string>();
+    const pending = [sourceMatchId];
+
+    while (pending.length) {
+      const currentId = pending.shift();
+      if (!currentId || visited.has(currentId)) continue;
+      visited.add(currentId);
+
+      for (const candidate of allMatches) {
+        const dependsOnCurrent = [candidate.source1, candidate.source2].some(
+          (source) =>
+            source?.kind !== "seed" && source?.matchId === currentId,
+        );
+        if (!dependsOnCurrent) continue;
+        if (
+          candidate.completed ||
+          candidate.status === "live" ||
+          candidate.score1 !== null ||
+          candidate.score2 !== null
+        ) {
+          return true;
+        }
+        pending.push(candidate.id);
+      }
+    }
+
+    return false;
+  }
+
+  function confirmResultCorrection() {
+    const dependentWarning = match && hasActiveDependent(match.id)
+      ? " A later match already has activity; reopening this result will clear affected progression."
+      : " Later bracket progression will be recalculated automatically.";
+    return window.confirm(
+      `Reopen this finished match?${dependentWarning}`,
+    );
+  }
 
   function saveBracket(nextBracket: TournamentBracket) {
     const updated = updateTournament(tournament.id, {
@@ -132,6 +176,7 @@ export function LiveMatchCenter({
   }
 
   function undoScore() {
+    if (match?.completed && !confirmResultCorrection()) return;
     updateMatch((target) => {
       const history = [...(target.scoreHistory ?? [])];
       const previous = history.pop();
@@ -142,6 +187,20 @@ export function LiveMatchCenter({
       target.completed = false;
       target.winner = null;
       target.status = "live";
+      target.endedAt = null;
+    });
+  }
+
+  function clearCompletedResult() {
+    if (!match?.completed || !confirmResultCorrection()) return;
+    updateMatch((target) => {
+      target.score1 = 0;
+      target.score2 = 0;
+      target.scoreHistory = [];
+      target.completed = false;
+      target.winner = null;
+      target.status = "live";
+      target.startedAt = target.startedAt ?? new Date().toISOString();
       target.endedAt = null;
     });
   }
@@ -202,9 +261,10 @@ export function LiveMatchCenter({
           onChange={(event: ChangeEvent<HTMLSelectElement>) => selectMatch(event.target.value)}
           className="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-sm font-bold text-white lg:w-auto"
         >
-          {playableMatches.map((item) => (
+          {selectableMatches.map((item) => (
             <option key={item.id} value={item.id}>
               {item.player1} vs {item.player2}
+              {item.completed ? " · Finished" : item.status === "live" ? " · Live" : ""}
             </option>
           ))}
         </select>
@@ -228,7 +288,8 @@ export function LiveMatchCenter({
               <button
                 type="button"
                 onClick={() => addPoint(player)}
-                className="mt-4 min-h-12 w-full rounded-2xl bg-cyan-400 px-4 py-3 font-black text-slate-950 hover:bg-cyan-300"
+                disabled={match.completed}
+                className="mt-4 min-h-12 w-full rounded-2xl bg-cyan-400 px-4 py-3 font-black text-slate-950 hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 +1 {name}
               </button>
@@ -300,7 +361,7 @@ export function LiveMatchCenter({
       </label>
 
       <div className="mt-5 flex flex-wrap gap-3">
-        {!match.startedAt ? (
+        {!match.startedAt && !match.completed ? (
           <button
             type="button"
             onClick={startMatch}
@@ -309,14 +370,24 @@ export function LiveMatchCenter({
             Start match
           </button>
         ) : null}
-        <button
-          type="button"
-          onClick={undoScore}
-          disabled={!match.scoreHistory?.length}
-          className="rounded-xl border border-white/10 px-5 py-3 font-bold text-slate-300 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          Undo last point
-        </button>
+        {match.completed ? (
+          <button
+            type="button"
+            onClick={match.scoreHistory?.length ? undoScore : clearCompletedResult}
+            className="rounded-xl border border-amber-300/30 bg-amber-300/10 px-5 py-3 font-black text-amber-200 hover:bg-amber-300/15"
+          >
+            {match.scoreHistory?.length ? "Undo final point & reopen" : "Clear result & reopen"}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={undoScore}
+            disabled={!match.scoreHistory?.length}
+            className="rounded-xl border border-white/10 px-5 py-3 font-bold text-slate-300 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Undo last point
+          </button>
+        )}
       </div>
     </section>
   );

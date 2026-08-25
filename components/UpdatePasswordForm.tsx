@@ -24,8 +24,8 @@ export function UpdatePasswordForm() {
     setMessage("");
     setSuccess(false);
 
-    if (password.length < 6) {
-      setMessage("Use at least 6 characters for your new password.");
+    if (password.length < 10) {
+      setMessage("Use at least 10 characters for your new password.");
       return;
     }
 
@@ -80,7 +80,7 @@ export function UpdatePasswordForm() {
         New password
         <input
           type="password"
-          minLength={6}
+          minLength={10}
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           required
@@ -88,7 +88,7 @@ export function UpdatePasswordForm() {
           className={inputClass}
         />
         <span className="mt-2 block text-xs leading-5 text-slate-500">
-          Use at least 6 characters.
+          Use at least 10 characters.
         </span>
       </label>
 
@@ -96,7 +96,7 @@ export function UpdatePasswordForm() {
         Confirm new password
         <input
           type="password"
-          minLength={6}
+          minLength={10}
           value={confirmPassword}
           onChange={(event) => setConfirmPassword(event.target.value)}
           required

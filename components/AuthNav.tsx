@@ -47,7 +47,19 @@ export function AuthNav({ compact = false }: AuthNavProps) {
   }, [supabase]);
 
   async function signOut() {
+    const clearThisDevice = window.confirm(
+      "Clear CueBracket tournaments, leagues and table data from this device when signing out?\n\nChoose Cancel to keep an offline copy on this device.",
+    );
     await supabase.auth.signOut();
+    if (clearThisDevice) {
+      [
+        "cuebracket:tournaments:v1",
+        "cuebracket:leagues:v1",
+        "cuebracket:tables:v1",
+        "cuebracket:cloud-owners:v1",
+        "cuebracket:cloud-pending:v1",
+      ].forEach((key) => window.localStorage.removeItem(key));
+    }
     window.location.href = "/";
   }
 

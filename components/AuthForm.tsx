@@ -126,7 +126,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         <input
           id="auth-password"
           type="password"
-          minLength={6}
+          minLength={10}
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           required
@@ -136,7 +136,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
 
         {mode === "signup" ? (
           <span className="mt-2 block text-xs leading-5 text-slate-500">
-            Use at least 6 characters.
+            Use at least 10 characters.
           </span>
         ) : null}
       </div>

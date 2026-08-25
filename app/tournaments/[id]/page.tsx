@@ -109,15 +109,6 @@ export default function TournamentDetailPage() {
           </div>
 
           <div className="flex flex-wrap gap-2">
-            {structureReady ? (
-              <a data-cb-hard-navigation="true"
-                href={`/cloud/live/${tournament.id}`}
-                className="rounded-xl bg-cyan-400 px-4 py-3 text-sm font-black text-slate-950 hover:bg-cyan-300"
-              >
-                Open public view
-              </a>
-            ) : null}
-
             {tournament.status === "draft" && structureReady && !champion ? (
               <button
                 onClick={() => changeStatus("live")}
@@ -223,7 +214,7 @@ export default function TournamentDetailPage() {
               <span className="flex items-center justify-between gap-3"><span>Share tournament</span><span className="text-sm font-bold text-slate-500">Link · Social · QR</span></span>
             </summary>
             <div className="mt-4 border-t border-white/10 pt-1">
-              <ShareTournament tournamentId={tournament.id} tournamentName={tournament.name} />
+              <ShareTournament tournament={tournament} />
             </div>
           </details>
         ) : null}

@@ -27,7 +27,7 @@ const formats: Array<{
   { value: "leaderboard", name: "Leaderboard", icon: "📈", description: "A season-style schedule with wins, frame difference and bonus points.", bestFor: "Ongoing rankings" },
 ];
 
-const eliminationCapacities = [4, 8, 16, 32, 64, 128];
+const eliminationCapacities = [2, 4, 8, 16, 32, 64, 128];
 const flexibleCapacities = [4, 6, 8, 10, 12, 16, 24, 32, 48, 64, 128];
 
 export default function NewTournamentPage() {

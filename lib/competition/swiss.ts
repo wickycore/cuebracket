@@ -36,15 +36,41 @@ function byeRecipients(rounds: BracketRound[]) {
 }
 
 function sortSwissRows(rows: StandingRow[]) {
-  return [...rows]
-    .sort((a, b) => {
+  const sorted = [...rows].sort((a, b) => {
       if (b.points !== a.points) return b.points - a.points;
       if ((b.buchholz ?? 0) !== (a.buchholz ?? 0)) return (b.buchholz ?? 0) - (a.buchholz ?? 0);
       if (b.frameDifference !== a.frameDifference) return b.frameDifference - a.frameDifference;
       if (b.framesFor !== a.framesFor) return b.framesFor - a.framesFor;
       return a.player.localeCompare(b.player);
-    })
-    .map((row, index) => ({ ...row, rank: index + 1 }));
+    });
+  let previous: StandingRow | undefined;
+  let previousRank = 0;
+  return sorted.map((row, index) => {
+    const tied = Boolean(
+      previous &&
+      row.points === previous.points &&
+      (row.buchholz ?? 0) === (previous.buchholz ?? 0) &&
+      row.frameDifference === previous.frameDifference &&
+      row.framesFor === previous.framesFor,
+    );
+    const rank = tied ? previousRank : index + 1;
+    previous = row;
+    previousRank = rank;
+    return { ...row, rank };
+  });
+}
+
+function resolveSwissChampion(competition: SwissCompetition, standings: StandingRow[], finished: boolean) {
+  if (!finished) return { champion: null, championshipTiePlayers: [] as string[], championOverride: null };
+  const tied = standings.filter((row) => row.rank === 1).map((row) => row.player);
+  const override = tied.includes(competition.championOverride ?? "")
+    ? competition.championOverride ?? null
+    : null;
+  return {
+    championshipTiePlayers: tied.length > 1 ? tied : [],
+    championOverride: tied.length > 1 ? override : null,
+    champion: tied.length === 1 ? tied[0] : override,
+  };
 }
 
 function swissStandings(
@@ -154,6 +180,8 @@ export function buildSwissCompetition(
     standings: swissStandings(players, rounds, options),
     totalRounds: Math.max(1, options.swissRounds),
     currentRound: 1,
+    championshipTiePlayers: [],
+    championOverride: null,
     champion: null,
     generatedAt: new Date().toISOString(),
   };
@@ -176,7 +204,7 @@ export function updateSwissMatch(
     ...competition,
     rounds,
     standings,
-    champion: finished ? standings[0]?.player ?? null : null,
+    ...resolveSwissChampion(competition, standings, finished),
   };
 }
 
