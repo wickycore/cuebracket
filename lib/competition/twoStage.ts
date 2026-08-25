@@ -6,9 +6,11 @@ import type {
 } from "@/lib/tournaments";
 import {
   allPlayableMatchesComplete,
+  buildChampionshipPlayoffRounds,
   buildRoundRobinRounds,
   calculateStandings,
   cloneRounds,
+  samePlayerSet,
 } from "@/lib/competition/common";
 import {
   buildSingleEliminationBracket,
@@ -35,6 +37,7 @@ interface QualifiedPlayer {
 function groupQualificationState(
   group: TwoStageCompetition["groups"][number],
   qualifiersPerGroup: number,
+  options: TournamentOptions,
 ) {
   if (!allPlayableMatchesComplete(group.rounds)) {
     return {
@@ -42,6 +45,11 @@ function groupQualificationState(
       qualificationTiePlayers: [],
       qualificationTieSlots: 0,
       selectedTieQualifiers: [],
+      qualificationPlayoffRounds: [],
+      qualificationPlayoffStandings: [],
+      qualificationPlayoffPlayers: [],
+      qualificationPlayoffCycle: 0,
+      qualificationPlayoffSlots: 0,
     };
   }
 
@@ -58,17 +66,71 @@ function groupQualificationState(
       qualificationTiePlayers: [],
       qualificationTieSlots: 0,
       selectedTieQualifiers: [],
+      qualificationPlayoffRounds: [],
+      qualificationPlayoffStandings: [],
+      qualificationPlayoffPlayers: [],
+      qualificationPlayoffCycle: 0,
+      qualificationPlayoffSlots: 0,
     };
   }
+
+  const sameTie = samePlayerSet(group.qualificationTiePlayers ?? [], tiedAtCutoff);
+  const qualificationPlayoffCycle = sameTie ? group.qualificationPlayoffCycle || 1 : 1;
+  const qualificationPlayoffPlayers = sameTie && (group.qualificationPlayoffPlayers?.length ?? 0) > 0
+    ? group.qualificationPlayoffPlayers ?? []
+    : tiedAtCutoff;
+  const qualificationPlayoffSlots = sameTie && (group.qualificationPlayoffSlots ?? 0) > 0
+    ? group.qualificationPlayoffSlots ?? availableSlots
+    : availableSlots;
+  const qualificationPlayoffRounds = sameTie && (group.qualificationPlayoffRounds?.length ?? 0) > 0
+    ? group.qualificationPlayoffRounds ?? []
+    : buildChampionshipPlayoffRounds(
+        qualificationPlayoffPlayers,
+        qualificationPlayoffCycle,
+        `${group.id}-qualification`,
+        "Qualification Playoff",
+      );
+  const qualificationPlayoffStandings = calculateStandings(
+    qualificationPlayoffPlayers,
+    qualificationPlayoffRounds,
+    options,
+  );
+  const locked = sameTie ? group.selectedTieQualifiers ?? [] : [];
+  const selectedTieQualifiers = resolvePlayoffQualifiers(
+    locked,
+    qualificationPlayoffStandings,
+    qualificationPlayoffRounds,
+    qualificationPlayoffSlots,
+  );
 
   return {
     ...group,
     qualificationTiePlayers: tiedAtCutoff,
     qualificationTieSlots: availableSlots,
-    selectedTieQualifiers: (group.selectedTieQualifiers ?? []).filter((player) =>
-      tiedAtCutoff.includes(player),
-    ).slice(0, availableSlots),
+    selectedTieQualifiers,
+    qualificationPlayoffRounds,
+    qualificationPlayoffStandings,
+    qualificationPlayoffPlayers,
+    qualificationPlayoffCycle,
+    qualificationPlayoffSlots,
   };
+}
+
+function resolvePlayoffQualifiers(
+  locked: string[],
+  standings: TwoStageCompetition["groups"][number]["standings"],
+  rounds: TwoStageCompetition["groups"][number]["rounds"],
+  slots: number,
+) {
+  if (!allPlayableMatchesComplete(rounds) || slots < 1) return locked;
+  const cutoff = standings[slots - 1];
+  if (!cutoff) return locked;
+  const guaranteed = standings.filter((row) => row.rank < cutoff.rank).map((row) => row.player);
+  const boundary = standings.filter((row) => row.rank === cutoff.rank).map((row) => row.player);
+  const remaining = slots - guaranteed.length;
+  return boundary.length <= remaining
+    ? [...new Set([...locked, ...standings.slice(0, slots).map((row) => row.player)])]
+    : [...new Set([...locked, ...guaranteed])];
 }
 
 function qualifiersForGroup(
@@ -153,6 +215,14 @@ export function buildTwoStageCompetition(
       players: members,
       rounds,
       standings: calculateStandings(members, rounds, options),
+      qualificationTiePlayers: [],
+      qualificationTieSlots: 0,
+      selectedTieQualifiers: [],
+      qualificationPlayoffRounds: [],
+      qualificationPlayoffStandings: [],
+      qualificationPlayoffPlayers: [],
+      qualificationPlayoffCycle: 0,
+      qualificationPlayoffSlots: 0,
     };
   });
 
@@ -173,35 +243,67 @@ export function updateTwoStageGroupMatch(
   matchId: string,
   updater: (match: BracketMatch) => void,
 ) {
-  const groups = competition.groups.map((group) => ({
+  const groups: TwoStageCompetition["groups"] = competition.groups.map((group) => ({
     ...group,
     rounds: cloneRounds(group.rounds),
     standings: group.standings.map((row) => ({ ...row })),
+    qualificationPlayoffRounds: cloneRounds(group.qualificationPlayoffRounds ?? []),
+    qualificationPlayoffStandings: (group.qualificationPlayoffStandings ?? []).map((row) => ({ ...row })),
   }));
   const group = groups.find((item) => item.id === groupId);
   if (!group) return competition;
-  const match = group.rounds.flatMap((round) => round.matches).find((item) => item.id === matchId);
+  const match = [...group.rounds, ...(group.qualificationPlayoffRounds ?? [])]
+    .flatMap((round) => round.matches)
+    .find((item) => item.id === matchId);
   if (!match) return competition;
   updater(match);
-  group.standings = calculateStandings(group.players, group.rounds, options);
+  if (group.rounds.some((round) => round.matches.some((item) => item.id === matchId))) {
+    group.standings = calculateStandings(group.players, group.rounds, options);
+  } else {
+    group.qualificationPlayoffStandings = calculateStandings(
+      group.qualificationPlayoffPlayers ?? [],
+      group.qualificationPlayoffRounds ?? [],
+      options,
+    );
+  }
   const groupIndex = groups.findIndex((item) => item.id === groupId);
-  groups[groupIndex] = groupQualificationState(group, competition.qualifiersPerGroup);
+  groups[groupIndex] = groupQualificationState(group, competition.qualifiersPerGroup, options);
   return { ...competition, groups };
 }
 
-export function selectTwoStageTieQualifier(
+export function generateTwoStageQualificationPlayoffRematch(
   competition: TwoStageCompetition,
+  options: TournamentOptions,
   groupId: string,
-  player: string,
 ) {
   const groups = competition.groups.map((group) => {
-    if (group.id !== groupId || !(group.qualificationTiePlayers ?? []).includes(player)) return group;
-    const slots = group.qualificationTieSlots ?? 0;
-    const current = group.selectedTieQualifiers ?? [];
-    const selected = current.includes(player)
-      ? current.filter((item) => item !== player)
-      : [...current, player].slice(-slots);
-    return { ...group, selectedTieQualifiers: selected };
+    if (group.id !== groupId) return group;
+    const rounds = group.qualificationPlayoffRounds ?? [];
+    const standings = group.qualificationPlayoffStandings ?? [];
+    const slots = group.qualificationPlayoffSlots ?? 0;
+    if (!allPlayableMatchesComplete(rounds) || slots < 1) return group;
+    const cutoff = standings[slots - 1];
+    if (!cutoff) return group;
+    const guaranteed = standings.filter((row) => row.rank < cutoff.rank).map((row) => row.player);
+    const tiedPlayers = standings.filter((row) => row.rank === cutoff.rank).map((row) => row.player);
+    const remainingSlots = slots - guaranteed.length;
+    if (tiedPlayers.length <= remainingSlots) return group;
+    const qualificationPlayoffCycle = (group.qualificationPlayoffCycle || 1) + 1;
+    const qualificationPlayoffRounds = buildChampionshipPlayoffRounds(
+      tiedPlayers,
+      qualificationPlayoffCycle,
+      `${group.id}-qualification`,
+      "Qualification Playoff",
+    );
+    return {
+      ...group,
+      selectedTieQualifiers: [...new Set([...(group.selectedTieQualifiers ?? []), ...guaranteed])],
+      qualificationPlayoffPlayers: tiedPlayers,
+      qualificationPlayoffSlots: remainingSlots,
+      qualificationPlayoffCycle,
+      qualificationPlayoffRounds,
+      qualificationPlayoffStandings: calculateStandings(tiedPlayers, qualificationPlayoffRounds, options),
+    };
   });
   return { ...competition, groups };
 }

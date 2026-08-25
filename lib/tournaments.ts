@@ -128,6 +128,10 @@ export interface SwissCompetition {
   currentRound: number;
   championshipTiePlayers?: string[];
   championOverride?: string | null;
+  playoffRounds: BracketRound[];
+  playoffStandings: StandingRow[];
+  playoffPlayers: string[];
+  playoffCycle: number;
   champion: string | null;
   generatedAt: string;
 }
@@ -140,6 +144,10 @@ export interface LeaderboardCompetition {
   adjustments: Record<string, number>;
   championshipTiePlayers?: string[];
   championOverride?: string | null;
+  playoffRounds: BracketRound[];
+  playoffStandings: StandingRow[];
+  playoffPlayers: string[];
+  playoffCycle: number;
   champion: string | null;
   generatedAt: string;
 }
@@ -169,6 +177,10 @@ export interface FreeForAllCompetition {
   tieRule: FreeForAllTieRule;
   championshipTiePlayers?: string[];
   championOverride?: string | null;
+  playoffRounds: BracketRound[];
+  playoffStandings: StandingRow[];
+  playoffPlayers: string[];
+  playoffCycle: number;
   champion: string | null;
   generatedAt: string;
 }
@@ -182,6 +194,11 @@ export interface TwoStageGroup {
   qualificationTiePlayers?: string[];
   qualificationTieSlots?: number;
   selectedTieQualifiers?: string[];
+  qualificationPlayoffRounds?: BracketRound[];
+  qualificationPlayoffStandings?: StandingRow[];
+  qualificationPlayoffPlayers?: string[];
+  qualificationPlayoffCycle?: number;
+  qualificationPlayoffSlots?: number;
 }
 
 export interface TwoStageCompetition {
@@ -343,6 +360,10 @@ function normalizeCompetition(
       rounds: normalizeRounds(competition.rounds),
       standings: normalizeStandings(competition.standings),
       currentRound: competition.currentRound ?? competition.rounds.length,
+      playoffRounds: normalizeRounds(competition.playoffRounds ?? []),
+      playoffStandings: normalizeStandings(competition.playoffStandings ?? []),
+      playoffPlayers: competition.playoffPlayers ?? [],
+      playoffCycle: competition.playoffCycle ?? 0,
     };
   }
   if (competition.type === "leaderboard") {
@@ -351,6 +372,10 @@ function normalizeCompetition(
       rounds: normalizeRounds(competition.rounds),
       standings: normalizeStandings(competition.standings),
       adjustments: competition.adjustments ?? {},
+      playoffRounds: normalizeRounds(competition.playoffRounds ?? []),
+      playoffStandings: normalizeStandings(competition.playoffStandings ?? []),
+      playoffPlayers: competition.playoffPlayers ?? [],
+      playoffCycle: competition.playoffCycle ?? 0,
     };
   }
   if (competition.type === "free_for_all") {
@@ -367,6 +392,10 @@ function normalizeCompetition(
       })),
       standings: normalizeStandings(competition.standings),
       tieRule: competition.tieRule ?? "split_points",
+      playoffRounds: normalizeRounds(competition.playoffRounds ?? []),
+      playoffStandings: normalizeStandings(competition.playoffStandings ?? []),
+      playoffPlayers: competition.playoffPlayers ?? [],
+      playoffCycle: competition.playoffCycle ?? 0,
     };
   }
   return {
@@ -375,6 +404,11 @@ function normalizeCompetition(
       ...group,
       rounds: normalizeRounds(group.rounds),
       standings: normalizeStandings(group.standings),
+      qualificationPlayoffRounds: normalizeRounds(group.qualificationPlayoffRounds ?? []),
+      qualificationPlayoffStandings: normalizeStandings(group.qualificationPlayoffStandings ?? []),
+      qualificationPlayoffPlayers: group.qualificationPlayoffPlayers ?? [],
+      qualificationPlayoffCycle: group.qualificationPlayoffCycle ?? 0,
+      qualificationPlayoffSlots: group.qualificationPlayoffSlots ?? 0,
     })),
     finalBracket: normalizeBracket(competition.finalBracket),
   };
@@ -536,6 +570,9 @@ export function renameTournamentPlayer(
       ...competition,
       rounds: renamePlayerRounds(competition.rounds, oldName, newName),
       standings: renamePlayerStandings(competition.standings, oldName, newName),
+      playoffRounds: renamePlayerRounds(competition.playoffRounds, oldName, newName),
+      playoffStandings: renamePlayerStandings(competition.playoffStandings, oldName, newName),
+      playoffPlayers: competition.playoffPlayers.map((player) => player === oldName ? newName : player),
       champion: competition.champion === oldName ? newName : competition.champion,
     };
   } else if (competition?.type === "leaderboard") {
@@ -548,6 +585,9 @@ export function renameTournamentPlayer(
       ...competition,
       rounds: renamePlayerRounds(competition.rounds, oldName, newName),
       standings: renamePlayerStandings(competition.standings, oldName, newName),
+      playoffRounds: renamePlayerRounds(competition.playoffRounds, oldName, newName),
+      playoffStandings: renamePlayerStandings(competition.playoffStandings, oldName, newName),
+      playoffPlayers: competition.playoffPlayers.map((player) => player === oldName ? newName : player),
       adjustments,
       champion: competition.champion === oldName ? newName : competition.champion,
     };
@@ -559,6 +599,9 @@ export function renameTournamentPlayer(
         entries: heat.entries.map((entry) => entry.player === oldName ? { ...entry, player: newName } : entry),
       })),
       standings: renamePlayerStandings(competition.standings, oldName, newName),
+      playoffRounds: renamePlayerRounds(competition.playoffRounds, oldName, newName),
+      playoffStandings: renamePlayerStandings(competition.playoffStandings, oldName, newName),
+      playoffPlayers: competition.playoffPlayers.map((player) => player === oldName ? newName : player),
       champion: competition.champion === oldName ? newName : competition.champion,
     };
   } else if (competition?.type === "two_stage") {
@@ -569,6 +612,11 @@ export function renameTournamentPlayer(
         players: group.players.map((player) => player === oldName ? newName : player),
         rounds: renamePlayerRounds(group.rounds, oldName, newName),
         standings: renamePlayerStandings(group.standings, oldName, newName),
+        qualificationTiePlayers: group.qualificationTiePlayers?.map((player) => player === oldName ? newName : player),
+        selectedTieQualifiers: group.selectedTieQualifiers?.map((player) => player === oldName ? newName : player),
+        qualificationPlayoffRounds: renamePlayerRounds(group.qualificationPlayoffRounds ?? [], oldName, newName),
+        qualificationPlayoffStandings: renamePlayerStandings(group.qualificationPlayoffStandings ?? [], oldName, newName),
+        qualificationPlayoffPlayers: group.qualificationPlayoffPlayers?.map((player) => player === oldName ? newName : player),
       })),
       finalBracket: renamePlayerBracket(competition.finalBracket, oldName, newName),
       champion: competition.champion === oldName ? newName : competition.champion,
@@ -630,11 +678,13 @@ export function getCompetitionRounds(competition?: TournamentCompetition): Brack
     competition.type === "swiss" ||
     competition.type === "leaderboard"
   ) {
-    return competition.rounds;
+    return [...competition.rounds, ...(competition.playoffRounds ?? [])];
   }
+  if (competition.type === "free_for_all") return competition.playoffRounds ?? [];
   if (competition.type === "two_stage") {
     return [
       ...competition.groups.flatMap((group) => group.rounds),
+      ...competition.groups.flatMap((group) => group.qualificationPlayoffRounds ?? []),
       ...getBracketRounds(competition.finalBracket),
     ];
   }

@@ -6,7 +6,8 @@ import { PlayerNameEditor } from "@/components/PlayerNameEditor";
 import { FreeForAllStandingsTable, StandingsTable } from "@/components/StandingsTable";
 import { buildTournamentCompetition } from "@/lib/competition";
 import { isValidRaceResult } from "@/lib/bracket/singleElimination";
-import { clearFreeForAllHeat, updateFreeForAllHeat } from "@/lib/competition/freeForAll";
+import { clearFreeForAllHeat, FREE_FOR_ALL_PLAYOFF_OPTIONS, updateFreeForAllHeat, updateFreeForAllPlayoffMatch } from "@/lib/competition/freeForAll";
+import { generateChampionshipPlayoffRematch } from "@/lib/competition/common";
 import { setLeaderboardAdjustment, updateLeaderboardMatch } from "@/lib/competition/leaderboard";
 import { generateRoundRobinPlayoffRematch, updateRoundRobinMatch } from "@/lib/competition/roundRobin";
 import { canGenerateNextSwissRound, generateNextSwissRound, updateSwissMatch } from "@/lib/competition/swiss";
@@ -14,7 +15,7 @@ import {
   areTwoStageGroupsComplete,
   areTwoStageQualificationTiesResolved,
   generateTwoStageFinals,
-  selectTwoStageTieQualifier,
+  generateTwoStageQualificationPlayoffRematch,
   updateTwoStageFinalMatch,
   updateTwoStageGroupMatch,
 } from "@/lib/competition/twoStage";
@@ -341,6 +342,8 @@ export function CompetitionManager({ tournament, onTournamentChange }: Props) {
       saveCompetition(updateSwissMatch(competition, tournament.players, tournament.options, match.id, updater));
     } else if (competition.type === "leaderboard") {
       saveCompetition(updateLeaderboardMatch(competition, tournament.players, tournament.options, match.id, updater));
+    } else if (competition.type === "free_for_all") {
+      saveCompetition(updateFreeForAllPlayoffMatch(competition, match.id, updater));
     } else if (competition.type === "two_stage") {
       saveCompetition(groupId
         ? updateTwoStageGroupMatch(competition, tournament.options, groupId, match.id, updater)
@@ -356,6 +359,8 @@ export function CompetitionManager({ tournament, onTournamentChange }: Props) {
       saveCompetition(updateSwissMatch(competition, tournament.players, tournament.options, match.id, undoMutator));
     } else if (competition.type === "leaderboard") {
       saveCompetition(updateLeaderboardMatch(competition, tournament.players, tournament.options, match.id, undoMutator));
+    } else if (competition.type === "free_for_all") {
+      saveCompetition(updateFreeForAllPlayoffMatch(competition, match.id, undoMutator));
     } else if (competition.type === "two_stage") {
       saveCompetition(groupId
         ? updateTwoStageGroupMatch(competition, tournament.options, groupId, match.id, undoMutator)
@@ -378,22 +383,13 @@ export function CompetitionManager({ tournament, onTournamentChange }: Props) {
       saveCompetition(updateSwissMatch(competition, tournament.players, tournament.options, match.id, updater));
     } else if (competition.type === "leaderboard") {
       saveCompetition(updateLeaderboardMatch(competition, tournament.players, tournament.options, match.id, updater));
+    } else if (competition.type === "free_for_all") {
+      saveCompetition(updateFreeForAllPlayoffMatch(competition, match.id, updater));
     } else if (competition.type === "two_stage") {
       saveCompetition(groupId
         ? updateTwoStageGroupMatch(competition, tournament.options, groupId, match.id, updater)
         : updateTwoStageFinalMatch(competition, match.id, updater));
     }
-  }
-
-  function declareTiedChampion(player: string) {
-    if (!competition) return;
-    if (
-      competition.type !== "swiss" &&
-      competition.type !== "leaderboard" &&
-      competition.type !== "free_for_all"
-    ) return;
-    if (!(competition.championshipTiePlayers ?? []).includes(player)) return;
-    saveCompetition({ ...competition, championOverride: player, champion: player });
   }
 
   if (!competition) {
@@ -435,17 +431,27 @@ export function CompetitionManager({ tournament, onTournamentChange }: Props) {
       {"championshipTiePlayers" in competition &&
       !competition.champion &&
       (competition.championshipTiePlayers?.length ?? 0) > 1 ? (
-        <section className="rounded-[2rem] border border-amber-300/25 bg-amber-300/[0.06] p-6">
-          <p className="text-sm font-black uppercase tracking-[0.2em] text-amber-300">Championship tie unresolved</p>
-          <h3 className="mt-2 text-xl font-black text-white">Choose the champion only after your organizer tiebreak</h3>
-          <p className="mt-2 text-sm text-slate-400">CueBracket will not decide this tie alphabetically. Run the agreed playoff or tiebreak, then record the official winner here.</p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            {competition.championshipTiePlayers?.map((player) => (
-              <button key={player} type="button" onClick={() => declareTiedChampion(player)} className="rounded-xl border border-amber-300/30 bg-amber-300/10 px-4 py-2.5 text-sm font-black text-amber-100 hover:bg-amber-300/20">
-                Declare {player} champion
-              </button>
-            ))}
+        <section className="space-y-5 rounded-[2rem] border border-amber-300/25 bg-amber-300/[0.06] p-5 sm:p-6">
+          <div>
+            <p className="text-sm font-black uppercase tracking-[0.2em] text-amber-300">Championship playoff</p>
+            <h3 className="mt-2 text-xl font-black text-white">The tied leaders must decide it on the table</h3>
+            <p className="mt-2 text-sm text-slate-400">CueBracket generated official playoff fixtures automatically. No player can become champion alphabetically or by array order.</p>
           </div>
+          <StandingsTable rows={competition.playoffStandings} title="Playoff standings" rules={TABLE_RULES} />
+          <PairRounds rounds={competition.playoffRounds} raceTo={tournament.raceTo} drafts={drafts} setDrafts={setDrafts} onSave={savePairMatch} onUndo={undoPairMatch} onStart={startPairMatch} />
+          {competition.playoffRounds.flatMap((round) => round.matches).filter((match) => match.player1 && match.player2).every((match) => match.completed) ? (
+            <button
+              type="button"
+              onClick={() => saveCompetition(generateChampionshipPlayoffRematch(
+                competition,
+                competition.type === "free_for_all" ? FREE_FOR_ALL_PLAYOFF_OPTIONS : tournament.options,
+                competition.type === "free_for_all" ? "ffa" : competition.type === "leaderboard" ? "lb" : "sw",
+              ))}
+              className="rounded-2xl bg-amber-300 px-5 py-3 font-black text-slate-950"
+            >
+              Generate playoff rematch
+            </button>
+          ) : null}
         </section>
       ) : null}
 
@@ -536,19 +542,16 @@ export function CompetitionManager({ tournament, onTournamentChange }: Props) {
               <div key={group.id} className="space-y-4">
                 <StandingsTable rows={group.standings} title={`${group.name} standings`} rules={TABLE_RULES} />
                 {(group.qualificationTiePlayers?.length ?? 0) > 1 ? (
-                  <section className="rounded-2xl border border-amber-300/25 bg-amber-300/[0.06] p-5">
-                    <p className="font-black text-amber-200">Qualification playoff required</p>
-                    <p className="mt-2 text-sm text-slate-400">Select {group.qualificationTieSlots} qualifier{group.qualificationTieSlots === 1 ? "" : "s"} after the tied players complete their organizer tiebreak.</p>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {group.qualificationTiePlayers?.map((player) => {
-                        const selected = group.selectedTieQualifiers?.includes(player);
-                        return (
-                          <button key={player} type="button" onClick={() => saveCompetition(selectTwoStageTieQualifier(competition, group.id, player))} className={`rounded-xl border px-3 py-2 text-sm font-black ${selected ? "border-emerald-300/40 bg-emerald-300/15 text-emerald-200" : "border-white/10 bg-white/5 text-slate-300"}`}>
-                            {selected ? "✓ " : ""}{player}
-                          </button>
-                        );
-                      })}
+                  <section className="space-y-4 rounded-2xl border border-amber-300/25 bg-amber-300/[0.06] p-5">
+                    <div>
+                      <p className="font-black text-amber-200">Qualification playoff</p>
+                      <p className="mt-2 text-sm text-slate-400">CueBracket generated fixtures for the tied qualification places. The required qualifier{group.qualificationTieSlots === 1 ? "" : "s"} will be selected from the playoff results.</p>
                     </div>
+                    <StandingsTable rows={group.qualificationPlayoffStandings ?? []} title="Qualification playoff standings" rules={TABLE_RULES} />
+                    <PairRounds rounds={group.qualificationPlayoffRounds ?? []} raceTo={tournament.raceTo} drafts={drafts} setDrafts={setDrafts} onSave={(match, score1, score2) => savePairMatch(match, score1, score2, group.id)} onUndo={(match) => undoPairMatch(match, group.id)} onStart={(match) => startPairMatch(match, group.id)} eyebrow={`${group.name} playoff`} />
+                    {!areTwoStageQualificationTiesResolved(competition) && (group.qualificationPlayoffRounds ?? []).flatMap((round) => round.matches).filter((match) => match.player1 && match.player2).every((match) => match.completed) ? (
+                      <button type="button" onClick={() => saveCompetition(generateTwoStageQualificationPlayoffRematch(competition, tournament.options, group.id))} className="rounded-xl bg-amber-300 px-4 py-2.5 text-sm font-black text-slate-950">Generate qualification rematch</button>
+                    ) : null}
                   </section>
                 ) : null}
                 <PairRounds rounds={group.rounds} raceTo={tournament.raceTo} drafts={drafts} setDrafts={setDrafts} onSave={(match, score1, score2) => savePairMatch(match, score1, score2, group.id)} onUndo={(match) => undoPairMatch(match, group.id)} onStart={(match) => startPairMatch(match, group.id)} eyebrow={group.name} />

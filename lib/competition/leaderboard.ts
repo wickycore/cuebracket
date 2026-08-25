@@ -8,23 +8,33 @@ import {
   buildRoundRobinRounds,
   calculateStandings,
   cloneRounds,
+  resolveChampionshipPlayoff,
 } from "@/lib/competition/common";
 
-function championshipState(
+function resolveLeaderboard(
   competition: LeaderboardCompetition,
   standings: LeaderboardCompetition["standings"],
-  complete: boolean,
+  options: TournamentOptions,
 ) {
-  if (!complete) return { champion: null, championshipTiePlayers: [] as string[], championOverride: null };
-  const tied = standings.filter((row) => row.rank === 1).map((row) => row.player);
-  const override = tied.includes(competition.championOverride ?? "")
-    ? competition.championOverride ?? null
-    : null;
-  return {
-    championshipTiePlayers: tied.length > 1 ? tied : [],
-    championOverride: tied.length > 1 ? override : null,
-    champion: tied.length === 1 ? tied[0] : override,
-  };
+  if (!allPlayableMatchesComplete(competition.rounds)) {
+    return {
+      ...competition,
+      standings,
+      championshipTiePlayers: [],
+      playoffRounds: [],
+      playoffStandings: [],
+      playoffPlayers: [],
+      playoffCycle: 0,
+      championOverride: null,
+      champion: null,
+    };
+  }
+  return resolveChampionshipPlayoff(
+    { ...competition, standings, championOverride: null },
+    standings.filter((row) => row.rank === 1).map((row) => row.player),
+    options,
+    "lb",
+  );
 }
 
 export function buildLeaderboardCompetition(
@@ -52,6 +62,10 @@ export function buildLeaderboardCompetition(
     adjustments,
     championshipTiePlayers: [],
     championOverride: null,
+    playoffRounds: [],
+    playoffStandings: [],
+    playoffPlayers: [],
+    playoffCycle: 0,
     champion: null,
     generatedAt: new Date().toISOString(),
   };
@@ -65,16 +79,14 @@ export function updateLeaderboardMatch(
   updater: (match: BracketMatch) => void,
 ) {
   const rounds = cloneRounds(competition.rounds);
-  const match = rounds.flatMap((round) => round.matches).find((item) => item.id === matchId);
+  const playoffRounds = cloneRounds(competition.playoffRounds ?? []);
+  const match = [...rounds, ...playoffRounds]
+    .flatMap((round) => round.matches)
+    .find((item) => item.id === matchId);
   if (!match) return competition;
   updater(match);
   const standings = calculateStandings(players, rounds, options, competition.adjustments);
-  return {
-    ...competition,
-    rounds,
-    standings,
-    ...championshipState(competition, standings, allPlayableMatchesComplete(rounds)),
-  };
+  return resolveLeaderboard({ ...competition, rounds, playoffRounds }, standings, options);
 }
 
 export function setLeaderboardAdjustment(
@@ -86,14 +98,5 @@ export function setLeaderboardAdjustment(
 ) {
   const adjustments = { ...competition.adjustments, [player]: value };
   const standings = calculateStandings(players, competition.rounds, options, adjustments);
-  return {
-    ...competition,
-    adjustments,
-    standings,
-    ...championshipState(
-      competition,
-      standings,
-      allPlayableMatchesComplete(competition.rounds),
-    ),
-  };
+  return resolveLeaderboard({ ...competition, adjustments }, standings, options);
 }

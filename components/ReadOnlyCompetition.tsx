@@ -105,9 +105,13 @@ export function ReadOnlyCompetition({ tournament, showChampion = true }: { tourn
       {"championshipTiePlayers" in competition &&
       !competition.champion &&
       (competition.championshipTiePlayers?.length ?? 0) > 1 ? (
-        <section className="rounded-[2rem] border border-amber-300/25 bg-amber-300/[0.06] p-6">
-          <p className="text-sm font-black uppercase tracking-[0.2em] text-amber-300">Championship tie</p>
-          <p className="mt-2 text-sm text-slate-300">The standings could not separate {competition.championshipTiePlayers?.join(", ")}. The organizer must record the official tiebreak winner.</p>
+        <section className="space-y-4 rounded-[2rem] border border-amber-300/25 bg-amber-300/[0.06] p-6">
+          <div>
+            <p className="text-sm font-black uppercase tracking-[0.2em] text-amber-300">Championship playoff live</p>
+            <p className="mt-2 text-sm text-slate-300">The standings could not separate {competition.championshipTiePlayers?.join(", ")}. Their official playoff fixtures decide the champion.</p>
+          </div>
+          <StandingsTable rows={competition.playoffStandings} title="Playoff standings" rules={TABLE_RULES} />
+          <ReadOnlyRounds rounds={competition.playoffRounds} raceTo={tournament.raceTo} />
         </section>
       ) : null}
 
@@ -175,7 +179,13 @@ export function ReadOnlyCompetition({ tournament, showChampion = true }: { tourn
             {competition.groups.map((group) => (
               <div key={group.id} className="space-y-4">
                 <StandingsTable rows={group.standings} title={`${group.name} standings`} rules={TABLE_RULES} />
-                {(group.qualificationTiePlayers?.length ?? 0) > 1 ? <p className="rounded-2xl border border-amber-300/20 bg-amber-300/[0.06] p-4 text-sm font-bold text-amber-100">Qualification tie pending organizer tiebreak.</p> : null}
+                {(group.qualificationTiePlayers?.length ?? 0) > 1 ? (
+                  <section className="space-y-4 rounded-2xl border border-amber-300/20 bg-amber-300/[0.06] p-4">
+                    <p className="text-sm font-bold text-amber-100">Qualification playoff in progress.</p>
+                    <StandingsTable rows={group.qualificationPlayoffStandings ?? []} title="Playoff standings" rules={TABLE_RULES} />
+                    <ReadOnlyRounds rounds={group.qualificationPlayoffRounds ?? []} raceTo={tournament.raceTo} />
+                  </section>
+                ) : null}
                 <ReadOnlyRounds rounds={group.rounds} raceTo={tournament.raceTo} />
               </div>
             ))}

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { isProtectedOrganizerPath } from "@/lib/auth/route-protection";
 
 test("organizer header keeps native navigation inside active tournaments", () => {
   const source = readFileSync(
@@ -24,4 +25,37 @@ test("organizer header keeps native navigation inside active tournaments", () =>
   const nativeAnchors =
     source.match(/<a data-cb-hard-navigation="true"/g) ?? [];
   assert.ok(nativeAnchors.length >= 6);
+});
+
+test("every organizer route is locked after sign-out while spectator routes stay public", () => {
+  for (const path of [
+    "/dashboard",
+    "/account",
+    "/cloud",
+    "/tournaments",
+    "/tournaments/example",
+    "/leagues",
+    "/tables",
+  ]) {
+    assert.equal(isProtectedOrganizerPath(path), true, path);
+  }
+  assert.equal(isProtectedOrganizerPath("/cloud/live/example"), false);
+  assert.equal(isProtectedOrganizerPath("/"), false);
+});
+
+test("share panel generates QR codes locally and never calls an external QR service", () => {
+  const source = readFileSync(
+    new URL("../components/ShareTournament.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(source, /QRCode\.toDataURL/);
+  assert.doesNotMatch(source, /api\.qrserver\.com/);
+});
+
+test("completed elimination matches retain a visible correction action", () => {
+  const source = readFileSync(
+    new URL("../components/OrganizerMatchQueue.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(source, /Correct result/);
 });

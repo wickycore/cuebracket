@@ -48,7 +48,7 @@ export function AuthNav({ compact = false }: AuthNavProps) {
 
   async function signOut() {
     const clearThisDevice = window.confirm(
-      "Clear CueBracket tournaments, leagues and table data from this device when signing out?\n\nChoose Cancel to keep an offline copy on this device.",
+      "Clear CueBracket tournaments, leagues and table data from this device when signing out?\n\nChoose Cancel to keep an offline copy. Organizer pages will still require you to sign in again before the data can be opened or edited.",
     );
     await supabase.auth.signOut();
     if (clearThisDevice) {
