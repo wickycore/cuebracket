@@ -43,7 +43,7 @@ export function ShareTournament({
     return () => {
       active = false;
     };
-  }, [tournament.id, tournament.updatedAt]);
+  }, [tournament.id]);
 
   const liveUrl = useMemo(
     () => (origin ? `${origin}/cloud/live/${tournament.id}` : ""),
