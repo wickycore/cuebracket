@@ -20,14 +20,15 @@ function formatPoints(value: number) {
 }
 
 function MatchTimer({ startedAt, endedAt }: { startedAt?: string | null; endedAt?: string | null }) {
-  const [, tick] = useState(0);
+  const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     if (!startedAt || endedAt) return;
-    const timer = window.setInterval(() => tick((value) => value + 1), 1000);
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(timer);
   }, [startedAt, endedAt]);
   if (!startedAt) return null;
-  return <span className="text-[11px] font-bold tabular-nums text-slate-500">{formatDuration(new Date(endedAt ?? Date.now()).getTime() - new Date(startedAt).getTime())}</span>;
+  const endTime = endedAt ? new Date(endedAt).getTime() : now;
+  return <span className="text-[11px] font-bold tabular-nums text-slate-500">{formatDuration(endTime - new Date(startedAt).getTime())}</span>;
 }
 
 function ReadOnlyRounds({ rounds, raceTo, byePoints }: { rounds: BracketRound[]; raceTo: number; byePoints?: number }) {

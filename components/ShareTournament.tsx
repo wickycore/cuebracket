@@ -26,15 +26,16 @@ export function ShareTournament({
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    setOrigin(publicOrigin());
     let active = true;
     getMyCloudTournament(tournament.id)
       .then((row) => {
         if (!active) return;
+        setOrigin(publicOrigin());
         setState(row?.is_public ? "public" : "private");
       })
       .catch((error) => {
         if (!active) return;
+        setOrigin(publicOrigin());
         const text = error instanceof Error ? error.message : "Unable to check cloud status.";
         setMessage(text);
         setState(text.toLowerCase().includes("sign in") ? "signed_out" : "error");

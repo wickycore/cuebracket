@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   BracketMatch,
   BracketRound,
@@ -98,6 +98,16 @@ function Section({
     : new Map<string, number>();
   const contentRef = useRef<HTMLDivElement>(null);
   const { matchRefs, registerMatch } = useBracketMatchRefs();
+  const hasLiveTimer = rounds.some((round) =>
+    round.matches.some((match) => match.startedAt && !match.endedAt),
+  );
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (!hasLiveTimer) return;
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [hasLiveTimer]);
 
   return (
     <section className={`mt-6 overflow-hidden rounded-[1.75rem] border border-white/10 bg-gradient-to-br ${colors.panel}`}>
@@ -194,7 +204,7 @@ function Section({
                             })}
                             <div className="flex min-h-9 items-center justify-between gap-2 px-3 py-1.5 text-[11px] font-bold text-slate-500">
                               <span>Race to {raceTo}</span>
-                              <span>{match.startedAt ? formatDuration(new Date(match.endedAt ?? Date.now()).getTime() - new Date(match.startedAt).getTime()) : ""}</span>
+                              <span>{match.startedAt ? formatDuration((match.endedAt ? new Date(match.endedAt).getTime() : now) - new Date(match.startedAt).getTime()) : ""}</span>
                             </div>
                           </article>
                         )}

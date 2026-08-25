@@ -31,7 +31,7 @@ export function TournamentList({
   limit,
   showControls = true,
 }: TournamentListProps) {
-  const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const [tournaments, setTournaments] = useState<Tournament[]>(() => getTournaments());
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<Sort>("updated");
@@ -41,7 +41,6 @@ export function TournamentList({
   }, []);
 
   useEffect(() => {
-    reload();
     return subscribeToTournamentChanges(reload);
   }, [reload]);
 

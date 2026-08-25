@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import type { BracketMatch, BracketRound } from "@/lib/tournaments";
 
@@ -10,14 +10,6 @@ export interface OrganizerMatchSection {
   name: string;
   tone: "cyan" | "rose" | "violet";
   rounds: BracketRound[];
-}
-
-interface QueueItem {
-  match: BracketMatch;
-  section: OrganizerMatchSection;
-  roundName: string;
-  matchNumber: number;
-  tab: QueueTab;
 }
 
 const tabLabels: Record<QueueTab, string> = {
@@ -77,11 +69,8 @@ export function OrganizerMatchQueue({
   );
   const suggestedTab: QueueTab = counts.live ? "live" : counts.ready ? "ready" : counts.waiting ? "waiting" : "completed";
   const [tab, setTab] = useState<QueueTab>(suggestedTab);
-  const visibleItems = items.filter((item) => item.tab === tab);
-
-  useEffect(() => {
-    if (counts[tab] === 0 && counts[suggestedTab] > 0) setTab(suggestedTab);
-  }, [counts, suggestedTab, tab]);
+  const activeTab = counts[tab] > 0 ? tab : suggestedTab;
+  const visibleItems = items.filter((item) => item.tab === activeTab);
 
   function controlMatch(matchId: string) {
     onSelectMatch(matchId);
@@ -114,7 +103,7 @@ export function OrganizerMatchQueue({
             type="button"
             onClick={() => setTab(value)}
             className={`rounded-xl px-2 py-2.5 text-xs font-black transition sm:text-sm ${
-              tab === value ? "bg-cyan-400 text-slate-950" : "text-slate-400 hover:bg-white/5 hover:text-white"
+              activeTab === value ? "bg-cyan-400 text-slate-950" : "text-slate-400 hover:bg-white/5 hover:text-white"
             }`}
           >
             {tabLabels[value]} <span className="opacity-70">{counts[value]}</span>
@@ -180,7 +169,7 @@ export function OrganizerMatchQueue({
 
         {visibleItems.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-sm text-slate-500 lg:col-span-2">
-            No {tabLabels[tab].toLowerCase()} matches.
+            No {tabLabels[activeTab].toLowerCase()} matches.
           </div>
         ) : null}
       </div>

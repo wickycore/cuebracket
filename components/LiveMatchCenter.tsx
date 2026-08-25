@@ -39,8 +39,13 @@ export function LiveMatchCenter({
   const [internalSelectedId, setInternalSelectedId] = useState(
     playableMatches[0]?.id ?? "",
   );
-  const selectedId = selectedMatchId ?? internalSelectedId;
-  const [, tick] = useState(0);
+  const requestedSelectedId = selectedMatchId ?? internalSelectedId;
+  const selectedId = selectableMatches.some(
+    (match) => match.id === requestedSelectedId,
+  )
+    ? requestedSelectedId
+    : playableMatches[0]?.id ?? selectableMatches[0]?.id ?? "";
+  const [now, setNow] = useState(() => Date.now());
 
   function selectMatch(matchId: string) {
     setInternalSelectedId(matchId);
@@ -48,15 +53,7 @@ export function LiveMatchCenter({
   }
 
   useEffect(() => {
-    if (!selectableMatches.some((match) => match.id === selectedId)) {
-      const nextId = playableMatches[0]?.id ?? "";
-      setInternalSelectedId(nextId);
-      onSelectedMatchChange?.(nextId);
-    }
-  }, [onSelectedMatchChange, playableMatches, selectableMatches, selectedId]);
-
-  useEffect(() => {
-    const timer = window.setInterval(() => tick((value) => value + 1), 1000);
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(timer);
   }, []);
 
@@ -240,7 +237,7 @@ export function LiveMatchCenter({
 
   const elapsed = match.startedAt
     ? formatDuration(
-        new Date(match.endedAt ?? Date.now()).getTime() -
+        (match.endedAt ? new Date(match.endedAt).getTime() : now) -
           new Date(match.startedAt).getTime(),
       )
     : "00:00";

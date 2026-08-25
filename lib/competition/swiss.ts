@@ -101,7 +101,7 @@ function makeSwissRound(
   previousRounds: BracketRound[],
   roundNumber: number,
 ): BracketRound {
-  let pool = standings.length
+  const pool = standings.length
     ? standings.map((row) => row.player)
     : [...players];
   const usedByes = byeRecipients(previousRounds);

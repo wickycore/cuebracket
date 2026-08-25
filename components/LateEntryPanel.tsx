@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import type { LateEntryByeSlot } from "@/lib/bracket/lateEntry";
 
 export function LateEntryPanel({
@@ -24,15 +24,11 @@ export function LateEntryPanel({
   const [selectedMatchId, setSelectedMatchId] = useState("");
   const [message, setMessage] = useState("");
 
-  useEffect(() => {
-    if (
-      selectedMatchId &&
-      availableSlots.some((slot) => slot.matchId === selectedMatchId)
-    ) {
-      return;
-    }
-    setSelectedMatchId(availableSlots[0]?.matchId ?? "");
-  }, [availableSlots, selectedMatchId]);
+  const activeMatchId = availableSlots.some(
+    (slot) => slot.matchId === selectedMatchId,
+  )
+    ? selectedMatchId
+    : availableSlots[0]?.matchId ?? "";
 
   if (slots.length === 0 || remainingCapacity <= 0) return null;
 
@@ -90,7 +86,7 @@ export function LateEntryPanel({
 
   function submitManual(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    assignToSlot(selectedMatchId, false);
+    assignToSlot(activeMatchId, false);
   }
 
   return (
@@ -140,7 +136,7 @@ export function LateEntryPanel({
                 <label className="grid gap-2 text-xs font-black uppercase tracking-[0.18em] text-slate-500">
                   BYE to replace
                   <select
-                    value={selectedMatchId}
+                    value={activeMatchId}
                     onChange={(event) => setSelectedMatchId(event.target.value)}
                     className="h-12 min-w-0 rounded-xl border border-white/10 bg-slate-950 px-4 text-sm font-bold normal-case tracking-normal text-white outline-none focus:border-amber-300/50 focus:ring-4 focus:ring-amber-300/10"
                   >

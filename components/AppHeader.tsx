@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -23,10 +24,6 @@ export function AppHeader() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
-    setMenuOpen(false);
-  }, [pathname]);
-
-  useEffect(() => {
     if (!menuOpen) return;
 
     const previousOverflow = document.body.style.overflow;
@@ -49,7 +46,7 @@ export function AppHeader() {
       <header className="no-print sticky top-0 z-[120] border-b border-white/10 bg-[#020617]/95 backdrop-blur-xl">
         <div className="cb-safe-top">
           <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-3 sm:h-[4.5rem] sm:px-6 lg:px-8">
-            <a data-cb-hard-navigation="true"
+            <Link
               href="/"
               className="flex min-w-0 items-center gap-2.5 rounded-xl pr-2 font-black text-white"
               aria-label="CueBracket Pro home"
@@ -60,16 +57,17 @@ export function AppHeader() {
               <span className="truncate text-sm sm:text-base">
                 CueBracket Pro
               </span>
-            </a>
+            </Link>
 
             <nav className="hidden items-center gap-1 lg:flex">
               {navigation.map((item) => {
                 const active = isActivePath(pathname, item.href);
 
                 return (
-                  <a data-cb-hard-navigation="true"
+                  <Link
                     key={item.href}
                     href={item.href}
+                    onClick={() => setMenuOpen(false)}
                     className={`rounded-xl px-3 py-2.5 text-sm font-bold transition ${
                       active
                         ? "bg-cyan-400/10 text-cyan-200 ring-1 ring-cyan-400/20"
@@ -77,16 +75,16 @@ export function AppHeader() {
                     }`}
                   >
                     {item.label}
-                  </a>
+                  </Link>
                 );
               })}
 
-              <a data-cb-hard-navigation="true"
+              <Link
                 href="/tournaments/new"
                 className="ml-2 rounded-xl bg-cyan-400 px-4 py-2.5 text-sm font-black text-slate-950 transition hover:bg-cyan-300"
               >
                 + New event
-              </a>
+              </Link>
 
               <div className="ml-2">
                 <AuthNav />
@@ -98,13 +96,13 @@ export function AppHeader() {
                 <AuthNav compact />
               </div>
 
-              <a data-cb-hard-navigation="true"
+              <Link
                 href="/tournaments/new"
                 aria-label="Create new tournament"
                 className="grid h-11 w-11 place-items-center rounded-xl bg-cyan-400 text-xl font-black text-slate-950 shadow-lg shadow-cyan-500/15 active:scale-95"
               >
                 +
-              </a>
+              </Link>
 
               <button
                 type="button"
@@ -183,21 +181,23 @@ export function AppHeader() {
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 py-5">
-          <a data-cb-hard-navigation="true"
+          <Link
             href="/tournaments/new"
+            onClick={() => setMenuOpen(false)}
             className="mb-5 flex min-h-12 items-center justify-center rounded-2xl bg-cyan-400 px-4 py-3 font-black text-slate-950"
           >
             + Create new event
-          </a>
+          </Link>
 
           <nav className="space-y-2">
             {navigation.map((item) => {
               const active = isActivePath(pathname, item.href);
 
               return (
-                <a data-cb-hard-navigation="true"
+                <Link
                   key={item.href}
                   href={item.href}
+                  onClick={() => setMenuOpen(false)}
                   className={`flex min-h-12 items-center justify-between rounded-2xl px-4 py-3.5 text-base font-bold transition ${
                     active
                       ? "bg-cyan-400/10 text-cyan-200 ring-1 ring-cyan-400/20"
@@ -208,7 +208,7 @@ export function AppHeader() {
                   <span aria-hidden="true" className="text-xl text-slate-500">
                     ›
                   </span>
-                </a>
+                </Link>
               );
             })}
           </nav>

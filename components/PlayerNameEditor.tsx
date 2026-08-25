@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 
 import {
   renameTournamentPlayer,
@@ -20,12 +20,12 @@ export function PlayerNameEditor({
   const [message, setMessage] = useState("");
   const [isError, setIsError] = useState(false);
 
-  useEffect(() => {
-    if (tournament.players.includes(selectedPlayer)) return;
-    const firstPlayer = tournament.players[0] ?? "";
-    setSelectedPlayer(firstPlayer);
-    setNewName(firstPlayer);
-  }, [selectedPlayer, tournament.players]);
+  const activePlayer = tournament.players.includes(selectedPlayer)
+    ? selectedPlayer
+    : tournament.players[0] ?? "";
+  const activeName = tournament.players.includes(selectedPlayer)
+    ? newName
+    : activePlayer;
 
   function choosePlayer(player: string) {
     setSelectedPlayer(player);
@@ -37,14 +37,14 @@ export function PlayerNameEditor({
     event.preventDefault();
     setMessage("");
 
-    const result = renameTournamentPlayer(tournament, selectedPlayer, newName);
+    const result = renameTournamentPlayer(tournament, activePlayer, activeName);
     if (!result.ok) {
       setIsError(true);
       setMessage(result.reason);
       return;
     }
 
-    const correctedName = newName.trim().replace(/\s+/g, " ");
+    const correctedName = activeName.trim().replace(/\s+/g, " ");
     const updated = updateTournament(tournament.id, result.updates);
     if (!updated) {
       setIsError(true);
@@ -69,7 +69,7 @@ export function PlayerNameEditor({
         <label className="grid gap-2 text-xs font-bold text-slate-500">
           PLAYER
           <select
-            value={selectedPlayer}
+            value={activePlayer}
             onChange={(event) => choosePlayer(event.target.value)}
             className="h-12 min-w-0 rounded-xl border border-white/10 bg-slate-950 px-4 text-sm font-bold text-white"
           >
@@ -79,7 +79,7 @@ export function PlayerNameEditor({
         <label className="grid gap-2 text-xs font-bold text-slate-500">
           CORRECTED NAME
           <input
-            value={newName}
+            value={activeName}
             onChange={(event) => setNewName(event.target.value)}
             className="h-12 min-w-0 rounded-xl border border-white/10 bg-slate-950 px-4 text-sm font-bold text-white outline-none focus:border-cyan-400/50"
           />

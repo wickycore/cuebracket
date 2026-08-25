@@ -8,14 +8,13 @@ import { LeagueCard } from "@/components/LeagueCard";
 type Filter = "all" | LeagueStatus;
 
 export function LeagueList({ compact = false }: { compact?: boolean }) {
-  const [leagues, setLeagues] = useState<League[]>([]);
+  const [leagues, setLeagues] = useState<League[]>(() => getLeagues());
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
 
   const reload = useCallback(() => setLeagues(getLeagues()), []);
 
   useEffect(() => {
-    reload();
     return subscribeToLeagueChanges(reload);
   }, [reload]);
 
