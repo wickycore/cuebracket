@@ -6,21 +6,23 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/client";
+import { safeNextPath } from "@/lib/auth/next-path";
 
-function callbackUrl() {
+function callbackUrl(next: string) {
   const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/+$/, "");
   const origin =
     process.env.NODE_ENV === "production" && configured
       ? configured
       : window.location.origin;
 
-  return `${origin}/auth/callback?next=/dashboard`;
+  return `${origin}/auth/callback?next=${encodeURIComponent(next)}`;
 }
 
 export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createClient();
+  const next = safeNextPath(searchParams.get("next"));
 
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
@@ -43,7 +45,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
           email: email.trim(),
           password,
           options: {
-            emailRedirectTo: callbackUrl(),
+            emailRedirectTo: callbackUrl(next),
             data: {
               display_name: displayName.trim() || email.split("@")[0],
             },
@@ -65,7 +67,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         if (error) {
           setMessage(error.message);
         } else {
-          router.push(searchParams.get("next") ?? "/dashboard");
+          router.push(next);
           router.refresh();
         }
       }
