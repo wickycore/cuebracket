@@ -40,6 +40,7 @@ test("every organizer route is locked after sign-out while spectator routes stay
     assert.equal(isProtectedOrganizerPath(path), true, path);
   }
   assert.equal(isProtectedOrganizerPath("/cloud/live/example"), false);
+  assert.equal(isProtectedOrganizerPath("/register/example"), false);
   assert.equal(isProtectedOrganizerPath("/"), false);
 });
 
