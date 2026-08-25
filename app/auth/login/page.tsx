@@ -3,7 +3,15 @@ import { Suspense } from "react";
 
 import { AuthForm } from "@/components/AuthForm";
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string }>;
+}) {
+  const { next } = await searchParams;
+  const signupHref = next
+    ? `/auth/signup?next=${encodeURIComponent(next)}`
+    : "/auth/signup";
   return (
     <main className="min-h-dvh overflow-x-clip bg-[#020617] text-white">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_20%_0%,rgba(34,211,238,0.16),transparent_28rem),radial-gradient(circle_at_90%_30%,rgba(59,130,246,0.12),transparent_30rem)]" />
@@ -47,7 +55,7 @@ export default function LoginPage() {
 
           <p className="mt-6 text-center text-sm text-slate-500">
             New here?{" "}
-            <Link href="/auth/signup" className="font-black text-cyan-300">
+            <Link href={signupHref} className="font-black text-cyan-300">
               Create an account
             </Link>
           </p>
