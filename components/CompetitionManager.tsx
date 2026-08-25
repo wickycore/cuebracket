@@ -386,6 +386,7 @@ export function CompetitionManager({ tournament, onTournamentChange }: Props) {
   }
 
   function declareTiedChampion(player: string) {
+    if (!competition) return;
     if (
       competition.type !== "swiss" &&
       competition.type !== "leaderboard" &&
