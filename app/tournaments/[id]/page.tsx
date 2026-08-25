@@ -9,6 +9,7 @@ import { LiveMatchCenter } from "@/components/LiveMatchCenter";
 import { PlayerManager } from "@/components/PlayerManager";
 import { ShareTournament } from "@/components/ShareTournament";
 import { TournamentStats } from "@/components/TournamentStats";
+import { TournamentRegistrationManager } from "@/components/TournamentRegistrationManager";
 import {
   deleteTournament,
   getFormatLabel,
@@ -174,10 +175,16 @@ export default function TournamentDetailPage() {
         </div>
 
         {!structureReady ? (
-          <PlayerManager
-            tournament={tournament}
-            onTournamentChange={setTournament}
-          />
+          <>
+            <TournamentRegistrationManager
+              tournament={tournament}
+              onTournamentChange={setTournament}
+            />
+            <PlayerManager
+              tournament={tournament}
+              onTournamentChange={setTournament}
+            />
+          </>
         ) : null}
 
         {elimination && tournament.bracket ? (
