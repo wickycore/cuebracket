@@ -33,9 +33,9 @@ type ElementBox = {
 };
 
 const strokeByTone: Record<ConnectorTone, string> = {
-  cyan: "#22d3ee",
-  rose: "#fb7185",
-  violet: "#a78bfa",
+  cyan: "#78b8d8",
+  rose: "#d98b99",
+  violet: "#a895cc",
 };
 
 export function useBracketMatchRefs() {
@@ -323,7 +323,7 @@ export function BracketConnections({
           width="160%"
           height="160%"
         >
-          <feGaussianBlur stdDeviation="4" result="blur" />
+          <feGaussianBlur stdDeviation="2.5" result="blur" />
           <feMerge>
             <feMergeNode in="blur" />
             <feMergeNode in="SourceGraphic" />
@@ -337,8 +337,8 @@ export function BracketConnections({
             d={path.d}
             fill="none"
             stroke={stroke}
-            strokeOpacity="0.14"
-            strokeWidth="6"
+            strokeOpacity="0.09"
+            strokeWidth="5"
             strokeLinecap="round"
             strokeLinejoin="round"
             filter={`url(#${filterId})`}
@@ -348,8 +348,8 @@ export function BracketConnections({
             d={path.d}
             fill="none"
             stroke={stroke}
-            strokeOpacity="0.92"
-            strokeWidth="2.5"
+            strokeOpacity="0.78"
+            strokeWidth="2.25"
             strokeLinecap="round"
             strokeLinejoin="round"
             vectorEffect="non-scaling-stroke"

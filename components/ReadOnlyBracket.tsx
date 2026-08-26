@@ -51,16 +51,16 @@ const connectorTone: Record<Tone, ConnectorTone> = {
 
 const toneClass: Record<Tone, { title: string; panel: string }> = {
   cyan: {
-    title: "text-cyan-300",
-    panel: "from-cyan-400/[0.08] via-slate-950/90 to-slate-950/95",
+    title: "text-[#8ac3df]",
+    panel: "from-[#16243a] via-[#111d30] to-[#0f1b2d]",
   },
   rose: {
-    title: "text-rose-300",
-    panel: "from-rose-400/[0.07] via-slate-950/90 to-slate-950/95",
+    title: "text-[#efb5bf]",
+    panel: "from-[#2a2030] via-[#171e30] to-[#101827]",
   },
   violet: {
-    title: "text-violet-300",
-    panel: "from-violet-400/[0.09] via-slate-950/90 to-slate-950/95",
+    title: "text-[#cbbfe4]",
+    panel: "from-[#24213b] via-[#171e30] to-[#101827]",
   },
 };
 
@@ -138,10 +138,10 @@ function Section({
   }, [hasLiveTimer]);
 
   return (
-    <section className={`${edgeToEdge ? "-mx-3 mt-3 rounded-none border-y sm:mx-0 sm:mt-6 sm:rounded-[1.75rem] sm:border" : "mt-6 rounded-[1.75rem] border"} overflow-hidden border-white/10 bg-gradient-to-br ${colors.panel}`}>
-      {showHeader ? <header className="border-b border-white/10 px-5 py-5 sm:px-7">
+    <section className={`${edgeToEdge ? "-mx-3 mt-3 rounded-none border-y sm:mx-0 sm:mt-6 sm:rounded-[1.75rem] sm:border" : "mt-6 rounded-[1.75rem] border"} overflow-hidden border-[#34465f] bg-gradient-to-br ${colors.panel}`}>
+      {showHeader ? <header className="border-b border-[#34465f] px-5 py-5 sm:px-7">
         <p className={`text-sm font-black uppercase tracking-[0.2em] ${colors.title}`}>{title}</p>
-        {subtitle ? <p className="mt-1 text-xs text-slate-500">{subtitle}</p> : null}
+        {subtitle ? <p className="mt-1 text-xs text-[#8292a8]">{subtitle}</p> : null}
       </header> : null}
 
       <BracketViewport label={title}>
@@ -162,7 +162,7 @@ function Section({
 
             return (
               <div key={`${title}-${round.round}`} className="w-56 shrink-0 snap-start">
-                <p className="mb-4 text-[11px] font-black uppercase tracking-[0.17em] text-slate-500">{round.name}</p>
+                <p className="mb-4 text-[11px] font-black uppercase tracking-[0.17em] text-[#9ba9bb]">{round.name}</p>
                 <div
                   style={
                     balancedGeometry
@@ -195,27 +195,27 @@ function Section({
                         }
                       >
                         {automaticAdvance ? (
-                          <article data-bracket-card className="relative z-10 overflow-hidden rounded-xl border border-violet-400/25 bg-violet-400/[0.06] shadow-[0_14px_40px_rgba(0,0,0,.24)]">
-                            <div className="flex items-center justify-between border-b border-violet-400/15 px-3 py-1.5">
-                              <span className="text-[10px] font-black uppercase tracking-[0.16em] text-violet-300">Automatic BYE</span>
-                              <span className="rounded-full bg-violet-400/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] text-violet-200">Advanced</span>
+                          <article data-bracket-card className="relative z-10 overflow-hidden rounded-xl border border-[#a895cc]/35 bg-[#292440] shadow-[0_10px_24px_rgba(0,0,0,.16)]">
+                            <div className="flex items-center justify-between border-b border-[#a895cc]/25 px-3 py-1.5">
+                              <span className="text-[10px] font-black uppercase tracking-[0.16em] text-[#cbbfe4]">Automatic BYE</span>
+                              <span className="rounded-full bg-[#a895cc]/12 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] text-[#d9d0eb]">Advanced</span>
                             </div>
-                            <div className="flex min-h-10 items-center gap-3 border-b border-violet-400/15 px-3 py-1.5">
-                              <span className="min-w-0 flex-1 truncate text-sm font-black text-violet-100">{advancingPlayer}</span>
-                              <span className="text-sm font-black text-violet-300">✓</span>
+                            <div className="flex min-h-10 items-center gap-3 border-b border-[#a895cc]/25 px-3 py-1.5">
+                              <span className="min-w-0 flex-1 truncate text-sm font-black text-[#eee9f7]">{advancingPlayer}</span>
+                              <span className="text-sm font-black text-[#cbbfe4]">✓</span>
                             </div>
-                            <div className="flex min-h-10 items-center border-b border-violet-400/15 px-3 py-1.5 text-sm font-extrabold text-slate-600">
+                            <div className="flex min-h-10 items-center border-b border-[#a895cc]/25 px-3 py-1.5 text-sm font-extrabold text-[#8292a8]">
                               No opponent
                             </div>
-                            <div className="flex min-h-9 items-center px-3 py-1.5 text-[11px] font-bold text-violet-200/75">
+                            <div className="flex min-h-9 items-center px-3 py-1.5 text-[11px] font-bold text-[#cbbfe4]">
                               Automatic advance
                             </div>
                           </article>
                         ) : (
-                          <article data-bracket-card className={`group relative z-10 overflow-hidden rounded-xl border bg-slate-950/95 shadow-[0_14px_40px_rgba(0,0,0,.28)] transition-all duration-300 hover:-translate-y-0.5 ${match.completed ? "border-emerald-400/45 shadow-[0_0_24px_rgba(52,211,153,.08)]" : match.status === "live" ? "border-cyan-400/45 shadow-[0_0_30px_rgba(34,211,238,.12)]" : "border-white/10"}`}>
-                            <div className="flex items-center justify-between border-b border-white/10 bg-white/[0.025] px-3 py-1.5">
-                              <span className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">{match.tableNumber ? `Table ${match.tableNumber}` : `Match ${match.position + 1}`}</span>
-                              <span className={`rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] ${match.completed ? "bg-emerald-400/10 text-emerald-300" : match.status === "live" ? "animate-pulse bg-rose-400/15 text-rose-300 ring-1 ring-rose-400/30" : match.player1 && match.player2 ? "bg-cyan-400/10 text-cyan-300" : "bg-white/5 text-slate-500"}`}>
+                          <article data-bracket-card className={`group relative z-10 overflow-hidden rounded-xl border bg-[#182840] shadow-[0_10px_24px_rgba(0,0,0,.16)] transition-colors duration-200 ${match.completed ? "border-[#78c69b]/50" : match.status === "live" ? "border-[#d98b99]/55" : "border-[#41536d]"}`}>
+                            <div className="flex items-center justify-between border-b border-[#34465f] bg-[#1b2b43] px-3 py-1.5">
+                              <span className="text-[10px] font-black uppercase tracking-[0.16em] text-[#9ba9bb]">{match.tableNumber ? `Table ${match.tableNumber}` : `Match ${match.position + 1}`}</span>
+                              <span className={`rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] ${match.completed ? "bg-[#78c69b]/12 text-[#a9d9bd]" : match.status === "live" ? "bg-[#d98b99]/15 text-[#efb5bf] ring-1 ring-[#d98b99]/30" : match.player1 && match.player2 ? "bg-[#78b8d8]/12 text-[#acd5e7]" : "bg-[#26364d] text-[#aeb9ca]"}`}>
                                 {match.completed ? "Finished" : match.status === "live" ? "● Live" : match.player1 && match.player2 ? "Ready" : "Waiting"}
                               </span>
                             </div>
@@ -224,13 +224,13 @@ function Section({
                               const score = index === 0 ? match.score1 : match.score2;
                               const placeholder = playerPlaceholders?.[index] ?? "TBD";
                               return (
-                                <div key={index} className={`flex min-h-10 items-center gap-3 border-b border-white/10 px-3 py-1.5 last:border-b-0 ${winner ? "bg-emerald-400/10" : ""}`}>
-                                  <span className={`min-w-0 flex-1 truncate text-sm font-extrabold ${winner ? "text-emerald-300" : player ? "text-white" : playerPlaceholders ? "text-violet-300/80" : "text-slate-600"}`}>{player ?? placeholder}</span>
-                                  <span className="text-sm font-black tabular-nums text-cyan-300">{score ?? "—"}</span>
+                                <div key={index} className={`flex min-h-10 items-center gap-3 border-b border-[#34465f] px-3 py-1.5 last:border-b-0 ${winner ? "bg-[#78c69b]/10" : ""}`}>
+                                  <span className={`min-w-0 flex-1 truncate text-sm font-extrabold ${winner ? "text-[#a9d9bd]" : player ? "text-[#f3f0e8]" : playerPlaceholders ? "text-[#cbbfe4]" : "text-[#8292a8]"}`}>{player ?? placeholder}</span>
+                                  <span className="text-sm font-black tabular-nums text-[#9bcde1]">{score ?? "—"}</span>
                                 </div>
                               );
                             })}
-                            <div className="flex min-h-9 items-center justify-between gap-2 px-3 py-1.5 text-[11px] font-bold text-slate-500">
+                            <div className="flex min-h-9 items-center justify-between gap-2 px-3 py-1.5 text-[11px] font-bold text-[#9ba9bb]">
                               <span>Race to {raceTo}</span>
                               <span>{match.startedAt ? formatDuration((match.endedAt ? new Date(match.endedAt).getTime() : now) - new Date(match.startedAt).getTime()) : ""}</span>
                             </div>
@@ -302,17 +302,17 @@ export function ReadOnlyBracket({
 
     return (
       <div>
-        <div className="rounded-[1.5rem] border border-white/10 bg-slate-950/55 p-5">
+        <div className="rounded-[1.5rem] border border-[#34465f] bg-[#142238] p-5">
           <div className="mb-3 flex items-end justify-between gap-3">
             <div>
-              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">Live tournament progress</p>
-              <p className="mt-1 text-sm font-bold text-white">{completed} of {totalPlayable} played matches completed</p>
+              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#8292a8]">Live tournament progress</p>
+              <p className="mt-1 text-sm font-bold text-[#f3f0e8]">{completed} of {totalPlayable} played matches completed</p>
               {automaticByes ? <p className="mt-1 text-xs font-bold text-violet-300">Automatic BYEs: {automaticByes}</p> : null}
             </div>
-            <p className="text-2xl font-black tabular-nums text-cyan-300">{progress}%</p>
+            <p className="text-2xl font-black tabular-nums text-[#8ac3df]">{progress}%</p>
           </div>
-          <div className="h-2.5 overflow-hidden rounded-full bg-white/5 ring-1 ring-white/10">
-            <div className="h-full rounded-full bg-gradient-to-r from-cyan-400 via-violet-400 to-emerald-400 transition-[width] duration-700" style={{ width: `${progress}%` }} />
+          <div className="h-2.5 overflow-hidden rounded-full bg-[#1b2b43] ring-1 ring-[#41536d]">
+            <div className="h-full rounded-full bg-gradient-to-r from-[#78b8d8] via-[#a895cc] to-[#78c69b] transition-[width] duration-700" style={{ width: `${progress}%` }} />
           </div>
         </div>
         {showChampion && bracket.champion ? <div className="mt-6"><ChampionCelebration champion={bracket.champion} description={getTournamentChampionDescription(tournament)} tournament={tournament} /></div> : null}
@@ -362,21 +362,21 @@ export function ReadOnlyBracket({
   return (
     <div>
       {showChampion && bracket.champion ? <div className="mb-6"><ChampionCelebration champion={bracket.champion} description={getTournamentChampionDescription(tournament)} tournament={tournament} /></div> : null}
-      <section className="rounded-2xl border border-white/10 bg-slate-950/55 p-2.5 sm:rounded-[1.5rem] sm:p-4">
+      <section className="rounded-2xl border border-[#34465f] bg-[#142238] p-2.5 sm:rounded-[1.5rem] sm:p-4">
         <div className="flex items-center gap-2 sm:justify-between">
           <div className="hidden px-1 sm:block">
-            <p className="text-[0.68rem] font-black uppercase tracking-[0.18em] text-slate-500">Tournament view</p>
-            <p className="mt-1 text-sm font-bold text-slate-300">Choose the view that is easiest to follow.</p>
+            <p className="text-[0.68rem] font-black uppercase tracking-[0.18em] text-[#8292a8]">Tournament view</p>
+            <p className="mt-1 text-sm font-bold text-[#bdc7d4]">Choose the view that is easiest to follow.</p>
           </div>
           <div className="flex min-w-0 flex-1 items-center gap-2 sm:flex-none">
             {liveMatches ? <span className="hidden rounded-full bg-rose-400/15 px-3 py-1.5 text-xs font-black text-rose-300 ring-1 ring-rose-400/25 sm:inline">● {liveMatches} live</span> : null}
-            <div className="grid flex-1 grid-cols-2 rounded-xl border border-white/10 bg-slate-950 p-1 sm:flex-none sm:rounded-2xl" role="tablist" aria-label="Tournament display mode">
+            <div className="grid flex-1 grid-cols-2 rounded-xl border border-[#41536d] bg-[#0f1b2d] p-1 sm:flex-none sm:rounded-2xl" role="tablist" aria-label="Tournament display mode">
               <button
                 type="button"
                 role="tab"
                 aria-selected={singleView === "flowchart"}
                 onClick={() => selectSingleView("flowchart")}
-                className={`min-h-10 rounded-xl px-3.5 text-xs font-black transition sm:px-4 ${singleView === "flowchart" ? "bg-cyan-400 text-slate-950" : "text-slate-400 hover:text-white"}`}
+                className={`min-h-10 rounded-xl px-3.5 text-xs font-black transition sm:px-4 ${singleView === "flowchart" ? "bg-[#78b8d8] text-[#0b1424]" : "text-[#aeb9ca] hover:text-[#f3f0e8]"}`}
               >
                 ⑂ Flowchart
               </button>
@@ -385,7 +385,7 @@ export function ReadOnlyBracket({
                 role="tab"
                 aria-selected={singleView === "list"}
                 onClick={() => selectSingleView("list")}
-                className={`min-h-10 rounded-xl px-3.5 text-xs font-black transition sm:px-4 ${singleView === "list" ? "bg-cyan-400 text-slate-950" : "text-slate-400 hover:text-white"}`}
+                className={`min-h-10 rounded-xl px-3.5 text-xs font-black transition sm:px-4 ${singleView === "list" ? "bg-[#78b8d8] text-[#0b1424]" : "text-[#aeb9ca] hover:text-[#f3f0e8]"}`}
               >
                 ☷ Match list
               </button>
@@ -396,7 +396,7 @@ export function ReadOnlyBracket({
 
       {singleView === "flowchart" ? (
         <>
-          <p className="mt-3 text-center text-xs font-bold text-slate-400 sm:hidden">Wide chart mode · drag sideways · pinch to zoom · double-tap to reset</p>
+          <p className="mt-3 text-center text-xs font-bold text-[#aeb9ca] sm:hidden">Wide chart mode · drag sideways · pinch to zoom · double-tap to reset</p>
           <Section
             title="Single Elimination"
             rounds={bracket.rounds}
