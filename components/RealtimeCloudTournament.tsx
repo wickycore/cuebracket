@@ -90,6 +90,11 @@ export function RealtimeCloudTournament({ id }: { id: string }) {
   }
 
   const tournament = rowToTournament(row);
+  const eliminationLabel = tournament.bracket?.type === "single"
+    ? "Single Elimination"
+    : tournament.bracket?.type === "double"
+      ? "Double Elimination"
+      : null;
 
   return (
     <>
@@ -109,7 +114,10 @@ export function RealtimeCloudTournament({ id }: { id: string }) {
               Public read-only
             </span>
           </div>
-          <h1 className="mt-3 truncate text-3xl font-black text-white sm:mt-4 sm:text-4xl">{tournament.name}</h1>
+          <div className="mt-3 flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1 sm:mt-4">
+            <h1 className="min-w-0 truncate text-3xl font-black text-white sm:text-4xl">{tournament.name}</h1>
+            {eliminationLabel ? <span className="shrink-0 text-xs font-black uppercase tracking-[0.12em] text-cyan-300 sm:text-sm">· {eliminationLabel}</span> : null}
+          </div>
           <p className="mt-1 truncate text-sm text-slate-400 sm:mt-2 sm:text-base">
             {tournament.venue || "Venue not set"} · Race to {tournament.raceTo}
           </p>
