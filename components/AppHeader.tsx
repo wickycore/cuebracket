@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { AuthNav } from "@/components/AuthNav";
+import { NotificationBell } from "@/components/NotificationBell";
 
 const navigation = [
   { href: "/dashboard", label: "Dashboard", shortLabel: "Home" },
@@ -88,11 +89,17 @@ export function AppHeader() {
               </a>
 
               <div className="ml-2">
+                <NotificationBell />
+              </div>
+
+              <div className="ml-2">
                 <AuthNav />
               </div>
             </nav>
 
             <div className="flex items-center gap-2 lg:hidden">
+              <NotificationBell />
+
               <div className="hidden min-[360px]:block">
                 <AuthNav compact />
               </div>
