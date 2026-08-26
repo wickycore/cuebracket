@@ -3,8 +3,10 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
+  getActiveSpectatorRound,
   getSpectatorMatchState,
   matchesSpectatorFilter,
+  matchesSpectatorPlayer,
   numberBracketMatches,
   spectatorSourceLabel,
 } from "@/lib/bracket/spectator";
@@ -62,4 +64,37 @@ test("spectator match list keeps one readable match per row", () => {
   assert.match(source, /divide-y divide-white\/10/);
   assert.doesNotMatch(source, /sm:grid-cols-2|xl:grid-cols-3/);
   assert.match(source, /text-base font-black leading-5/);
+});
+
+test("player search finds every match containing the requested player", () => {
+  assert.equal(matchesSpectatorPlayer(match({ player1: "Wicky", player2: "Sam" }), "wick"), true);
+  assert.equal(matchesSpectatorPlayer(match({ player1: "Mike", player2: "WICKY" }), " Wicky "), true);
+  assert.equal(matchesSpectatorPlayer(match({ player1: "Mike", player2: "Sam" }), "Wicky"), false);
+  assert.equal(matchesSpectatorPlayer(match({ player1: "Mike", winner: "Wicky" }), "Wicky"), true);
+});
+
+test("smart round opening prioritizes live, then ready, then the first unfinished round", () => {
+  const rounds: BracketRound[] = [
+    { round: 1, name: "Round of 16", matches: [match({ id: "r1", completed: true, player1: "A", player2: "B", winner: "A" })] },
+    { round: 2, name: "Quarter Final", matches: [match({ id: "r2", round: 2, player1: "A", player2: "C" })] },
+    { round: 3, name: "Semi Final", matches: [match({ id: "r3", round: 3, player1: "D", player2: "E", status: "live" })] },
+    { round: 4, name: "Final", matches: [match({ id: "r4", round: 4 })] },
+  ];
+
+  assert.equal(getActiveSpectatorRound(rounds), 3);
+  rounds[2].matches[0] = match({ id: "r3", round: 3 });
+  assert.equal(getActiveSpectatorRound(rounds), 2);
+  rounds[1].matches[0] = match({ id: "r2", round: 2 });
+  assert.equal(getActiveSpectatorRound(rounds), 2);
+});
+
+test("phones default to the list while retaining a spectator's saved choice", () => {
+  const source = readFileSync(
+    new URL("../components/ReadOnlyBracket.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(source, /max-width: 767px/);
+  assert.match(source, /savedView === "list" \|\| savedView === "flowchart"/);
+  assert.match(source, /Swipe sideways to explore rounds/);
 });
