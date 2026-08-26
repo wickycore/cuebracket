@@ -136,7 +136,7 @@ function RoundGroup({
       onToggle={(event) => {
         if (!forceOpen) onOpenChange(event.currentTarget.open);
       }}
-      className="group scroll-mt-24 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.025]"
+      className="group scroll-mt-24 overflow-hidden border-y border-white/10 bg-white/[0.025] sm:rounded-2xl sm:border"
     >
       <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-3 sm:px-5 sm:py-4">
         <div>
@@ -210,15 +210,9 @@ export function BracketMatchList({ rounds, raceTo }: { rounds: BracketRound[]; r
   }
 
   return (
-    <section className="mt-4 overflow-hidden rounded-[1.5rem] border border-white/10 bg-gradient-to-br from-cyan-400/[0.06] via-slate-950/90 to-slate-950/95 sm:mt-6 sm:rounded-[1.75rem]">
+    <section className="-mx-3 mt-3 overflow-hidden border-y border-white/10 bg-gradient-to-br from-cyan-400/[0.06] via-slate-950/90 to-slate-950/95 sm:mx-0 sm:mt-6 sm:rounded-[1.75rem] sm:border">
       <header className="border-b border-white/10 px-3 py-4 sm:px-7 sm:py-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-base font-black uppercase tracking-[0.16em] text-cyan-300">Single Elimination</p>
-            <p className="mt-1 text-xs font-medium text-slate-400 sm:text-sm">Find a player or jump straight to a round.</p>
-          </div>
-          {counts.live ? <span className="w-fit rounded-full bg-rose-400/15 px-3 py-1.5 text-xs font-black text-rose-300 ring-1 ring-rose-400/25">● {counts.live} live now</span> : null}
-        </div>
+        {counts.live ? <span className="mb-3 block w-fit rounded-full bg-rose-400/15 px-3 py-1.5 text-xs font-black text-rose-300 ring-1 ring-rose-400/25">● {counts.live} live now</span> : null}
 
         <div className="relative mt-3">
           <label htmlFor="spectator-player-search" className="sr-only">Find a player</label>
@@ -268,7 +262,7 @@ export function BracketMatchList({ rounds, raceTo }: { rounds: BracketRound[]; r
       </header>
 
       {visibleRounds.length ? (
-        <div className="space-y-3 p-2 sm:p-5">
+        <div className="space-y-2 py-2 sm:space-y-3 sm:p-5">
           {visibleRounds.map((round) => (
             <RoundGroup
               key={`${filter}-${round.round}`}
