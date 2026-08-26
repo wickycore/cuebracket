@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
@@ -52,3 +53,13 @@ test("future fixtures name their feeder match instead of showing only TBD", () =
   assert.equal(spectatorSourceLabel(rounds[1].matches[0].source2, numbers), "Winner of Match #2");
 });
 
+test("spectator match list keeps one readable match per row", () => {
+  const source = readFileSync(
+    new URL("../components/BracketMatchList.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(source, /divide-y divide-white\/10/);
+  assert.doesNotMatch(source, /sm:grid-cols-2|xl:grid-cols-3/);
+  assert.match(source, /text-base font-black leading-5/);
+});

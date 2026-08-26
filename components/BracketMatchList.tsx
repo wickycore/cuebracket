@@ -24,7 +24,15 @@ const statusStyles: Record<SpectatorMatchState, string> = {
   finished: "bg-emerald-400/10 text-emerald-300 ring-emerald-400/20",
   live: "bg-rose-400/15 text-rose-300 ring-rose-400/30",
   ready: "bg-cyan-400/10 text-cyan-300 ring-cyan-400/20",
-  waiting: "bg-white/5 text-slate-500 ring-white/10",
+  waiting: "bg-white/5 text-slate-300 ring-white/10",
+};
+
+const rowAccentStyles: Record<SpectatorMatchState, string> = {
+  advanced: "border-l-violet-400/60",
+  finished: "border-l-emerald-400/70",
+  live: "border-l-rose-400",
+  ready: "border-l-cyan-400/70",
+  waiting: "border-l-slate-700",
 };
 
 const statusLabels: Record<SpectatorMatchState, string> = {
@@ -62,31 +70,39 @@ function MatchRow({
       )
     : "";
 
+  function playerStyle(index: number) {
+    const player = players[index];
+    const isWinner = Boolean(match.completed && match.winner && player === match.winner);
+    const isPlaceholder = !(index === 0 ? match.player1 : match.player2);
+    if (isWinner) return "text-emerald-300";
+    if (!isPlaceholder) return "text-white";
+    return automaticAdvance ? "text-slate-500" : "text-slate-300";
+  }
+
   return (
-    <article className={`overflow-hidden rounded-2xl border bg-slate-950/65 ${state === "live" ? "border-cyan-400/35 shadow-[0_0_26px_rgba(34,211,238,.08)]" : automaticAdvance ? "border-violet-400/20" : "border-white/10"}`}>
-      <div className="flex items-center justify-between gap-3 border-b border-white/10 bg-white/[0.025] px-4 py-2.5">
-        <span className="text-[0.66rem] font-black uppercase tracking-[0.16em] text-slate-500">
+    <article className={`border-l-[3px] bg-slate-950/45 transition hover:bg-white/[0.035] ${rowAccentStyles[state]} ${state === "live" ? "shadow-[inset_0_0_30px_rgba(34,211,238,.045)]" : ""}`}>
+      <div className="flex items-center justify-between gap-3 px-4 pt-3 sm:px-5">
+        <span className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">
           {match.tableNumber ? `Table ${match.tableNumber} · ` : ""}Match #{matchNumber}
         </span>
-        <span className={`rounded-full px-2.5 py-1 text-[0.62rem] font-black uppercase tracking-[0.1em] ring-1 ${statusStyles[state]} ${state === "live" ? "animate-pulse" : ""}`}>
+        <span className={`rounded-full px-2.5 py-1 text-[0.68rem] font-black uppercase tracking-[0.09em] ring-1 ${statusStyles[state]} ${state === "live" ? "animate-pulse" : ""}`}>
           {statusLabels[state]}
         </span>
       </div>
 
-      {players.map((player, index) => {
-        const isWinner = Boolean(match.completed && match.winner && player === match.winner);
-        const isPlaceholder = !(index === 0 ? match.player1 : match.player2);
-        return (
-          <div key={`${match.id}-${index}`} className={`flex min-h-12 items-center gap-3 border-b border-white/10 px-4 py-2.5 ${isWinner ? "bg-emerald-400/10" : ""}`}>
-            <span className={`min-w-0 flex-1 truncate text-sm font-black ${isWinner ? "text-emerald-300" : isPlaceholder ? automaticAdvance ? "text-slate-600" : "text-slate-500" : "text-white"}`}>
-              {player}
-            </span>
-            <span className="text-base font-black tabular-nums text-cyan-300">{scores[index] ?? "—"}</span>
-          </div>
-        );
-      })}
+      <div className="grid min-h-[4.75rem] grid-cols-[minmax(0,1fr)_2.25rem_1.5rem_2.25rem_minmax(0,1fr)] items-center gap-1 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_3rem_2rem_3rem_minmax(0,1fr)] sm:px-5">
+        <span className={`min-w-0 break-words text-left text-base font-black leading-5 sm:text-lg sm:leading-6 ${playerStyle(0)}`}>
+          {players[0]}
+        </span>
+        <span className="text-center text-xl font-black tabular-nums text-cyan-300 sm:text-2xl">{scores[0] ?? "—"}</span>
+        <span className="text-center text-xs font-black uppercase text-slate-600">vs</span>
+        <span className="text-center text-xl font-black tabular-nums text-cyan-300 sm:text-2xl">{scores[1] ?? "—"}</span>
+        <span className={`min-w-0 break-words text-right text-base font-black leading-5 sm:text-lg sm:leading-6 ${playerStyle(1)}`}>
+          {players[1]}
+        </span>
+      </div>
 
-      <div className="flex min-h-10 flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-2 text-xs font-bold text-slate-500">
+      <div className="flex min-h-9 flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-white/[0.07] px-4 py-2 text-sm font-bold text-slate-400 sm:px-5">
         <span>{automaticAdvance ? "Automatic advance · no match played" : `Race to ${raceTo}`}</span>
         {elapsed ? <span className={state === "live" ? "text-cyan-300" : ""}>{elapsed}</span> : null}
       </div>
@@ -114,14 +130,14 @@ function RoundGroup({
       onToggle={(event) => setOpen(event.currentTarget.open)}
       className="group overflow-hidden rounded-2xl border border-white/10 bg-white/[0.025]"
     >
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-4 sm:px-5">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-4 sm:px-5 sm:py-5">
         <div>
-          <h3 className="font-black text-white">{round.name}</h3>
-          <p className="mt-1 text-xs font-bold text-slate-500">{completed}/{round.matches.length} shown matches resolved</p>
+          <h3 className="text-lg font-black text-white">{round.name}</h3>
+          <p className="mt-1 text-sm font-bold text-slate-400">{completed}/{round.matches.length} shown matches resolved</p>
         </div>
-        <span className="grid h-8 w-8 place-items-center rounded-lg bg-white/5 text-lg text-slate-400 transition group-open:rotate-180">⌄</span>
+        <span className="grid h-10 w-10 place-items-center rounded-xl bg-white/5 text-xl text-slate-300 ring-1 ring-white/10 transition group-open:rotate-180">⌄</span>
       </summary>
-      <div className="grid gap-3 border-t border-white/10 p-3 sm:grid-cols-2 sm:p-4 xl:grid-cols-3">
+      <div className="divide-y divide-white/10 border-t border-white/10">
         {round.matches.map((match) => (
           <MatchRow
             key={match.id}
@@ -159,11 +175,11 @@ export function BracketMatchList({ rounds, raceTo }: { rounds: BracketRound[]; r
 
   return (
     <section className="mt-6 overflow-hidden rounded-[1.75rem] border border-white/10 bg-gradient-to-br from-cyan-400/[0.06] via-slate-950/90 to-slate-950/95">
-      <header className="border-b border-white/10 px-5 py-5 sm:px-7">
+      <header className="border-b border-white/10 px-4 py-5 sm:px-7 sm:py-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-sm font-black uppercase tracking-[0.2em] text-cyan-300">Single Elimination</p>
-            <p className="mt-1 text-xs text-slate-500">Every fixture grouped by round for faster mobile viewing.</p>
+            <p className="text-base font-black uppercase tracking-[0.16em] text-cyan-300">Single Elimination</p>
+            <p className="mt-1 text-sm font-medium text-slate-400">One match per row, grouped by round.</p>
           </div>
           {counts.live ? <span className="w-fit rounded-full bg-rose-400/15 px-3 py-1.5 text-xs font-black text-rose-300 ring-1 ring-rose-400/25">● {counts.live} live now</span> : null}
         </div>
@@ -176,7 +192,7 @@ export function BracketMatchList({ rounds, raceTo }: { rounds: BracketRound[]; r
               role="tab"
               aria-selected={filter === key}
               onClick={() => setFilter(key)}
-              className={`shrink-0 rounded-xl px-3.5 py-2 text-xs font-black transition ${filter === key ? "bg-cyan-400 text-slate-950" : "bg-white/5 text-slate-400 ring-1 ring-white/10 hover:text-white"}`}
+              className={`min-h-11 shrink-0 rounded-xl px-4 py-2 text-sm font-black transition ${filter === key ? "bg-cyan-400 text-slate-950" : "bg-white/5 text-slate-300 ring-1 ring-white/10 hover:text-white"}`}
             >
               {label} <span className={filter === key ? "text-slate-700" : "text-slate-600"}>{counts[key]}</span>
             </button>
@@ -185,7 +201,7 @@ export function BracketMatchList({ rounds, raceTo }: { rounds: BracketRound[]; r
       </header>
 
       {visibleRounds.length ? (
-        <div className="space-y-3 p-3 sm:p-5">
+        <div className="space-y-3 p-2 sm:p-5">
           {visibleRounds.map((round) => (
             <RoundGroup
               key={`${filter}-${round.round}`}
