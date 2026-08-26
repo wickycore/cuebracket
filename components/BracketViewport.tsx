@@ -33,7 +33,6 @@ type GestureState = {
 
 const MIN_ZOOM = 0.25;
 const MAX_ZOOM = 2;
-const ZOOM_STEP = 0.25;
 
 function clampZoom(value: number) {
   return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, value));
@@ -121,26 +120,6 @@ export function BracketViewport({ children, label }: Props) {
     requestAnimationFrame(() => {
       scroller.scrollLeft = Math.max(0, contentX * nextZoom - localAnchor.x);
       scroller.scrollTop = Math.max(0, contentY * nextZoom - localAnchor.y);
-    });
-  }
-
-  function fitBracket() {
-    const scroller = scrollerRef.current;
-    const content = contentRef.current;
-    if (!scroller || !content) return;
-
-    const width = content.scrollWidth || contentSize.width;
-    if (!width) return;
-
-    const availableWidth = Math.max(1, scroller.clientWidth - 24);
-    const fittedZoom = clampZoom(availableWidth / width);
-
-    zoomRef.current = fittedZoom;
-    setZoom(fittedZoom);
-
-    requestAnimationFrame(() => {
-      scroller.scrollLeft = 0;
-      scroller.scrollTop = 0;
     });
   }
 
@@ -319,61 +298,17 @@ export function BracketViewport({ children, label }: Props) {
   const compensatedHeight = contentSize.height * (zoom - 1);
 
   return (
-    <div data-bracket-viewport-version="0.9e4">
-      <div className="flex items-center justify-end border-b border-white/10 px-3 py-2 sm:px-7">
-        <div
-          className="flex w-full items-center justify-between gap-1 rounded-xl border border-white/10 bg-slate-950/80 p-1 sm:w-auto sm:justify-start"
-          aria-label={`${label} zoom controls`}
-        >
-          <button
-            type="button"
-            onClick={() => commitZoom(zoomRef.current - ZOOM_STEP)}
-            disabled={zoom <= MIN_ZOOM}
-            className="h-11 w-11 rounded-lg text-lg font-black text-slate-200 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-30"
-            aria-label="Zoom out"
-          >
-            −
-          </button>
-
-          <button
-            type="button"
-            onClick={fitBracket}
-            className="h-11 min-w-14 rounded-lg px-2 text-[11px] font-black uppercase tracking-wide text-cyan-300 hover:bg-white/10"
-            aria-label="Fit bracket to screen"
-          >
-            Fit
-          </button>
-
-          <button
-            type="button"
-            onClick={() => commitZoom(1)}
-            className="h-11 min-w-16 rounded-lg px-2 text-xs font-black text-cyan-300 hover:bg-white/10"
-            aria-label="Reset zoom to 100 percent"
-            aria-live="polite"
-          >
-            {Math.round(zoom * 100)}%
-          </button>
-
-          <button
-            type="button"
-            onClick={() => commitZoom(zoomRef.current + ZOOM_STEP)}
-            disabled={zoom >= MAX_ZOOM}
-            className="h-11 w-11 rounded-lg text-lg font-black text-slate-200 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-30"
-            aria-label="Zoom in"
-          >
-            +
-          </button>
-        </div>
-      </div>
-
+    <div data-bracket-viewport-version="0.10">
       <div
         ref={scrollerRef}
+        aria-label={`${label} wide chart`}
         onPointerDown={beginPointer}
         onPointerMove={movePointer}
         onPointerUp={endPointer}
         onPointerCancel={endPointer}
+        onDoubleClick={() => commitZoom(1)}
         onWheel={handleWheel}
-        className="max-h-[72vh] cursor-grab overflow-auto overscroll-contain px-4 py-5 active:cursor-grabbing sm:px-7 sm:py-6"
+        className="max-h-[calc(100dvh-9rem)] cursor-grab overflow-auto overscroll-contain px-3 py-4 active:cursor-grabbing sm:max-h-[78vh] sm:px-7 sm:py-6"
         style={{
           touchAction: "none",
           WebkitOverflowScrolling: "touch",
