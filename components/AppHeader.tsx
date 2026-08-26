@@ -9,6 +9,7 @@ const navigation = [
   { href: "/dashboard", label: "Dashboard", shortLabel: "Home" },
   { href: "/tournaments", label: "Tournaments", shortLabel: "Events" },
   { href: "/leagues", label: "Leagues", shortLabel: "Leagues" },
+  { href: "/clubs", label: "Clubs", shortLabel: "Clubs" },
   { href: "/tables", label: "Tables", shortLabel: "Tables" },
   { href: "/hall-of-champions", label: "Champions", shortLabel: "Winners" },
   { href: "/cloud", label: "Cloud", shortLabel: "Cloud" },
