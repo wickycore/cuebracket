@@ -43,6 +43,7 @@ export interface CloudTournamentRow {
 export function rowToTournament(row: CloudTournamentRow): Tournament {
   return {
     id: row.id,
+    clubId: row.club_id,
     name: row.name,
     venue: row.venue,
     type: row.stage_type ?? "single_stage",
@@ -61,6 +62,7 @@ export function rowToTournament(row: CloudTournamentRow): Tournament {
 
 function tournamentPayload(tournament: Tournament) {
   return {
+    club_id: tournament.clubId ?? null,
     name: tournament.name,
     venue: tournament.venue,
     stage_type: tournament.type,
