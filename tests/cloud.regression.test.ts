@@ -7,7 +7,7 @@ test("cloud tournament rows preserve all modern engine payloads", () => {
   const row: CloudTournamentRow = {
     id: "cloud-test",
     owner_id: "00000000-0000-0000-0000-000000000001",
-    club_id: null,
+    club_id: "00000000-0000-0000-0000-000000000099",
     name: "Cloud Swiss",
     venue: "KPC",
     stage_type: "single_stage",
@@ -25,6 +25,7 @@ test("cloud tournament rows preserve all modern engine payloads", () => {
   };
   const tournament = rowToTournament(row);
   assert.equal(tournament.format, "swiss");
+  assert.equal(tournament.clubId, row.club_id);
   assert.equal(tournament.bracketSize, 7);
   assert.equal(tournament.options.pointsForWin, 3);
   assert.equal(tournament.status, "live");
