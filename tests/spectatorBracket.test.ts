@@ -96,5 +96,28 @@ test("phones default to the list while retaining a spectator's saved choice", ()
 
   assert.match(source, /max-width: 767px/);
   assert.match(source, /savedView === "list" \|\| savedView === "flowchart"/);
-  assert.match(source, /Swipe sideways to explore rounds/);
+  assert.match(source, /Wide chart mode · drag sideways · pinch to zoom · double-tap to reset/);
+});
+
+test("phone list uses a single edge-to-edge gutter and keeps CueBracket controls", () => {
+  const source = readFileSync(
+    new URL("../components/BracketMatchList.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(source, /-mx-3 mt-3 overflow-hidden border-y/);
+  assert.match(source, /Find a player — e\.g\. Wicky/);
+  assert.match(source, /Jump to round/);
+});
+
+test("flowchart removes the bulky zoom toolbar but keeps gesture navigation", () => {
+  const source = readFileSync(
+    new URL("../components/BracketViewport.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.doesNotMatch(source, /Zoom out|Fit bracket to screen|Reset zoom to 100 percent|Zoom in/);
+  assert.match(source, /mode: "idle" \| "pan" \| "pinch"/);
+  assert.match(source, /wide chart/);
+  assert.match(source, /onDoubleClick=\{\(\) => commitZoom\(1\)\}/);
 });
