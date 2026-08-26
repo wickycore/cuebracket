@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
   BracketMatch,
   BracketRound,
@@ -15,7 +15,29 @@ import {
   type ConnectorTone,
 } from "@/components/BracketConnections";
 import { BracketViewport } from "@/components/BracketViewport";
+import { BracketMatchList } from "@/components/BracketMatchList";
 import { ChampionCelebration } from "@/components/ChampionCelebration";
+
+type SingleBracketView = "flowchart" | "list";
+const SPECTATOR_VIEW_KEY = "cuebracket:spectator-bracket-view:v1";
+const SPECTATOR_VIEW_EVENT = "cuebracket:spectator-bracket-view-change";
+
+function subscribeToSpectatorView(onStoreChange: () => void) {
+  window.addEventListener("storage", onStoreChange);
+  window.addEventListener(SPECTATOR_VIEW_EVENT, onStoreChange);
+  return () => {
+    window.removeEventListener("storage", onStoreChange);
+    window.removeEventListener(SPECTATOR_VIEW_EVENT, onStoreChange);
+  };
+}
+
+function getSpectatorViewSnapshot(): SingleBracketView {
+  return window.localStorage.getItem(SPECTATOR_VIEW_KEY) === "list" ? "list" : "flowchart";
+}
+
+function getServerSpectatorViewSnapshot(): SingleBracketView {
+  return "flowchart";
+}
 
 type Tone = "cyan" | "rose" | "violet";
 
@@ -231,6 +253,16 @@ export function ReadOnlyBracket({
   showChampion?: boolean;
 }) {
   const bracket = bracketOverride ?? tournament.bracket;
+  const singleView = useSyncExternalStore(
+    subscribeToSpectatorView,
+    getSpectatorViewSnapshot,
+    getServerSpectatorViewSnapshot,
+  );
+
+  function selectSingleView(view: SingleBracketView) {
+    window.localStorage.setItem(SPECTATOR_VIEW_KEY, view);
+    window.dispatchEvent(new Event(SPECTATOR_VIEW_EVENT));
+  }
 
   if (!bracket) {
     return (
@@ -317,16 +349,56 @@ export function ReadOnlyBracket({
     );
   }
 
+  const liveMatches = bracket.rounds.filter(Boolean).flatMap((round) => round.matches).filter(
+    (match) => !match.completed && (match.status === "live" || Boolean(match.startedAt && !match.endedAt)),
+  ).length;
+
   return (
     <div>
       {showChampion && bracket.champion ? <div className="mb-6"><ChampionCelebration champion={bracket.champion} description={getTournamentChampionDescription(tournament)} tournament={tournament} /></div> : null}
-      <Section
-        title="Single Elimination"
-        rounds={bracket.rounds}
-        raceTo={tournament.raceTo}
-        tone="cyan"
-        balancedGeometry
-      />
+      <section className="rounded-[1.5rem] border border-white/10 bg-slate-950/55 p-3 sm:p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="px-1">
+            <p className="text-[0.68rem] font-black uppercase tracking-[0.18em] text-slate-500">Tournament view</p>
+            <p className="mt-1 text-sm font-bold text-slate-300">Choose the view that is easiest to follow.</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {liveMatches ? <span className="hidden rounded-full bg-rose-400/15 px-3 py-1.5 text-xs font-black text-rose-300 ring-1 ring-rose-400/25 sm:inline">● {liveMatches} live</span> : null}
+            <div className="grid flex-1 grid-cols-2 rounded-2xl border border-white/10 bg-slate-950 p-1 sm:flex-none" role="tablist" aria-label="Tournament display mode">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={singleView === "flowchart"}
+                onClick={() => selectSingleView("flowchart")}
+                className={`min-h-10 rounded-xl px-3.5 text-xs font-black transition sm:px-4 ${singleView === "flowchart" ? "bg-cyan-400 text-slate-950" : "text-slate-400 hover:text-white"}`}
+              >
+                ⑂ Flowchart
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={singleView === "list"}
+                onClick={() => selectSingleView("list")}
+                className={`min-h-10 rounded-xl px-3.5 text-xs font-black transition sm:px-4 ${singleView === "list" ? "bg-cyan-400 text-slate-950" : "text-slate-400 hover:text-white"}`}
+              >
+                ☷ Match list
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {singleView === "flowchart" ? (
+        <Section
+          title="Single Elimination"
+          rounds={bracket.rounds}
+          raceTo={tournament.raceTo}
+          tone="cyan"
+          balancedGeometry
+        />
+      ) : (
+        <BracketMatchList rounds={bracket.rounds} raceTo={tournament.raceTo} />
+      )}
     </div>
   );
 }
