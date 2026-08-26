@@ -25,7 +25,7 @@ export default async function CloudLivePage({
         </div>
       </header>
 
-      <div className="mx-auto max-w-7xl px-5 py-10">
+      <div className="mx-auto max-w-7xl px-3 py-5 sm:px-5 sm:py-10">
         <RealtimeCloudTournament id={id} />
       </div>
     </main>

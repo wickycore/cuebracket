@@ -19,6 +19,34 @@ export function matchesSpectatorFilter(match: BracketMatch, filter: SpectatorMat
   return state === "finished" || state === "advanced";
 }
 
+export function getActiveSpectatorRound(rounds: BracketRound[]) {
+  const liveRound = rounds.find((round) =>
+    round.matches.some((match) => getSpectatorMatchState(match) === "live"),
+  );
+  if (liveRound) return liveRound.round;
+
+  const readyRound = rounds.find((round) =>
+    round.matches.some((match) => getSpectatorMatchState(match) === "ready"),
+  );
+  if (readyRound) return readyRound.round;
+
+  const unfinishedRound = rounds.find((round) =>
+    round.matches.some((match) => !match.completed),
+  );
+  return unfinishedRound?.round ?? rounds.at(-1)?.round ?? null;
+}
+
+export function matchesSpectatorPlayer(
+  match: BracketMatch,
+  query: string,
+) {
+  const search = query.trim().toLocaleLowerCase();
+  if (!search) return true;
+  return [match.player1, match.player2, match.winner]
+    .filter((value): value is string => Boolean(value))
+    .some((value) => value.toLocaleLowerCase().includes(search));
+}
+
 export function numberBracketMatches(rounds: BracketRound[]) {
   return new Map(
     rounds.flatMap((round) => round.matches).map((match, index) => [match.id, index + 1]),
@@ -35,4 +63,3 @@ export function spectatorSourceLabel(
   const matchLabel = number ? `Match #${number}` : "another match";
   return `${source.kind === "winner" ? "Winner" : "Loser"} of ${matchLabel}`;
 }
-
