@@ -1,8 +1,11 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
+import { getManagedClubs } from "@/lib/cloud/clubs";
+import type { ClubRow } from "@/lib/clubs";
 import {
   createTournament,
   DEFAULT_TOURNAMENT_OPTIONS,
@@ -34,6 +37,8 @@ export default function NewTournamentPage() {
   const router = useRouter();
   const [name, setName] = useState("");
   const [venue, setVenue] = useState("");
+  const [clubId, setClubId] = useState<string | null>(null);
+  const [managedClubs, setManagedClubs] = useState<ClubRow[]>([]);
   const [type, setType] = useState<TournamentType>("single_stage");
   const [format, setFormat] = useState<TournamentFormat>("single");
   const [raceTo, setRaceTo] = useState(5);
@@ -48,6 +53,14 @@ export default function NewTournamentPage() {
       : flexibleCapacities,
     [format, type],
   );
+
+  useEffect(() => {
+    let active = true;
+    void getManagedClubs()
+      .then((clubs) => { if (active) setManagedClubs(clubs); })
+      .catch(() => { if (active) setManagedClubs([]); });
+    return () => { active = false; };
+  }, []);
 
   function updateOption<K extends keyof TournamentOptions>(key: K, value: TournamentOptions[K]) {
     setOptions((current) => ({ ...current, [key]: value }));
@@ -110,6 +123,7 @@ export default function NewTournamentPage() {
     }
 
     const tournament = createTournament({
+      clubId,
       name,
       venue,
       type,
@@ -155,6 +169,16 @@ export default function NewTournamentPage() {
               <label>
                 <span className="mb-2 block text-sm font-bold text-slate-300">{type === "single_stage" && format === "free_for_all" ? "Score cap" : "Race to"}</span>
                 <input type="number" min={1} max={25} value={raceTo} onChange={(event) => setRaceTo(Number(event.target.value))} className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3.5 text-white outline-none focus:border-cyan-400/50" />
+              </label>
+              <label className="sm:col-span-2">
+                <span className="mb-2 block text-sm font-bold text-slate-300">Hosted by</span>
+                <select value={clubId ?? ""} onChange={(event) => setClubId(event.target.value || null)} className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3.5 text-white outline-none focus:border-cyan-400/50">
+                  <option value="">Independent event</option>
+                  {managedClubs.map((club) => <option key={club.id} value={club.id}>{club.name}</option>)}
+                </select>
+                <span className="mt-2 block text-xs leading-5 text-slate-500">
+                  Linked events appear on the club page when registration is opened. {managedClubs.length ? "" : <><Link href="/clubs/new" className="font-black text-cyan-300">Create a club</Link> if this event has a host.</>}
+                </span>
               </label>
             </div>
           </section>

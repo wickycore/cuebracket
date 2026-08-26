@@ -220,6 +220,7 @@ export type TournamentCompetition =
 
 export interface Tournament {
   id: string;
+  clubId?: string | null;
   name: string;
   venue: string;
   type: TournamentType;
@@ -236,6 +237,7 @@ export interface Tournament {
 }
 
 export interface TournamentInput {
+  clubId?: string | null;
   name: string;
   venue: string;
   type: TournamentType;
@@ -417,6 +419,7 @@ function normalizeCompetition(
 function normalizeTournament(tournament: Tournament): Tournament {
   return {
     ...tournament,
+    clubId: tournament.clubId ?? null,
     type: tournament.type ?? "single_stage",
     options: { ...DEFAULT_TOURNAMENT_OPTIONS, ...(tournament.options ?? {}) },
     bracketSize: Number(tournament.bracketSize) || 8,
@@ -448,6 +451,7 @@ export function createTournament(input: TournamentInput): Tournament {
   const now = new Date().toISOString();
   const tournament: Tournament = {
     id: makeId(),
+    clubId: input.clubId ?? null,
     name: input.name.trim(),
     venue: input.venue.trim(),
     type: input.type,

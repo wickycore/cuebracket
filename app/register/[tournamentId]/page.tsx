@@ -39,6 +39,10 @@ export default async function TournamentRegistrationPage({ params }: Props) {
   const settings = settingsData as RegistrationSettingsRow | null;
   if (!settings) notFound();
 
+  const { data: club } = settings.club_id
+    ? await supabase.from("clubs").select("name, slug").eq("id", settings.club_id).maybeSingle()
+    : { data: null };
+
   const { data: { user } } = await supabase.auth.getUser();
   const [{ data: profile }, { data: registrationRows }, ownRegistrationResult] = await Promise.all([
     user
@@ -83,6 +87,7 @@ export default async function TournamentRegistrationPage({ params }: Props) {
             <div>
               <p className="text-xs font-black uppercase tracking-[0.26em] text-cyan-300">Open tournament registration</p>
               <h1 className="mt-3 text-4xl font-black tracking-tight sm:text-5xl">{settings.event_name}</h1>
+              {club ? <Link href={`/clubs/${club.slug}`} className="mt-2 inline-block text-sm font-black text-cyan-300 hover:text-cyan-200">Hosted by {club.name} →</Link> : null}
               <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm font-bold text-slate-400">
                 {settings.venue ? <span>📍 {settings.venue}</span> : null}
                 <span>🎱 Race to {settings.race_to}</span>

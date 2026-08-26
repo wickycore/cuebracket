@@ -5,6 +5,7 @@ const ORGANIZER_ROUTE_PREFIXES = [
   "/tournaments",
   "/leagues",
   "/tables",
+  "/clubs/new",
 ];
 
 export function isProtectedOrganizerPath(pathname: string) {
