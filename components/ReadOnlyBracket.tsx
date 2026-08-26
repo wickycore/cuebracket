@@ -19,7 +19,7 @@ import { BracketMatchList } from "@/components/BracketMatchList";
 import { ChampionCelebration } from "@/components/ChampionCelebration";
 
 type SingleBracketView = "flowchart" | "list";
-const SPECTATOR_VIEW_KEY = "cuebracket:spectator-bracket-view:v1";
+const SPECTATOR_VIEW_KEY = "cuebracket:spectator-bracket-view:v2";
 const SPECTATOR_VIEW_EVENT = "cuebracket:spectator-bracket-view-change";
 
 function subscribeToSpectatorView(onStoreChange: () => void) {
@@ -32,7 +32,9 @@ function subscribeToSpectatorView(onStoreChange: () => void) {
 }
 
 function getSpectatorViewSnapshot(): SingleBracketView {
-  return window.localStorage.getItem(SPECTATOR_VIEW_KEY) === "list" ? "list" : "flowchart";
+  const savedView = window.localStorage.getItem(SPECTATOR_VIEW_KEY);
+  if (savedView === "list" || savedView === "flowchart") return savedView;
+  return window.matchMedia("(max-width: 767px)").matches ? "list" : "flowchart";
 }
 
 function getServerSpectatorViewSnapshot(): SingleBracketView {
@@ -356,15 +358,15 @@ export function ReadOnlyBracket({
   return (
     <div>
       {showChampion && bracket.champion ? <div className="mb-6"><ChampionCelebration champion={bracket.champion} description={getTournamentChampionDescription(tournament)} tournament={tournament} /></div> : null}
-      <section className="rounded-[1.5rem] border border-white/10 bg-slate-950/55 p-3 sm:p-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="px-1">
+      <section className="rounded-2xl border border-white/10 bg-slate-950/55 p-2.5 sm:rounded-[1.5rem] sm:p-4">
+        <div className="flex items-center gap-2 sm:justify-between">
+          <div className="hidden px-1 sm:block">
             <p className="text-[0.68rem] font-black uppercase tracking-[0.18em] text-slate-500">Tournament view</p>
             <p className="mt-1 text-sm font-bold text-slate-300">Choose the view that is easiest to follow.</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 flex-1 items-center gap-2 sm:flex-none">
             {liveMatches ? <span className="hidden rounded-full bg-rose-400/15 px-3 py-1.5 text-xs font-black text-rose-300 ring-1 ring-rose-400/25 sm:inline">● {liveMatches} live</span> : null}
-            <div className="grid flex-1 grid-cols-2 rounded-2xl border border-white/10 bg-slate-950 p-1 sm:flex-none" role="tablist" aria-label="Tournament display mode">
+            <div className="grid flex-1 grid-cols-2 rounded-xl border border-white/10 bg-slate-950 p-1 sm:flex-none sm:rounded-2xl" role="tablist" aria-label="Tournament display mode">
               <button
                 type="button"
                 role="tab"
@@ -389,13 +391,16 @@ export function ReadOnlyBracket({
       </section>
 
       {singleView === "flowchart" ? (
-        <Section
-          title="Single Elimination"
-          rounds={bracket.rounds}
-          raceTo={tournament.raceTo}
-          tone="cyan"
-          balancedGeometry
-        />
+        <>
+          <p className="mt-3 px-1 text-xs font-bold text-slate-400 sm:hidden">Swipe sideways to explore rounds. Use Fit for a full overview.</p>
+          <Section
+            title="Single Elimination"
+            rounds={bracket.rounds}
+            raceTo={tournament.raceTo}
+            tone="cyan"
+            balancedGeometry
+          />
+        </>
       ) : (
         <BracketMatchList rounds={bracket.rounds} raceTo={tournament.raceTo} />
       )}
