@@ -8,6 +8,7 @@ import type { Tournament } from "@/lib/tournaments";
 export interface RegistrationSettingsRow {
   tournament_id: string;
   owner_id: string;
+  club_id: string | null;
   event_name: string;
   venue: string;
   format: string;
@@ -64,6 +65,7 @@ export async function saveRegistrationSettings(
     .upsert({
       tournament_id: tournament.id,
       owner_id: user.id,
+      club_id: tournament.clubId ?? null,
       event_name: tournament.name,
       venue: tournament.venue,
       format: tournament.format,
