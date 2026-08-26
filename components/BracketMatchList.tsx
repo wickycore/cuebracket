@@ -22,19 +22,19 @@ const filters: Array<{ key: SpectatorMatchFilter; label: string }> = [
 ];
 
 const statusStyles: Record<SpectatorMatchState, string> = {
-  advanced: "bg-violet-400/10 text-violet-200 ring-violet-400/20",
-  finished: "bg-emerald-400/10 text-emerald-300 ring-emerald-400/20",
-  live: "bg-rose-400/15 text-rose-300 ring-rose-400/30",
-  ready: "bg-cyan-400/10 text-cyan-300 ring-cyan-400/20",
-  waiting: "bg-white/5 text-slate-300 ring-white/10",
+  advanced: "bg-[#a895cc]/12 text-[#cbbfe4] ring-[#a895cc]/25",
+  finished: "bg-[#78c69b]/12 text-[#a9d9bd] ring-[#78c69b]/25",
+  live: "bg-[#d98b99]/15 text-[#efb5bf] ring-[#d98b99]/30",
+  ready: "bg-[#78b8d8]/12 text-[#acd5e7] ring-[#78b8d8]/25",
+  waiting: "bg-[#26364d] text-[#bdc7d4] ring-[#41536d]",
 };
 
 const rowAccentStyles: Record<SpectatorMatchState, string> = {
-  advanced: "border-l-violet-400/60",
-  finished: "border-l-emerald-400/70",
-  live: "border-l-rose-400",
-  ready: "border-l-cyan-400/70",
-  waiting: "border-l-slate-700",
+  advanced: "border-l-[#a895cc]",
+  finished: "border-l-[#78c69b]",
+  live: "border-l-[#d98b99]",
+  ready: "border-l-[#78b8d8]",
+  waiting: "border-l-[#53647c]",
 };
 
 const statusLabels: Record<SpectatorMatchState, string> = {
@@ -74,19 +74,19 @@ function MatchRow({
     const player = players[index];
     const isWinner = Boolean(match.completed && match.winner && player === match.winner);
     const isPlaceholder = !(index === 0 ? match.player1 : match.player2);
-    if (isWinner) return "text-emerald-300";
-    if (!isPlaceholder) return "text-white";
-    return automaticAdvance ? "text-slate-500" : "text-slate-300";
+    if (isWinner) return "text-[#a9d9bd]";
+    if (!isPlaceholder) return "text-[#f3f0e8]";
+    return automaticAdvance ? "text-[#8292a8]" : "text-[#bdc7d4]";
   }
 
   return (
-    <article className={`border-l-[3px] bg-slate-950/45 transition hover:bg-white/[0.035] ${rowAccentStyles[state]} ${state === "live" ? "shadow-[inset_0_0_30px_rgba(34,211,238,.045)]" : ""}`}>
+    <article className={`border-l-[3px] bg-[#182840] transition hover:bg-[#1d304c] ${rowAccentStyles[state]}`}>
       <div className="flex items-center justify-between gap-3 px-3 pt-2.5 sm:px-5 sm:pt-3">
-        <span className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">
+        <span className="text-xs font-black uppercase tracking-[0.14em] text-[#aeb9ca]">
           {match.tableNumber ? `Table ${match.tableNumber} · ` : ""}Match #{matchNumber}
         </span>
         <div className="flex items-center gap-2">
-          {elapsed ? <span className={`text-xs font-black tabular-nums ${state === "live" ? "text-cyan-300" : "text-slate-500"}`}>{elapsed}</span> : null}
+          {elapsed ? <span className={`text-xs font-black tabular-nums ${state === "live" ? "text-[#acd5e7]" : "text-[#8292a8]"}`}>{elapsed}</span> : null}
           <span className={`rounded-full px-2.5 py-1 text-[0.68rem] font-black uppercase tracking-[0.09em] ring-1 ${statusStyles[state]} ${state === "live" ? "animate-pulse" : ""}`}>
             {statusLabels[state]}
           </span>
@@ -97,15 +97,15 @@ function MatchRow({
         <span className={`min-w-0 break-words text-left text-base font-black leading-5 sm:text-lg sm:leading-6 ${playerStyle(0)}`}>
           {players[0]}
         </span>
-        <span className="text-center text-xl font-black tabular-nums text-cyan-300 sm:text-2xl">{scores[0] ?? "—"}</span>
-        <span className="text-center text-xs font-black uppercase text-slate-600">vs</span>
-        <span className="text-center text-xl font-black tabular-nums text-cyan-300 sm:text-2xl">{scores[1] ?? "—"}</span>
+        <span className="text-center text-xl font-black tabular-nums text-[#9bcde1] sm:text-2xl">{scores[0] ?? "—"}</span>
+        <span className="text-center text-xs font-black uppercase text-[#74859c]">vs</span>
+        <span className="text-center text-xl font-black tabular-nums text-[#9bcde1] sm:text-2xl">{scores[1] ?? "—"}</span>
         <span className={`min-w-0 break-words text-right text-base font-black leading-5 sm:text-lg sm:leading-6 ${playerStyle(1)}`}>
           {players[1]}
         </span>
       </div>
 
-      {automaticAdvance ? <p className="border-t border-white/[0.07] px-3 py-2 text-xs font-bold text-violet-200/75 sm:px-5">Automatic advance · no match played</p> : null}
+      {automaticAdvance ? <p className="border-t border-[#34465f] px-3 py-2 text-xs font-bold text-[#cbbfe4] sm:px-5">Automatic advance · no match played</p> : null}
     </article>
   );
 }
@@ -136,19 +136,19 @@ function RoundGroup({
       onToggle={(event) => {
         if (!forceOpen) onOpenChange(event.currentTarget.open);
       }}
-      className="group scroll-mt-24 overflow-hidden border-y border-white/10 bg-white/[0.025] sm:rounded-2xl sm:border"
+      className="group scroll-mt-24 overflow-hidden border-y border-[#34465f] bg-[#142238] sm:rounded-2xl sm:border"
     >
       <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-3 sm:px-5 sm:py-4">
         <div>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <h3 className="text-base font-black text-white sm:text-lg">{round.name}</h3>
-            <span className="text-xs font-black text-cyan-300">Race to {raceTo}</span>
+            <h3 className="text-base font-black text-[#f3f0e8] sm:text-lg">{round.name}</h3>
+            <span className="text-xs font-black text-[#8ac3df]">Race to {raceTo}</span>
           </div>
-          <p className="mt-0.5 text-xs font-bold text-slate-400 sm:text-sm">{completed}/{round.matches.length} shown matches resolved</p>
+          <p className="mt-0.5 text-xs font-bold text-[#aeb9ca] sm:text-sm">{completed}/{round.matches.length} shown matches resolved</p>
         </div>
-        <span className="grid h-9 w-9 place-items-center rounded-xl bg-white/5 text-lg text-slate-300 ring-1 ring-white/10 transition group-open:rotate-180">⌄</span>
+        <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#1d2e47] text-lg text-[#bdc7d4] ring-1 ring-[#41536d] transition group-open:rotate-180">⌄</span>
       </summary>
-      <div className="divide-y divide-white/10 border-t border-white/10">
+      <div className="divide-y divide-[#34465f] border-t border-[#34465f]">
         {round.matches.map((match) => (
           <MatchRow
             key={match.id}
@@ -210,34 +210,34 @@ export function BracketMatchList({ rounds, raceTo }: { rounds: BracketRound[]; r
   }
 
   return (
-    <section className="-mx-3 mt-3 overflow-hidden border-y border-white/10 bg-gradient-to-br from-cyan-400/[0.06] via-slate-950/90 to-slate-950/95 sm:mx-0 sm:mt-6 sm:rounded-[1.75rem] sm:border">
-      <header className="border-b border-white/10 px-3 py-4 sm:px-7 sm:py-6">
+    <section className="-mx-3 mt-3 overflow-hidden border-y border-[#34465f] bg-[#111d30] sm:mx-0 sm:mt-6 sm:rounded-[1.75rem] sm:border">
+      <header className="border-b border-[#34465f] px-3 py-4 sm:px-7 sm:py-6">
         {counts.live ? <span className="mb-3 block w-fit rounded-full bg-rose-400/15 px-3 py-1.5 text-xs font-black text-rose-300 ring-1 ring-rose-400/25">● {counts.live} live now</span> : null}
 
         <div className="relative mt-3">
           <label htmlFor="spectator-player-search" className="sr-only">Find a player</label>
-          <span aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-lg text-slate-500">⌕</span>
+          <span aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-lg text-[#8292a8]">⌕</span>
           <input
             id="spectator-player-search"
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Find a player — e.g. Wicky"
-            className="min-h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 pl-10 pr-10 text-base font-bold text-white outline-none placeholder:text-slate-500 focus:border-cyan-400/60 focus:ring-2 focus:ring-cyan-400/15"
+            className="min-h-11 w-full rounded-xl border border-[#41536d] bg-[#0f1b2d] pl-10 pr-10 text-base font-bold text-[#f3f0e8] outline-none placeholder:text-[#8292a8] focus:border-[#78b8d8] focus:ring-2 focus:ring-[#78b8d8]/15"
           />
-          {query ? <button type="button" onClick={() => setQuery("")} aria-label="Clear player search" className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-lg text-slate-400 hover:bg-white/5 hover:text-white">×</button> : null}
+          {query ? <button type="button" onClick={() => setQuery("")} aria-label="Clear player search" className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-lg text-[#aeb9ca] hover:bg-[#1d2e47] hover:text-[#f3f0e8]">×</button> : null}
         </div>
-        {query.trim() ? <p className="mt-2 text-xs font-bold text-cyan-300">{visibleMatchCount} {visibleMatchCount === 1 ? "match" : "matches"} found</p> : null}
+        {query.trim() ? <p className="mt-2 text-xs font-bold text-[#8ac3df]">{visibleMatchCount} {visibleMatchCount === 1 ? "match" : "matches"} found</p> : null}
 
         <div className="mt-3">
-          <p className="text-[0.65rem] font-black uppercase tracking-[0.16em] text-slate-500">Jump to round</p>
+          <p className="text-[0.65rem] font-black uppercase tracking-[0.16em] text-[#8292a8]">Jump to round</p>
           <div className="mt-1.5 flex gap-2 overflow-x-auto pb-1">
             {rounds.map((round) => (
               <button
                 key={round.round}
                 type="button"
                 onClick={() => jumpToRound(round.round)}
-                className={`min-h-9 shrink-0 rounded-lg px-3 text-xs font-black ring-1 transition ${round.round === activeRound ? "bg-cyan-400/10 text-cyan-300 ring-cyan-400/25" : "bg-white/5 text-slate-300 ring-white/10 hover:text-white"}`}
+                className={`min-h-9 shrink-0 rounded-lg px-3 text-xs font-black ring-1 transition ${round.round === activeRound ? "bg-[#78b8d8]/12 text-[#acd5e7] ring-[#78b8d8]/30" : "bg-[#1b2b43] text-[#bdc7d4] ring-[#41536d] hover:text-[#f3f0e8]"}`}
               >
                 {round.name}
               </button>
@@ -253,9 +253,9 @@ export function BracketMatchList({ rounds, raceTo }: { rounds: BracketRound[]; r
               role="tab"
               aria-selected={filter === key}
               onClick={() => setFilter(key)}
-              className={`min-h-10 shrink-0 rounded-xl px-3.5 py-2 text-sm font-black transition ${filter === key ? "bg-cyan-400 text-slate-950" : "bg-white/5 text-slate-300 ring-1 ring-white/10 hover:text-white"}`}
+              className={`min-h-10 shrink-0 rounded-xl px-3.5 py-2 text-sm font-black transition ${filter === key ? "bg-[#78b8d8] text-[#0b1424]" : "bg-[#1b2b43] text-[#bdc7d4] ring-1 ring-[#41536d] hover:text-[#f3f0e8]"}`}
             >
-              {label} <span className={filter === key ? "text-slate-700" : "text-slate-600"}>{counts[key]}</span>
+              {label} <span className={filter === key ? "text-[#29455c]" : "text-[#8292a8]"}>{counts[key]}</span>
             </button>
           ))}
         </div>
@@ -279,8 +279,8 @@ export function BracketMatchList({ rounds, raceTo }: { rounds: BracketRound[]; r
       ) : (
         <div className="px-6 py-16 text-center">
           <p className="text-3xl">🎱</p>
-          <p className="mt-3 font-black text-white">{query.trim() ? `No matches found for “${query.trim()}”.` : `No ${filter} matches right now.`}</p>
-          <button type="button" onClick={() => { setFilter("all"); setQuery(""); }} className="mt-3 text-sm font-black text-cyan-300">Show every match</button>
+          <p className="mt-3 font-black text-[#f3f0e8]">{query.trim() ? `No matches found for “${query.trim()}”.` : `No ${filter} matches right now.`}</p>
+          <button type="button" onClick={() => { setFilter("all"); setQuery(""); }} className="mt-3 text-sm font-black text-[#8ac3df]">Show every match</button>
         </div>
       )}
     </section>
