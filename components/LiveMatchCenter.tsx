@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 
 import { updateDoubleMatch } from "@/lib/bracket/doubleElimination";
 import { updateSingleEliminationMatch } from "@/lib/bracket/singleElimination";
+import { recordMatchStarted } from "@/lib/cloud/notifications";
 import type { BracketMatch, Tournament, TournamentBracket } from "@/lib/tournaments";
 import {
   formatDuration,
@@ -123,6 +124,7 @@ export function LiveMatchCenter({
   }
 
   function startMatch() {
+    if (match) void recordMatchStarted(tournament, match).catch(() => undefined);
     updateMatch((target) => {
       target.status = "live";
       target.startedAt = target.startedAt ?? new Date().toISOString();
@@ -133,6 +135,9 @@ export function LiveMatchCenter({
   }
 
   function addPoint(player: 1 | 2) {
+    if (match && match.status !== "live" && !match.completed) {
+      void recordMatchStarted(tournament, match).catch(() => undefined);
+    }
     updateMatch((target) => {
       if (target.completed) return;
       if (target.status !== "live") {
