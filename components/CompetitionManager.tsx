@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from
 import { ChampionCelebration } from "@/components/ChampionCelebration";
 import { PlayerNameEditor } from "@/components/PlayerNameEditor";
 import { FreeForAllStandingsTable, StandingsTable } from "@/components/StandingsTable";
+import { recordMatchStarted } from "@/lib/cloud/notifications";
 import { buildTournamentCompetition } from "@/lib/competition";
 import { isValidRaceResult } from "@/lib/bracket/singleElimination";
 import { clearFreeForAllHeat, FREE_FOR_ALL_PLAYOFF_OPTIONS, updateFreeForAllHeat, updateFreeForAllPlayoffMatch } from "@/lib/competition/freeForAll";
@@ -370,6 +371,7 @@ export function CompetitionManager({ tournament, onTournamentChange }: Props) {
 
   function startPairMatch(match: BracketMatch, groupId?: string) {
     if (!competition) return;
+    void recordMatchStarted(tournament, match).catch(() => undefined);
     const updater = (target: BracketMatch) => {
       target.status = "live";
       target.startedAt = target.startedAt ?? new Date().toISOString();

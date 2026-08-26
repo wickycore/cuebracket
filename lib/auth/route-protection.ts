@@ -1,6 +1,7 @@
 const ORGANIZER_ROUTE_PREFIXES = [
   "/dashboard",
   "/account",
+  "/notifications",
   "/cloud",
   "/tournaments",
   "/leagues",

@@ -32,6 +32,7 @@ test("every organizer route is locked after sign-out while spectator routes stay
   for (const path of [
     "/dashboard",
     "/account",
+    "/notifications",
     "/cloud",
     "/tournaments",
     "/tournaments/example",
