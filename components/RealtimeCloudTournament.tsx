@@ -93,11 +93,11 @@ export function RealtimeCloudTournament({ id }: { id: string }) {
 
   return (
     <>
-      <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-        <div>
+      <div className="mb-5 flex items-end justify-between gap-3 sm:mb-8">
+        <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <span
-              className={`rounded-full px-3 py-1 text-xs font-black uppercase ${
+              className={`rounded-full px-2.5 py-1 text-[0.68rem] font-black uppercase sm:px-3 sm:text-xs ${
                 connection === "live"
                   ? "animate-pulse bg-emerald-400/10 text-emerald-300"
                   : "bg-amber-400/10 text-amber-300"
@@ -105,21 +105,21 @@ export function RealtimeCloudTournament({ id }: { id: string }) {
             >
               {connection === "live" ? "● Realtime" : "● Reconnecting"}
             </span>
-            <span className="rounded-full bg-white/5 px-3 py-1 text-xs font-bold text-slate-400">
+            <span className="hidden rounded-full bg-white/5 px-3 py-1 text-xs font-bold text-slate-400 sm:inline">
               Public read-only
             </span>
           </div>
-          <h1 className="mt-4 text-4xl font-black text-white">{tournament.name}</h1>
-          <p className="mt-2 text-slate-400">
+          <h1 className="mt-3 truncate text-3xl font-black text-white sm:mt-4 sm:text-4xl">{tournament.name}</h1>
+          <p className="mt-1 truncate text-sm text-slate-400 sm:mt-2 sm:text-base">
             {tournament.venue || "Venue not set"} · Race to {tournament.raceTo}
           </p>
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-slate-900/70 px-5 py-4">
-          <p className="text-xs font-black uppercase tracking-wider text-slate-500">
+        <div className="shrink-0 rounded-xl border border-white/10 bg-slate-900/70 px-3 py-2 sm:rounded-2xl sm:px-5 sm:py-4">
+          <p className="hidden text-xs font-black uppercase tracking-wider text-slate-500 sm:block">
             Status
           </p>
-          <p className="mt-1 font-black capitalize text-cyan-300">
+          <p className="text-sm font-black capitalize text-cyan-300 sm:mt-1 sm:text-base">
             {tournament.status}
           </p>
         </div>
