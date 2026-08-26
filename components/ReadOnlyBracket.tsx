@@ -103,6 +103,8 @@ function Section({
   tone = "cyan",
   balancedGeometry = false,
   playerPlaceholders,
+  showHeader = true,
+  edgeToEdge = false,
 }: {
   title: string;
   subtitle?: string;
@@ -111,6 +113,8 @@ function Section({
   tone?: Tone;
   balancedGeometry?: boolean;
   playerPlaceholders?: [string, string];
+  showHeader?: boolean;
+  edgeToEdge?: boolean;
 }) {
   const colors = toneClass[tone];
   const maxMatches = Math.max(1, ...rounds.map((round) => round.matches.length));
@@ -134,11 +138,11 @@ function Section({
   }, [hasLiveTimer]);
 
   return (
-    <section className={`mt-6 overflow-hidden rounded-[1.75rem] border border-white/10 bg-gradient-to-br ${colors.panel}`}>
-      <header className="border-b border-white/10 px-5 py-5 sm:px-7">
+    <section className={`${edgeToEdge ? "-mx-3 mt-3 rounded-none border-y sm:mx-0 sm:mt-6 sm:rounded-[1.75rem] sm:border" : "mt-6 rounded-[1.75rem] border"} overflow-hidden border-white/10 bg-gradient-to-br ${colors.panel}`}>
+      {showHeader ? <header className="border-b border-white/10 px-5 py-5 sm:px-7">
         <p className={`text-sm font-black uppercase tracking-[0.2em] ${colors.title}`}>{title}</p>
         {subtitle ? <p className="mt-1 text-xs text-slate-500">{subtitle}</p> : null}
-      </header>
+      </header> : null}
 
       <BracketViewport label={title}>
         <div
@@ -392,13 +396,15 @@ export function ReadOnlyBracket({
 
       {singleView === "flowchart" ? (
         <>
-          <p className="mt-3 px-1 text-xs font-bold text-slate-400 sm:hidden">Swipe sideways to explore rounds. Use Fit for a full overview.</p>
+          <p className="mt-3 text-center text-xs font-bold text-slate-400 sm:hidden">Wide chart mode · drag sideways · pinch to zoom · double-tap to reset</p>
           <Section
             title="Single Elimination"
             rounds={bracket.rounds}
             raceTo={tournament.raceTo}
             tone="cyan"
             balancedGeometry
+            showHeader={false}
+            edgeToEdge
           />
         </>
       ) : (
