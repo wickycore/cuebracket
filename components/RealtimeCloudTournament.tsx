@@ -83,7 +83,7 @@ export function RealtimeCloudTournament({ id }: { id: string }) {
 
   if (!row) {
     return (
-      <p className="animate-pulse text-[#aeb9ca]">
+      <p className="animate-pulse text-[#b8c7dc]">
         Connecting to live tournament...
       </p>
     );
@@ -110,24 +110,24 @@ export function RealtimeCloudTournament({ id }: { id: string }) {
             >
               {connection === "live" ? "● Realtime" : "● Reconnecting"}
             </span>
-            <span className="hidden rounded-full bg-[#1b2b43] px-3 py-1 text-xs font-bold text-[#aeb9ca] sm:inline">
+            <span className="hidden rounded-full bg-[#11335d] px-3 py-1 text-xs font-bold text-[#d2dfec] sm:inline">
               Public read-only
             </span>
           </div>
           <div className="mt-3 flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1 sm:mt-4">
-            <h1 className="min-w-0 truncate text-3xl font-black text-[#f3f0e8] sm:text-4xl">{tournament.name}</h1>
-            {eliminationLabel ? <span className="shrink-0 text-xs font-black uppercase tracking-[0.12em] text-[#8ac3df] sm:text-sm">· {eliminationLabel}</span> : null}
+            <h1 className="min-w-0 truncate text-3xl font-black text-[#fafcff] sm:text-4xl">{tournament.name}</h1>
+            {eliminationLabel ? <span className="shrink-0 text-xs font-black uppercase tracking-[0.12em] text-[#52d3ee] sm:text-sm">· {eliminationLabel}</span> : null}
           </div>
-          <p className="mt-1 truncate text-sm text-[#aeb9ca] sm:mt-2 sm:text-base">
+          <p className="mt-1 truncate text-sm text-[#d2dfec] sm:mt-2 sm:text-base">
             {tournament.venue || "Venue not set"} · Race to {tournament.raceTo}
           </p>
         </div>
 
-        <div className="shrink-0 rounded-xl border border-[#34465f] bg-[#16243a] px-3 py-2 sm:rounded-2xl sm:px-5 sm:py-4">
-          <p className="hidden text-xs font-black uppercase tracking-wider text-[#8292a8] sm:block">
+        <div className="shrink-0 rounded-xl border border-[#2a5680] bg-[#10305a] px-3 py-2 sm:rounded-2xl sm:px-5 sm:py-4">
+          <p className="hidden text-xs font-black uppercase tracking-wider text-[#9fb4ca] sm:block">
             Status
           </p>
-          <p className="text-sm font-black capitalize text-[#8ac3df] sm:mt-1 sm:text-base">
+          <p className="text-sm font-black capitalize text-[#52d3ee] sm:mt-1 sm:text-base">
             {tournament.status}
           </p>
         </div>
