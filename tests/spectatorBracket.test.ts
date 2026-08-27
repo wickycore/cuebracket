@@ -82,6 +82,7 @@ test("automatic advances use a dedicated BYE card", () => {
   assert.match(source, /const advancingPlayer = match\.player1 \?\? match\.player2 \?\? match\.winner/);
   assert.match(source, /BYE<\/strong> — No opponent/);
   assert.match(source, /border-dashed border-\[#a873ee\]/);
+  assert.match(source, /h-\[7\.5rem\].*sm:h-auto/);
   assert.match(source, /Automatic advance<\/span> · no match played/);
 });
 
