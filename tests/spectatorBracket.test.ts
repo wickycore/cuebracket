@@ -61,7 +61,7 @@ test("spectator match list keeps one readable match per row", () => {
     "utf8",
   );
 
-  assert.match(source, /divide-y divide-\[#34465f\]/);
+  assert.match(source, /divide-y divide-\[#2a5680\]/);
   assert.doesNotMatch(source, /sm:grid-cols-2|xl:grid-cols-3/);
   assert.match(source, /text-base font-black leading-5/);
 });
@@ -122,7 +122,7 @@ test("flowchart removes the bulky zoom toolbar but keeps gesture navigation", ()
   assert.match(source, /onDoubleClick=\{\(\) => commitZoom\(1\)\}/);
 });
 
-test("spectator views use the calmer navy and muted-sky palette", () => {
+test("spectator views use the Royal Pool Blue palette", () => {
   const listSource = readFileSync(
     new URL("../components/BracketMatchList.tsx", import.meta.url),
     "utf8",
@@ -132,9 +132,10 @@ test("spectator views use the calmer navy and muted-sky palette", () => {
     "utf8",
   );
 
-  assert.match(listSource, /bg-\[#111d30\]/);
-  assert.match(listSource, /text-\[#f3f0e8\]/);
-  assert.match(listSource, /bg-\[#78b8d8\] text-\[#0b1424\]/);
-  assert.match(bracketSource, /bg-\[#182840\]/);
+  assert.match(listSource, /bg-\[#0d2a50\]/);
+  assert.match(listSource, /text-\[#fafcff\]/);
+  assert.match(listSource, /bg-\[#27c2e6\] text-\[#071a35\]/);
+  assert.match(listSource, /text-\[#dce8f4\]/);
+  assert.match(bracketSource, /bg-\[#123763\]/);
   assert.doesNotMatch(bracketSource, /shadow-\[0_0_30px_rgba\(34,211,238/);
 });
