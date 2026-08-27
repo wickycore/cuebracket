@@ -55,15 +55,30 @@ test("future fixtures name their feeder match instead of showing only TBD", () =
   assert.equal(spectatorSourceLabel(rounds[1].matches[0].source2, numbers), "Winner of Match #2");
 });
 
-test("spectator match list keeps one readable match per row", () => {
+test("spectator match list keeps one visual match card per row", () => {
   const source = readFileSync(
     new URL("../components/BracketMatchList.tsx", import.meta.url),
     "utf8",
   );
 
-  assert.match(source, /divide-y divide-\[#2a5680\]/);
+  assert.match(source, /space-y-2\.5 border-t border-\[#263c54\]/);
   assert.doesNotMatch(source, /sm:grid-cols-2|xl:grid-cols-3/);
-  assert.match(source, /text-base font-black leading-5/);
+  assert.match(source, /bg-\[linear-gradient\(110deg,#172a43/);
+  assert.match(source, /playerInitials/);
+  assert.match(source, /grid-cols-\[minmax\(0,1fr\)_7rem_minmax\(0,1fr\)\]/);
+  assert.match(source, /Race to \{raceTo\}/);
+  assert.doesNotMatch(source, /Best of/);
+});
+
+test("round cards show resolved progress before their matches", () => {
+  const source = readFileSync(
+    new URL("../components/BracketMatchList.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(source, /const progress = round\.matches\.length/);
+  assert.match(source, /matches resolved/);
+  assert.match(source, /bg-\[#39d38f\]/);
 });
 
 test("player search finds every match containing the requested player", () => {
@@ -122,7 +137,7 @@ test("flowchart removes the bulky zoom toolbar but keeps gesture navigation", ()
   assert.match(source, /onDoubleClick=\{\(\) => commitZoom\(1\)\}/);
 });
 
-test("spectator views use the Royal Pool Blue palette", () => {
+test("spectator list uses the match-card palette while the flowchart stays Royal Pool Blue", () => {
   const listSource = readFileSync(
     new URL("../components/BracketMatchList.tsx", import.meta.url),
     "utf8",
@@ -132,9 +147,9 @@ test("spectator views use the Royal Pool Blue palette", () => {
     "utf8",
   );
 
-  assert.match(listSource, /bg-\[#0d2a50\]/);
-  assert.match(listSource, /text-\[#fafcff\]/);
-  assert.match(listSource, /bg-\[#27c2e6\] text-\[#071a35\]/);
+  assert.match(listSource, /bg-\[#08172a\]/);
+  assert.match(listSource, /text-\[#f8fbff\]/);
+  assert.match(listSource, /bg-\[#39cbe8\] text-\[#071a2d\]/);
   assert.match(listSource, /text-\[#dce8f4\]/);
   assert.match(bracketSource, /bg-\[#123763\]/);
   assert.doesNotMatch(bracketSource, /shadow-\[0_0_30px_rgba\(34,211,238/);
