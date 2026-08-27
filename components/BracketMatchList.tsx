@@ -22,7 +22,7 @@ const filters: Array<{ key: SpectatorMatchFilter; label: string }> = [
 ];
 
 const statusStyles: Record<SpectatorMatchState, string> = {
-  advanced: "bg-[#5b318d] text-[#d9bcff] ring-[#8e58cc]/45",
+  advanced: "bg-[#5b318d]/20 text-[#d9bcff] ring-[#a873ee]/80",
   finished: "bg-[#185843] text-[#9aebc6] ring-[#36b985]/35",
   live: "bg-[#642c3b] text-[#ff7485] ring-[#a84255]/40",
   ready: "bg-[#075968] text-[#67e7ed] ring-[#168798]/40",
@@ -66,6 +66,24 @@ function playerAvatarStyle(name: string) {
   return avatarStyles[colorIndex];
 }
 
+function ClockIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function UserPlusIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="9" cy="8" r="3" />
+      <path d="M3.5 19c.5-4 2.4-6 5.5-6s5 2 5.5 6M18 7v6M15 10h6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function MatchRow({
   match,
   matchNumber,
@@ -86,6 +104,7 @@ function MatchRow({
     match.player2 ?? (automaticAdvance ? "No opponent" : spectatorSourceLabel(match.source2, matchNumbers)),
   ];
   const scores = [match.score1, match.score2];
+  const displayMatchNumber = String(matchNumber).padStart(2, "0");
   const elapsed = match.startedAt
     ? formatDuration(
         (match.endedAt ? new Date(match.endedAt).getTime() : now) -
@@ -107,53 +126,86 @@ function MatchRow({
     const hasPlayer = Boolean(index === 0 ? match.player1 : match.player2);
 
     return (
-      <div className={`flex min-w-0 items-center gap-2.5 sm:gap-3 ${index === 1 ? "flex-row-reverse text-right" : "text-left"}`}>
+      <div className={`flex min-w-0 items-center gap-1.5 sm:gap-3 ${index === 1 ? "flex-row-reverse text-right" : "text-left"}`}>
         {hasPlayer ? (
           <span
             aria-hidden="true"
-            className={`grid h-9 w-9 shrink-0 place-items-center rounded-full text-sm font-black lowercase text-white ring-1 ring-white/10 sm:h-12 sm:w-12 sm:text-base ${playerAvatarStyle(player)}`}
+            className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-xs font-black lowercase text-white ring-1 ring-white/15 sm:h-12 sm:w-12 sm:text-base ${playerAvatarStyle(player)}`}
           >
             {playerInitials(player)}
           </span>
         ) : null}
-        <span className={`min-w-0 truncate text-base font-black leading-5 sm:text-lg sm:leading-6 ${playerStyle(index)}`}>
+        <span className={`min-w-0 break-words text-sm font-black leading-4 sm:text-lg sm:leading-6 ${playerStyle(index)}`}>
           {player}
         </span>
       </div>
     );
   }
 
+  if (automaticAdvance) {
+    const advancingPlayer = match.player1 ?? match.player2 ?? match.winner ?? "Advanced player";
+
+    return (
+      <article className="relative overflow-hidden rounded-xl border border-[#3b3b61] bg-[linear-gradient(110deg,#17263f_0%,#18233b_52%,#151d34_100%)] shadow-[0_10px_30px_rgba(0,0,0,0.14)]">
+        <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-1.5 ${rowAccentStyles[state]}`} />
+        <div className="flex items-center justify-between gap-3 px-4 pt-3 sm:px-7 sm:pt-4">
+          <span className="text-[0.68rem] font-black uppercase tracking-[0.08em] text-[#c1d0e2] sm:text-xs">
+            {match.tableNumber ? `Table ${match.tableNumber} · ` : ""}Match {displayMatchNumber}
+          </span>
+          <span className={`rounded-full px-2.5 py-1 text-[0.66rem] font-black uppercase tracking-[0.06em] ring-1 sm:text-xs ${statusStyles[state]}`}>
+            {statusLabels[state]}
+          </span>
+        </div>
+
+        <div className="grid min-h-[5.25rem] grid-cols-[minmax(0,1fr)_2rem_minmax(0,1.35fr)] items-center gap-2 px-4 py-3 sm:min-h-[6.4rem] sm:grid-cols-[minmax(0,1fr)_3rem_minmax(0,1.2fr)] sm:px-7 sm:py-4">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+            <span aria-hidden="true" className={`grid h-9 w-9 shrink-0 place-items-center rounded-full text-xs font-black uppercase text-white ring-1 ring-[#b17aff]/50 sm:h-12 sm:w-12 sm:text-base ${playerAvatarStyle(advancingPlayer)}`}>
+              {playerInitials(advancingPlayer)}
+            </span>
+            <span className="min-w-0 break-words text-sm font-black leading-4 text-[#fafcff] sm:text-lg sm:leading-6">{advancingPlayer}</span>
+          </div>
+
+          <span className="text-center text-lg font-black text-[#b9b5ca] sm:text-2xl">VS.</span>
+
+          <div className="flex min-h-12 min-w-0 items-center justify-center gap-1.5 rounded-xl border border-dashed border-[#a873ee] bg-[#281d42]/45 px-2 py-2 text-center text-[0.65rem] font-bold leading-4 text-[#d9cfee] sm:min-h-16 sm:gap-2 sm:px-3 sm:text-sm" aria-label="Bye — no opponent">
+            <span className="text-[#b17aff]"><UserPlusIcon /></span>
+            <span><strong className="text-[#c798ff]">BYE</strong> — No opponent</span>
+          </div>
+        </div>
+
+        <p className="border-t border-[#3b3b61] px-4 py-2.5 text-center text-xs font-bold text-[#d8b8ff] sm:px-7 sm:text-sm">
+          <span className="text-[#bd8cff]">Automatic advance</span> · no match played
+        </p>
+      </article>
+    );
+  }
+
   return (
     <article className="relative overflow-hidden rounded-xl border border-[#2c425a] bg-[linear-gradient(110deg,#172a43_0%,#152940_52%,#11243a_100%)] shadow-[0_10px_30px_rgba(0,0,0,0.14)] transition hover:border-[#3c5875] hover:bg-[linear-gradient(110deg,#1b314d_0%,#193049_52%,#152b44_100%)]">
       <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-1.5 ${rowAccentStyles[state]}`} />
-      <div className="flex items-center justify-between gap-3 px-4 pt-3 sm:px-7 sm:pt-4">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 px-4 pt-3 sm:px-7 sm:pt-4">
         <span className="text-[0.68rem] font-black uppercase tracking-[0.08em] text-[#c1d0e2] sm:text-xs">
-          {match.tableNumber ? `Table ${match.tableNumber} · ` : ""}Match #{matchNumber}
+          {match.tableNumber ? `Table ${match.tableNumber} · ` : ""}Match {displayMatchNumber}
         </span>
-        <div className="flex items-center gap-2">
-          {elapsed ? <span className="text-xs font-black tabular-nums text-[#c4d2e3] sm:text-sm">{elapsed}</span> : null}
+        <span className="flex items-center justify-center gap-1 text-xs font-black tabular-nums text-[#c4d2e3] sm:text-sm">
+          {elapsed ? <><ClockIcon />{elapsed}</> : null}
+        </span>
+        <div className="flex items-center justify-end">
           <span className={`rounded-full px-2.5 py-1 text-[0.66rem] font-black uppercase tracking-[0.06em] ring-1 sm:text-xs ${statusStyles[state]}`}>
             {statusLabels[state]}
           </span>
         </div>
       </div>
 
-      <div className="grid min-h-[5.25rem] grid-cols-[minmax(0,1fr)_7rem_minmax(0,1fr)] items-center gap-2 px-4 pb-3 pt-2 sm:min-h-[6.2rem] sm:grid-cols-[minmax(0,1fr)_13rem_minmax(0,1fr)] sm:px-7 sm:pb-4 sm:pt-1">
+      <div className="grid min-h-[4.75rem] grid-cols-[minmax(0,1fr)_2rem_1.5rem_2rem_minmax(0,1fr)] items-center gap-1 px-4 py-2.5 sm:min-h-[6.2rem] sm:grid-cols-[minmax(0,1fr)_3.5rem_2rem_3.5rem_minmax(0,1fr)] sm:gap-3 sm:px-7 sm:py-3">
         {playerIdentity(0)}
-
-        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-1.5 sm:gap-3">
-          <span className="text-center text-3xl font-black tabular-nums text-[#f8fbff] sm:text-4xl">{scores[0] ?? "—"}</span>
-          <span className="flex flex-col items-center gap-1">
-            <span className="rounded-lg border border-[#344b65] bg-[#1a2e47] px-2 py-1 text-xs font-black uppercase text-[#cbd8e7] shadow-inner sm:px-3 sm:text-sm">vs</span>
-            <span className="whitespace-nowrap text-[0.62rem] font-medium text-[#b9c8da] sm:text-xs">Race to {raceTo}</span>
-          </span>
-          <span className="text-center text-3xl font-black tabular-nums text-[#f8fbff] sm:text-4xl">{scores[1] ?? "—"}</span>
-        </div>
-
+        <span className="text-center text-3xl font-black tabular-nums text-[#f8fbff] sm:text-4xl">{scores[0] ?? "—"}</span>
+        <span className="text-center text-base font-black uppercase text-[#aebdd0] sm:text-xl">vs</span>
+        <span className="text-center text-3xl font-black tabular-nums text-[#f8fbff] sm:text-4xl">{scores[1] ?? "—"}</span>
         {playerIdentity(1)}
       </div>
 
-      {automaticAdvance ? <p className="border-t border-[#2c425a] px-4 py-2.5 text-xs font-bold text-[#d8b8ff] sm:px-7 sm:text-sm"><span className="text-[#bd8cff]">Automatic advance</span> · no match played</p> : null}
+      <p className="border-t border-[#2c425a] px-4 py-2 text-center text-xs font-medium text-[#b9c8da] sm:px-7 sm:text-sm">Race to {raceTo}</p>
     </article>
   );
 }
@@ -284,7 +336,7 @@ export function BracketMatchList({ rounds, raceTo }: { rounds: BracketRound[]; r
 
         <div className="mt-3">
           <p className="text-[0.65rem] font-black uppercase tracking-[0.16em] text-[#dce8f4]">Jump to round</p>
-          <div className="mt-1.5 flex gap-2 overflow-x-auto pb-1">
+          <div className="mt-1.5 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {rounds.map((round) => (
               <button
                 key={round.round}
@@ -298,7 +350,7 @@ export function BracketMatchList({ rounds, raceTo }: { rounds: BracketRound[]; r
           </div>
         </div>
 
-        <div className="mt-3 flex gap-2 overflow-x-auto pb-1" role="tablist" aria-label="Filter tournament matches">
+        <div className="mt-3 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="tablist" aria-label="Filter tournament matches">
           {filters.map(({ key, label }) => (
             <button
               key={key}
