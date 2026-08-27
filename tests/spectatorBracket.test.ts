@@ -65,9 +65,23 @@ test("spectator match list keeps one visual match card per row", () => {
   assert.doesNotMatch(source, /sm:grid-cols-2|xl:grid-cols-3/);
   assert.match(source, /bg-\[linear-gradient\(110deg,#172a43/);
   assert.match(source, /playerInitials/);
-  assert.match(source, /grid-cols-\[minmax\(0,1fr\)_7rem_minmax\(0,1fr\)\]/);
+  assert.match(source, /grid-cols-\[minmax\(0,1fr\)_2rem_1\.5rem_2rem_minmax\(0,1fr\)\]/);
+  assert.match(source, /break-words text-sm font-black/);
+  assert.doesNotMatch(source, /min-w-0 truncate/);
   assert.match(source, /Race to \{raceTo\}/);
   assert.doesNotMatch(source, /Best of/);
+});
+
+test("automatic advances use a dedicated BYE card", () => {
+  const source = readFileSync(
+    new URL("../components/BracketMatchList.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(source, /const advancingPlayer = match\.player1 \?\? match\.player2 \?\? match\.winner/);
+  assert.match(source, /BYE<\/strong> — No opponent/);
+  assert.match(source, /border-dashed border-\[#a873ee\]/);
+  assert.match(source, /Automatic advance<\/span> · no match played/);
 });
 
 test("round cards show resolved progress before their matches", () => {
@@ -123,6 +137,8 @@ test("phone list uses a single edge-to-edge gutter and keeps CueBracket controls
   assert.match(source, /-mx-3 mt-3 overflow-hidden border-y/);
   assert.match(source, /Find a player — e\.g\. Wicky/);
   assert.match(source, /Jump to round/);
+  assert.match(source, /\[scrollbar-width:none\]/);
+  assert.match(source, /\[&::\-webkit-scrollbar\]:hidden/);
 });
 
 test("flowchart removes the bulky zoom toolbar but keeps gesture navigation", () => {
