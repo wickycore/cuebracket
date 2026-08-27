@@ -35,7 +35,7 @@ export function SpectatorAuthNav({ returnTo }: { returnTo: string }) {
   }, [supabase]);
 
   if (!ready) {
-    return <span aria-hidden="true" className="h-10 w-28 animate-pulse rounded-xl bg-[#1b2b43] ring-1 ring-[#41536d]" />;
+    return <span aria-hidden="true" className="h-10 w-28 animate-pulse rounded-xl bg-[#11335d] ring-1 ring-[#356a98]" />;
   }
 
   if (!user) {
@@ -45,14 +45,14 @@ export function SpectatorAuthNav({ returnTo }: { returnTo: string }) {
         <a
           data-cb-hard-navigation="true"
           href={`/auth/login?next=${next}`}
-          className="inline-flex h-10 items-center justify-center rounded-xl border border-[#34465f] px-3 text-xs font-black text-[#d7dee7] transition hover:border-[#78b8d8] hover:text-[#f3f0e8] sm:px-4 sm:text-sm"
+          className="inline-flex h-10 items-center justify-center rounded-xl border border-[#2a5680] px-3 text-xs font-black text-[#dce8f4] transition hover:border-[#27c2e6] hover:text-[#fafcff] sm:px-4 sm:text-sm"
         >
           Sign in
         </a>
         <a
           data-cb-hard-navigation="true"
           href={`/auth/signup?next=${next}`}
-          className="inline-flex h-10 items-center justify-center rounded-xl bg-[#78b8d8] px-3 text-xs font-black text-[#0b1424] transition hover:bg-[#8ac3df] sm:px-4 sm:text-sm"
+          className="inline-flex h-10 items-center justify-center rounded-xl bg-[#27c2e6] px-3 text-xs font-black text-[#071a35] transition hover:bg-[#52d3ee] sm:px-4 sm:text-sm"
         >
           Sign up
         </a>
@@ -71,7 +71,7 @@ export function SpectatorAuthNav({ returnTo }: { returnTo: string }) {
         href="/account"
         title={label}
         aria-label="Open player account"
-        className="grid h-10 w-10 place-items-center rounded-xl border border-[#78b8d8]/35 bg-[#78b8d8]/10 text-sm font-black text-[#b8ddeb] transition hover:border-[#8ac3df]/60 hover:bg-[#78b8d8]/15"
+        className="grid h-10 w-10 place-items-center rounded-xl border border-[#27c2e6]/40 bg-[#27c2e6]/12 text-sm font-black text-[#c8f3fb] transition hover:border-[#52d3ee]/70 hover:bg-[#27c2e6]/18"
       >
         {initial}
       </a>
