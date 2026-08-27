@@ -146,9 +146,9 @@ function MatchRow({
     const advancingPlayer = match.player1 ?? match.player2 ?? match.winner ?? "Advanced player";
 
     return (
-      <article className="relative overflow-hidden rounded-xl border border-[#3b3b61] bg-[linear-gradient(110deg,#17263f_0%,#18233b_52%,#151d34_100%)] shadow-[0_10px_30px_rgba(0,0,0,0.14)]">
+      <article className="relative h-[7.5rem] overflow-hidden rounded-xl border border-[#3b3b61] bg-[linear-gradient(110deg,#17263f_0%,#18233b_52%,#151d34_100%)] shadow-[0_10px_30px_rgba(0,0,0,0.14)] sm:h-auto">
         <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-1.5 ${rowAccentStyles[state]}`} />
-        <div className="flex items-center justify-between gap-3 px-4 pt-3 sm:px-7 sm:pt-4">
+        <div className="flex h-7 items-center justify-between gap-3 px-3 sm:h-auto sm:px-7 sm:pt-4">
           <span className="text-[0.68rem] font-black uppercase tracking-[0.08em] text-[#c1d0e2] sm:text-xs">
             {match.tableNumber ? `Table ${match.tableNumber} · ` : ""}Match {displayMatchNumber}
           </span>
@@ -157,9 +157,9 @@ function MatchRow({
           </span>
         </div>
 
-        <div className="grid min-h-[5.25rem] grid-cols-[minmax(0,1fr)_2rem_minmax(0,1.35fr)] items-center gap-2 px-4 py-3 sm:min-h-[6.4rem] sm:grid-cols-[minmax(0,1fr)_3rem_minmax(0,1.2fr)] sm:px-7 sm:py-4">
+        <div className="grid h-16 grid-cols-[minmax(0,1fr)_2rem_minmax(0,1.35fr)] items-center gap-1.5 px-3 py-1 sm:h-auto sm:min-h-[6.4rem] sm:grid-cols-[minmax(0,1fr)_3rem_minmax(0,1.2fr)] sm:px-7 sm:py-4">
           <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-            <span aria-hidden="true" className={`grid h-9 w-9 shrink-0 place-items-center rounded-full text-xs font-black uppercase text-white ring-1 ring-[#b17aff]/50 sm:h-12 sm:w-12 sm:text-base ${playerAvatarStyle(advancingPlayer)}`}>
+            <span aria-hidden="true" className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-xs font-black uppercase text-white ring-1 ring-[#b17aff]/50 sm:h-12 sm:w-12 sm:text-base ${playerAvatarStyle(advancingPlayer)}`}>
               {playerInitials(advancingPlayer)}
             </span>
             <span className="min-w-0 break-words text-sm font-black leading-4 text-[#fafcff] sm:text-lg sm:leading-6">{advancingPlayer}</span>
@@ -167,13 +167,13 @@ function MatchRow({
 
           <span className="text-center text-lg font-black text-[#b9b5ca] sm:text-2xl">VS.</span>
 
-          <div className="flex min-h-12 min-w-0 items-center justify-center gap-1.5 rounded-xl border border-dashed border-[#a873ee] bg-[#281d42]/45 px-2 py-2 text-center text-[0.65rem] font-bold leading-4 text-[#d9cfee] sm:min-h-16 sm:gap-2 sm:px-3 sm:text-sm" aria-label="Bye — no opponent">
+          <div className="flex min-h-10 min-w-0 items-center justify-center gap-1 rounded-xl border border-dashed border-[#a873ee] bg-[#281d42]/45 px-1.5 py-1 text-center text-[0.62rem] font-bold leading-3.5 text-[#d9cfee] sm:min-h-16 sm:gap-2 sm:px-3 sm:py-2 sm:text-sm sm:leading-4" aria-label="Bye — no opponent">
             <span className="text-[#b17aff]"><UserPlusIcon /></span>
             <span><strong className="text-[#c798ff]">BYE</strong> — No opponent</span>
           </div>
         </div>
 
-        <p className="border-t border-[#3b3b61] px-4 py-2.5 text-center text-xs font-bold text-[#d8b8ff] sm:px-7 sm:text-sm">
+        <p className="grid h-7 place-items-center border-t border-[#3b3b61] px-3 text-center text-xs font-bold text-[#d8b8ff] sm:block sm:h-auto sm:px-7 sm:py-2.5 sm:text-sm">
           <span className="text-[#bd8cff]">Automatic advance</span> · no match played
         </p>
       </article>
