@@ -22,20 +22,29 @@ const filters: Array<{ key: SpectatorMatchFilter; label: string }> = [
 ];
 
 const statusStyles: Record<SpectatorMatchState, string> = {
-  advanced: "bg-[#a78bfa]/15 text-[#ddd6fe] ring-[#a78bfa]/35",
-  finished: "bg-[#78c69b]/12 text-[#a9d9bd] ring-[#78c69b]/25",
-  live: "bg-[#ef8193]/15 text-[#ffc2cb] ring-[#ef8193]/35",
-  ready: "bg-[#27c2e6]/15 text-[#7ce8fb] ring-[#27c2e6]/35",
-  waiting: "bg-[#1a426d] text-[#d2dfec] ring-[#356a98]",
+  advanced: "bg-[#5b318d] text-[#d9bcff] ring-[#8e58cc]/45",
+  finished: "bg-[#185843] text-[#9aebc6] ring-[#36b985]/35",
+  live: "bg-[#642c3b] text-[#ff7485] ring-[#a84255]/40",
+  ready: "bg-[#075968] text-[#67e7ed] ring-[#168798]/40",
+  waiting: "bg-[#21364d] text-[#c6d4e4] ring-[#3b536d]",
 };
 
 const rowAccentStyles: Record<SpectatorMatchState, string> = {
-  advanced: "border-l-[#a78bfa]",
-  finished: "border-l-[#78c69b]",
-  live: "border-l-[#ef8193]",
-  ready: "border-l-[#52d3ee]",
-  waiting: "border-l-[#4a7ca7]",
+  advanced: "bg-[#9b5de5]",
+  finished: "bg-[#3bd198]",
+  live: "bg-[#ff6075]",
+  ready: "bg-[#3bd198]",
+  waiting: "bg-[#5f7b99]",
 };
+
+const avatarStyles = [
+  "bg-[#b83e59]",
+  "bg-[#6b3fca]",
+  "bg-[#2f9d62]",
+  "bg-[#e89013]",
+  "bg-[#27aaa3]",
+  "bg-[#2f6fc9]",
+];
 
 const statusLabels: Record<SpectatorMatchState, string> = {
   advanced: "Advanced",
@@ -45,15 +54,29 @@ const statusLabels: Record<SpectatorMatchState, string> = {
   waiting: "Waiting",
 };
 
+function playerInitials(name: string) {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return "?";
+  if (words.length === 1) return words[0].slice(0, 2).toLowerCase();
+  return words.slice(0, 2).map((word) => word[0]).join("").toLowerCase();
+}
+
+function playerAvatarStyle(name: string) {
+  const colorIndex = Array.from(name).reduce((total, character) => total + character.charCodeAt(0), 0) % avatarStyles.length;
+  return avatarStyles[colorIndex];
+}
+
 function MatchRow({
   match,
   matchNumber,
   matchNumbers,
+  raceTo,
   now,
 }: {
   match: BracketMatch;
   matchNumber: number;
   matchNumbers: Map<string, number>;
+  raceTo: number;
   now: number;
 }) {
   const state = getSpectatorMatchState(match);
@@ -79,33 +102,58 @@ function MatchRow({
     return automaticAdvance ? "text-[#9fb4ca]" : "text-[#d2dfec]";
   }
 
+  function playerIdentity(index: number) {
+    const player = players[index];
+    const hasPlayer = Boolean(index === 0 ? match.player1 : match.player2);
+
+    return (
+      <div className={`flex min-w-0 items-center gap-2.5 sm:gap-3 ${index === 1 ? "flex-row-reverse text-right" : "text-left"}`}>
+        {hasPlayer ? (
+          <span
+            aria-hidden="true"
+            className={`grid h-9 w-9 shrink-0 place-items-center rounded-full text-sm font-black lowercase text-white ring-1 ring-white/10 sm:h-12 sm:w-12 sm:text-base ${playerAvatarStyle(player)}`}
+          >
+            {playerInitials(player)}
+          </span>
+        ) : null}
+        <span className={`min-w-0 truncate text-base font-black leading-5 sm:text-lg sm:leading-6 ${playerStyle(index)}`}>
+          {player}
+        </span>
+      </div>
+    );
+  }
+
   return (
-    <article className={`border-l-[3px] bg-[#123763] transition hover:bg-[#174873] ${rowAccentStyles[state]}`}>
-      <div className="flex items-center justify-between gap-3 px-3 pt-2.5 sm:px-5 sm:pt-3">
-        <span className="text-xs font-black uppercase tracking-[0.14em] text-[#dce8f4]">
+    <article className="relative overflow-hidden rounded-xl border border-[#2c425a] bg-[linear-gradient(110deg,#172a43_0%,#152940_52%,#11243a_100%)] shadow-[0_10px_30px_rgba(0,0,0,0.14)] transition hover:border-[#3c5875] hover:bg-[linear-gradient(110deg,#1b314d_0%,#193049_52%,#152b44_100%)]">
+      <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-1.5 ${rowAccentStyles[state]}`} />
+      <div className="flex items-center justify-between gap-3 px-4 pt-3 sm:px-7 sm:pt-4">
+        <span className="text-[0.68rem] font-black uppercase tracking-[0.08em] text-[#c1d0e2] sm:text-xs">
           {match.tableNumber ? `Table ${match.tableNumber} · ` : ""}Match #{matchNumber}
         </span>
         <div className="flex items-center gap-2">
-          {elapsed ? <span className={`text-xs font-black tabular-nums ${state === "live" ? "text-[#7ce8fb]" : "text-[#b8c7dc]"}`}>{elapsed}</span> : null}
-          <span className={`rounded-full px-2.5 py-1 text-[0.68rem] font-black uppercase tracking-[0.09em] ring-1 ${statusStyles[state]} ${state === "live" ? "animate-pulse" : ""}`}>
+          {elapsed ? <span className="text-xs font-black tabular-nums text-[#c4d2e3] sm:text-sm">{elapsed}</span> : null}
+          <span className={`rounded-full px-2.5 py-1 text-[0.66rem] font-black uppercase tracking-[0.06em] ring-1 sm:text-xs ${statusStyles[state]}`}>
             {statusLabels[state]}
           </span>
         </div>
       </div>
 
-      <div className="grid min-h-14 grid-cols-[minmax(0,1fr)_2.25rem_1.5rem_2.25rem_minmax(0,1fr)] items-center gap-1 px-3 py-2.5 sm:min-h-[4.25rem] sm:grid-cols-[minmax(0,1fr)_3rem_2rem_3rem_minmax(0,1fr)] sm:px-5 sm:py-3">
-        <span className={`min-w-0 break-words text-left text-base font-black leading-5 sm:text-lg sm:leading-6 ${playerStyle(0)}`}>
-          {players[0]}
-        </span>
-        <span className="text-center text-xl font-black tabular-nums text-[#52d3ee] sm:text-2xl">{scores[0] ?? "—"}</span>
-        <span className="text-center text-xs font-black uppercase text-[#afc3d7]">vs</span>
-        <span className="text-center text-xl font-black tabular-nums text-[#52d3ee] sm:text-2xl">{scores[1] ?? "—"}</span>
-        <span className={`min-w-0 break-words text-right text-base font-black leading-5 sm:text-lg sm:leading-6 ${playerStyle(1)}`}>
-          {players[1]}
-        </span>
+      <div className="grid min-h-[5.25rem] grid-cols-[minmax(0,1fr)_7rem_minmax(0,1fr)] items-center gap-2 px-4 pb-3 pt-2 sm:min-h-[6.2rem] sm:grid-cols-[minmax(0,1fr)_13rem_minmax(0,1fr)] sm:px-7 sm:pb-4 sm:pt-1">
+        {playerIdentity(0)}
+
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-1.5 sm:gap-3">
+          <span className="text-center text-3xl font-black tabular-nums text-[#f8fbff] sm:text-4xl">{scores[0] ?? "—"}</span>
+          <span className="flex flex-col items-center gap-1">
+            <span className="rounded-lg border border-[#344b65] bg-[#1a2e47] px-2 py-1 text-xs font-black uppercase text-[#cbd8e7] shadow-inner sm:px-3 sm:text-sm">vs</span>
+            <span className="whitespace-nowrap text-[0.62rem] font-medium text-[#b9c8da] sm:text-xs">Race to {raceTo}</span>
+          </span>
+          <span className="text-center text-3xl font-black tabular-nums text-[#f8fbff] sm:text-4xl">{scores[1] ?? "—"}</span>
+        </div>
+
+        {playerIdentity(1)}
       </div>
 
-      {automaticAdvance ? <p className="border-t border-[#2a5680] px-3 py-2 text-xs font-bold text-[#e3dcff] sm:px-5">Automatic advance · no match played</p> : null}
+      {automaticAdvance ? <p className="border-t border-[#2c425a] px-4 py-2.5 text-xs font-bold text-[#d8b8ff] sm:px-7 sm:text-sm"><span className="text-[#bd8cff]">Automatic advance</span> · no match played</p> : null}
     </article>
   );
 }
@@ -128,6 +176,7 @@ function RoundGroup({
   onOpenChange: (open: boolean) => void;
 }) {
   const completed = round.matches.filter((match) => match.completed).length;
+  const progress = round.matches.length ? (completed / round.matches.length) * 100 : 0;
 
   return (
     <details
@@ -136,25 +185,29 @@ function RoundGroup({
       onToggle={(event) => {
         if (!forceOpen) onOpenChange(event.currentTarget.open);
       }}
-      className="group scroll-mt-24 overflow-hidden border-y border-[#2a5680] bg-[#0d2a50] sm:rounded-2xl sm:border"
+      className="group scroll-mt-24 overflow-hidden border-y border-[#263c54] bg-[#09192d] sm:rounded-2xl sm:border"
     >
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-3 sm:px-5 sm:py-4">
-        <div>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <h3 className="text-base font-black text-[#fafcff] sm:text-lg">{round.name}</h3>
-            <span className="text-xs font-black text-[#d2dfec]">Race to {raceTo}</span>
+      <summary className="flex cursor-pointer list-none items-start justify-between gap-3 px-4 py-4 sm:px-7 sm:py-6">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <h3 className="text-xl font-black text-[#f8fbff] sm:text-2xl">{round.name}</h3>
+            <span className="rounded-lg border border-[#2d435c] bg-[#1b2d45] px-2.5 py-1 text-xs font-black text-[#cbd8e7] shadow-inner sm:text-sm">Race to {raceTo}</span>
           </div>
-          <p className="mt-0.5 text-xs font-bold text-[#b8c7dc] sm:text-sm">{completed}/{round.matches.length} shown matches resolved</p>
+          <p className="mt-2 text-sm font-bold text-[#c7d5e4] sm:text-base">{completed} / {round.matches.length} matches resolved</p>
+          <span className="mt-2 block h-2 w-full max-w-sm overflow-hidden rounded-full bg-[#2b3c52]" aria-hidden="true">
+            <span className="block h-full rounded-full bg-[#39d38f] transition-[width] duration-500" style={{ width: `${progress}%` }} />
+          </span>
         </div>
-        <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#163e6b] text-lg text-[#d2dfec] ring-1 ring-[#356a98] transition group-open:rotate-180">⌄</span>
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-[#2d435c] bg-[#17283d] text-xl text-[#edf5ff] shadow-inner transition group-open:rotate-180 sm:h-12 sm:w-12">⌄</span>
       </summary>
-      <div className="divide-y divide-[#2a5680] border-t border-[#2a5680]">
+      <div className="space-y-2.5 border-t border-[#263c54] px-3 py-3 sm:space-y-3 sm:px-5 sm:py-5">
         {round.matches.map((match) => (
           <MatchRow
             key={match.id}
             match={match}
             matchNumber={matchNumbers.get(match.id) ?? match.position + 1}
             matchNumbers={matchNumbers}
+            raceTo={raceTo}
             now={now}
           />
         ))}
@@ -210,8 +263,8 @@ export function BracketMatchList({ rounds, raceTo }: { rounds: BracketRound[]; r
   }
 
   return (
-    <section className="-mx-3 mt-3 overflow-hidden border-y border-[#2a5680] bg-[#0d2a50] sm:mx-0 sm:mt-6 sm:rounded-[1.75rem] sm:border">
-      <header className="border-b border-[#2a5680] px-3 py-4 sm:px-7 sm:py-6">
+    <section className="-mx-3 mt-3 overflow-hidden border-y border-[#263c54] bg-[#08172a] sm:mx-0 sm:mt-6 sm:rounded-[1.75rem] sm:border">
+      <header className="border-b border-[#263c54] bg-[#0a1b30] px-3 py-4 sm:px-7 sm:py-6">
         {counts.live ? <span className="mb-3 block w-fit rounded-full bg-rose-400/15 px-3 py-1.5 text-xs font-black text-rose-300 ring-1 ring-rose-400/25">● {counts.live} live now</span> : null}
 
         <div className="relative mt-3">
@@ -223,9 +276,9 @@ export function BracketMatchList({ rounds, raceTo }: { rounds: BracketRound[]; r
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Find a player — e.g. Wicky"
-            className="min-h-11 w-full rounded-xl border border-[#356a98] bg-[#09213f] pl-10 pr-10 text-base font-bold text-[#fafcff] outline-none placeholder:text-[#9fb4ca] focus:border-[#27c2e6] focus:ring-2 focus:ring-[#27c2e6]/20"
+            className="min-h-11 w-full rounded-xl border border-[#2d435c] bg-[#111f33] pl-10 pr-10 text-base font-bold text-[#f8fbff] outline-none placeholder:text-[#8fa2b8] focus:border-[#39cbe8] focus:ring-2 focus:ring-[#39cbe8]/20"
           />
-          {query ? <button type="button" onClick={() => setQuery("")} aria-label="Clear player search" className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-lg text-[#d2dfec] hover:bg-[#163e6b] hover:text-[#fafcff]">×</button> : null}
+          {query ? <button type="button" onClick={() => setQuery("")} aria-label="Clear player search" className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-lg text-[#c7d5e4] hover:bg-[#1b2d45] hover:text-white">×</button> : null}
         </div>
         {query.trim() ? <p className="mt-2 text-xs font-bold text-[#52d3ee]">{visibleMatchCount} {visibleMatchCount === 1 ? "match" : "matches"} found</p> : null}
 
@@ -237,7 +290,7 @@ export function BracketMatchList({ rounds, raceTo }: { rounds: BracketRound[]; r
                 key={round.round}
                 type="button"
                 onClick={() => jumpToRound(round.round)}
-                className={`min-h-9 shrink-0 rounded-lg px-3 text-xs font-black ring-1 transition ${round.round === activeRound ? "bg-[#27c2e6]/18 text-[#7ce8fb] ring-[#27c2e6]/40" : "bg-[#11335d] text-[#d2dfec] ring-[#356a98] hover:text-[#fafcff]"}`}
+                className={`min-h-9 shrink-0 rounded-lg px-3 text-xs font-black ring-1 transition ${round.round === activeRound ? "bg-[#12566a] text-[#75e6ee] ring-[#238499]" : "bg-[#17283d] text-[#c7d5e4] ring-[#2d435c] hover:text-white"}`}
               >
                 {round.name}
               </button>
@@ -253,16 +306,16 @@ export function BracketMatchList({ rounds, raceTo }: { rounds: BracketRound[]; r
               role="tab"
               aria-selected={filter === key}
               onClick={() => setFilter(key)}
-              className={`min-h-10 shrink-0 rounded-xl px-3.5 py-2 text-sm font-black transition ${filter === key ? "bg-[#27c2e6] text-[#071a35]" : "bg-[#11335d] text-[#d2dfec] ring-1 ring-[#356a98] hover:text-[#fafcff]"}`}
+              className={`min-h-10 shrink-0 rounded-xl px-3.5 py-2 text-sm font-black transition ${filter === key ? "bg-[#39cbe8] text-[#071a2d]" : "bg-[#17283d] text-[#c7d5e4] ring-1 ring-[#2d435c] hover:text-white"}`}
             >
-              {label} <span className={filter === key ? "text-[#17456a]" : "text-[#9fb4ca]"}>{counts[key]}</span>
+              {label} <span className={filter === key ? "text-[#17455a]" : "text-[#8fa2b8]"}>{counts[key]}</span>
             </button>
           ))}
         </div>
       </header>
 
       {visibleRounds.length ? (
-        <div className="space-y-2 py-2 sm:space-y-3 sm:p-5">
+        <div className="space-y-2 py-2 sm:space-y-4 sm:p-5">
           {visibleRounds.map((round) => (
             <RoundGroup
               key={`${filter}-${round.round}`}
