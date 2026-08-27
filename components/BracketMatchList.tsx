@@ -181,9 +181,9 @@ function MatchRow({
   }
 
   return (
-    <article className="relative h-[7.8125rem] overflow-hidden rounded-xl border border-[#2c425a] bg-[linear-gradient(110deg,#172a43_0%,#152940_52%,#11243a_100%)] shadow-[0_10px_30px_rgba(0,0,0,0.14)] transition hover:border-[#3c5875] hover:bg-[linear-gradient(110deg,#1b314d_0%,#193049_52%,#152b44_100%)] sm:h-auto">
+    <article className="relative h-[6.875rem] overflow-hidden rounded-xl border border-[#2c425a] bg-[linear-gradient(110deg,#172a43_0%,#152940_52%,#11243a_100%)] shadow-[0_10px_30px_rgba(0,0,0,0.14)] transition hover:border-[#3c5875] hover:bg-[linear-gradient(110deg,#1b314d_0%,#193049_52%,#152b44_100%)] sm:h-auto">
       <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-1.5 ${rowAccentStyles[state]}`} />
-      <div className="grid h-8 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 px-3 sm:h-auto sm:px-7 sm:pt-4">
+      <div className="grid h-7 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 px-3 sm:h-auto sm:px-7 sm:pt-4">
         <span className="text-[0.68rem] font-black uppercase tracking-[0.08em] text-[#c1d0e2] sm:text-xs">
           {match.tableNumber ? `Table ${match.tableNumber} · ` : ""}Match {displayMatchNumber}
         </span>
@@ -197,7 +197,7 @@ function MatchRow({
         </div>
       </div>
 
-      <div className="grid h-[3.75rem] grid-cols-[minmax(0,1fr)_2rem_1.5rem_2rem_minmax(0,1fr)] items-center gap-1 px-3 py-1.5 sm:h-auto sm:min-h-[6.2rem] sm:grid-cols-[minmax(0,1fr)_3.5rem_2rem_3.5rem_minmax(0,1fr)] sm:gap-3 sm:px-7 sm:py-3">
+      <div className="grid h-[3.375rem] grid-cols-[minmax(0,1fr)_2rem_1.5rem_2rem_minmax(0,1fr)] items-center gap-1 px-3 py-1 sm:h-auto sm:min-h-[6.2rem] sm:grid-cols-[minmax(0,1fr)_3.5rem_2rem_3.5rem_minmax(0,1fr)] sm:gap-3 sm:px-7 sm:py-3">
         {playerIdentity(0)}
         <span className="text-center text-3xl font-black tabular-nums text-[#f8fbff] sm:text-4xl">{scores[0] ?? "—"}</span>
         <span className="text-center text-base font-black uppercase text-[#aebdd0] sm:text-xl">vs</span>
@@ -205,7 +205,7 @@ function MatchRow({
         {playerIdentity(1)}
       </div>
 
-      <p className="grid h-8 place-items-center border-t border-[#2c425a] px-3 text-center text-xs font-medium text-[#b9c8da] sm:block sm:h-auto sm:px-7 sm:py-2 sm:text-sm">Race to {raceTo}</p>
+      <p className="grid h-7 place-items-center border-t border-[#2c425a] px-3 text-center text-xs font-medium text-[#b9c8da] sm:block sm:h-auto sm:px-7 sm:py-2 sm:text-sm">Race to {raceTo}</p>
     </article>
   );
 }
