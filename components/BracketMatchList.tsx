@@ -173,8 +173,8 @@ function MatchRow({
           </div>
         </div>
 
-        <p className="grid h-7 place-items-center border-t border-[#3b3b61] px-3 text-center text-xs font-bold text-[#d8b8ff] sm:block sm:h-auto sm:px-7 sm:py-2.5 sm:text-sm">
-          <span className="text-[#bd8cff]">Automatic advance</span> · no match played
+        <p className="flex h-7 items-center justify-center border-t border-[#3b3b61] px-3 text-center text-[0.68rem] font-bold text-[#d8b8ff] sm:block sm:h-auto sm:px-7 sm:py-2.5 sm:text-sm">
+          <span className="whitespace-nowrap"><strong className="text-[#bd8cff]">Automatic advance</strong> · no match played</span>
         </p>
       </article>
     );
