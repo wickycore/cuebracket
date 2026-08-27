@@ -68,6 +68,7 @@ test("spectator match list keeps one visual match card per row", () => {
   assert.match(source, /grid-cols-\[minmax\(0,1fr\)_2rem_1\.5rem_2rem_minmax\(0,1fr\)\]/);
   assert.match(source, /break-words text-sm font-black/);
   assert.doesNotMatch(source, /min-w-0 truncate/);
+  assert.match(source, /h-\[7\.8125rem\].*sm:h-auto/);
   assert.match(source, /Race to \{raceTo\}/);
   assert.doesNotMatch(source, /Best of/);
 });
