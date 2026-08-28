@@ -68,6 +68,7 @@ export function CloudAutoSyncProvider({ children }: { children: ReactNode }) {
     let userId: string | null = null;
     let applyingRemoteChange = false;
     let realtimeChannel: RealtimeChannel | null = null;
+    let collaborationChannel: RealtimeChannel | null = null;
     let reconcileRun = 0;
     let authReconcileTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -77,6 +78,7 @@ export function CloudAutoSyncProvider({ children }: { children: ReactNode }) {
     const syncingIds = new Set<string>();
     const offlineIds = new Set<string>();
     const retryAttempts = new Map<string, number>();
+    const managedTournamentIds = new Set<string>();
 
     function clearTimer(id: string) {
       const timer = timers.get(id);
@@ -105,7 +107,7 @@ export function CloudAutoSyncProvider({ children }: { children: ReactNode }) {
     }
 
     function applyRemoteRow(row: CloudTournamentRow) {
-      if (!active || row.owner_id !== userId) return;
+      if (!active || (row.owner_id !== userId && !managedTournamentIds.has(row.id))) return;
       setLocalCloudOwner(row.id, row.owner_id);
       if (dirtyIds.has(row.id) || syncingIds.has(row.id)) return;
 
@@ -151,7 +153,7 @@ export function CloudAutoSyncProvider({ children }: { children: ReactNode }) {
 
       const syncUserId = userId;
       const knownOwner = getLocalCloudOwner(id);
-      if (knownOwner && knownOwner !== syncUserId) {
+      if (knownOwner && knownOwner !== syncUserId && !managedTournamentIds.has(id)) {
         dirtyIds.delete(id);
         clearPendingCloudChange(id, syncUserId);
         publishCloudSyncStatus({
@@ -206,7 +208,7 @@ export function CloudAutoSyncProvider({ children }: { children: ReactNode }) {
               );
             }
 
-            setLocalCloudOwner(id, syncUserId);
+            setLocalCloudOwner(id, savedRow.owner_id);
             clearPendingCloudChange(id, syncUserId);
             retryAttempts.delete(id);
             offlineIds.delete(id);
@@ -287,7 +289,7 @@ export function CloudAutoSyncProvider({ children }: { children: ReactNode }) {
       if (!active || !userId) return;
 
       const knownOwner = getLocalCloudOwner(id);
-      if (knownOwner && knownOwner !== userId) {
+      if (knownOwner && knownOwner !== userId && !managedTournamentIds.has(id)) {
         publishCloudSyncStatus({
           state: "error",
           tournamentId: id,
@@ -353,23 +355,27 @@ export function CloudAutoSyncProvider({ children }: { children: ReactNode }) {
     }
 
     function stopRealtime() {
-      if (!realtimeChannel) return;
-      void supabase.removeChannel(realtimeChannel);
-      realtimeChannel = null;
+      if (realtimeChannel) {
+        void supabase.removeChannel(realtimeChannel);
+        realtimeChannel = null;
+      }
+      if (collaborationChannel) {
+        void supabase.removeChannel(collaborationChannel);
+        collaborationChannel = null;
+      }
     }
 
     function startRealtime(ownerId: string) {
       stopRealtime();
 
       realtimeChannel = supabase
-        .channel(`cuebracket-owner-${ownerId}`)
+        .channel(`cuebracket-managed-${ownerId}`)
         .on(
           "postgres_changes",
           {
             event: "*",
             schema: "public",
             table: "cloud_tournaments",
-            filter: `owner_id=eq.${ownerId}`,
           },
           (payload: RealtimePostgresChangesPayload<CloudTournamentRow>) => {
             if (payload.eventType === "DELETE") {
@@ -389,6 +395,20 @@ export function CloudAutoSyncProvider({ children }: { children: ReactNode }) {
             });
           }
         });
+
+      collaborationChannel = supabase
+        .channel(`cuebracket-collaborations-${ownerId}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "tournament_collaborators",
+            filter: `user_id=eq.${ownerId}`,
+          },
+          () => void reconcile(),
+        )
+        .subscribe();
     }
 
     async function reconcile() {
@@ -424,12 +444,24 @@ export function CloudAutoSyncProvider({ children }: { children: ReactNode }) {
         const cloudRows = await getMyCloudTournaments();
         if (!isCurrent() || userId !== user.id) return;
 
+        const previouslyManagedIds = new Set(managedTournamentIds);
+        managedTournamentIds.clear();
+        for (const row of cloudRows) managedTournamentIds.add(row.id);
         const cloudById = new Map(cloudRows.map((row) => [row.id, row]));
         let local = getTournaments();
         let changedLocally = false;
 
+        for (const previousId of previouslyManagedIds) {
+          if (!managedTournamentIds.has(previousId)) {
+            local = local.filter((item) => item.id !== previousId);
+            removeLocalCloudOwner(previousId);
+            dirtyIds.delete(previousId);
+            changedLocally = true;
+          }
+        }
+
         for (const row of cloudRows) {
-          setLocalCloudOwner(row.id, user.id);
+          setLocalCloudOwner(row.id, row.owner_id);
           let pending = getPendingCloudChange(row.id, user.id);
           const existing = local.find((item) => item.id === row.id);
 
@@ -517,6 +549,7 @@ export function CloudAutoSyncProvider({ children }: { children: ReactNode }) {
       if (nextUserId !== userId) {
         userId = nextUserId;
         dirtyIds.clear();
+        managedTournamentIds.clear();
         offlineIds.clear();
         retryAttempts.clear();
         for (const id of timers.keys()) clearTimer(id);
@@ -555,6 +588,7 @@ export function CloudAutoSyncProvider({ children }: { children: ReactNode }) {
 
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
+    window.addEventListener("cuebracket:collaborations-changed", reconcile);
     rememberLocalState();
     void reconcile();
 
@@ -565,6 +599,7 @@ export function CloudAutoSyncProvider({ children }: { children: ReactNode }) {
       authSubscription.unsubscribe();
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
+      window.removeEventListener("cuebracket:collaborations-changed", reconcile);
       stopRealtime();
       if (authReconcileTimer) clearTimeout(authReconcileTimer);
       for (const id of timers.keys()) clearTimer(id);
@@ -573,4 +608,3 @@ export function CloudAutoSyncProvider({ children }: { children: ReactNode }) {
 
   return children;
 }
-

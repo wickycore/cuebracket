@@ -395,7 +395,7 @@ export function CloudSyncPanel() {
                     </button>
                   ) : null}
 
-                  {cloudRow ? (
+                  {cloudRow && cloudRow.access_role !== "co_organizer" ? (
                     <button
                       type="button"
                       onClick={() => void toggleVisibility(cloudRow)}
@@ -418,6 +418,11 @@ export function CloudSyncPanel() {
                     >
                       Open live link
                     </Link>
+                  ) : null}
+                  {cloudRow?.access_role === "co_organizer" ? (
+                    <span className="flex min-h-11 items-center rounded-xl border border-violet-300/20 bg-violet-300/10 px-4 py-2 text-sm font-black text-violet-200">
+                      Co-organizer
+                    </span>
                   ) : null}
                 </div>
               </article>

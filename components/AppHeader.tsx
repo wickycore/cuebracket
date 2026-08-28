@@ -11,6 +11,7 @@ const navigation = [
   { href: "/tournaments", label: "Tournaments", shortLabel: "Events" },
   { href: "/leagues", label: "Leagues", shortLabel: "Leagues" },
   { href: "/clubs", label: "Clubs", shortLabel: "Clubs" },
+  { href: "/rankings", label: "Rankings", shortLabel: "Ranks" },
   { href: "/tables", label: "Tables", shortLabel: "Tables" },
   { href: "/hall-of-champions", label: "Champions", shortLabel: "Winners" },
   { href: "/cloud", label: "Cloud", shortLabel: "Cloud" },

@@ -38,6 +38,7 @@ export interface CloudTournamentRow {
   is_public: boolean;
   created_at: string;
   updated_at: string;
+  access_role?: "owner" | "co_organizer";
 }
 
 export function rowToTournament(row: CloudTournamentRow): Tournament {
@@ -104,12 +105,16 @@ export async function syncTournamentToCloud(
 
   if (lookupError) throw lookupError;
 
-  if (
-    existing &&
-    existing.owner_id !== user.id &&
-    existing.club_id === null
-  ) {
-    throw new CloudTournamentOwnershipError();
+  if (existing && existing.owner_id !== user.id && existing.club_id === null) {
+    const { data: collaboration, error: collaborationError } = await supabase
+      .from("tournament_collaborators")
+      .select("id")
+      .eq("tournament_id", tournament.id)
+      .eq("user_id", user.id)
+      .eq("status", "accepted")
+      .maybeSingle();
+    if (collaborationError) throw collaborationError;
+    if (!collaboration) throw new CloudTournamentOwnershipError();
   }
 
   if (existing) {
@@ -216,27 +221,54 @@ export async function setCloudTournamentVisibility(
 
 export async function getMyCloudTournaments() {
   const { supabase, user } = await requireUser();
-  const { data, error } = await supabase
-    .from("cloud_tournaments")
-    .select("*")
-    .eq("owner_id", user.id)
-    .order("updated_at", { ascending: false });
+  const [{ data: owned, error: ownedError }, { data: collaborations, error: collaborationError }] = await Promise.all([
+    supabase
+      .from("cloud_tournaments")
+      .select("*")
+      .eq("owner_id", user.id)
+      .order("updated_at", { ascending: false }),
+    supabase
+      .from("tournament_collaborators")
+      .select("tournament_id")
+      .eq("user_id", user.id)
+      .eq("status", "accepted"),
+  ]);
+  if (ownedError) throw ownedError;
+  if (collaborationError) throw collaborationError;
 
-  if (error) throw error;
-  return (data ?? []) as CloudTournamentRow[];
+  const collaborationIds = (collaborations ?? []).map((row) => row.tournament_id);
+  let shared: CloudTournamentRow[] = [];
+  if (collaborationIds.length) {
+    const { data, error } = await supabase
+      .from("cloud_tournaments")
+      .select("*")
+      .in("id", collaborationIds)
+      .order("updated_at", { ascending: false });
+    if (error) throw error;
+    shared = (data ?? []).map((row) => ({ ...row, access_role: "co_organizer" as const })) as CloudTournamentRow[];
+  }
+
+  return [
+    ...(owned ?? []).map((row) => ({ ...row, access_role: "owner" as const })),
+    ...shared,
+  ].sort((a, b) => b.updated_at.localeCompare(a.updated_at)) as CloudTournamentRow[];
 }
 
 export async function getMyCloudTournament(id: string) {
-  const { supabase, user } = await requireUser();
+  const { supabase } = await requireUser();
   const { data, error } = await supabase
     .from("cloud_tournaments")
     .select("*")
     .eq("id", id)
-    .eq("owner_id", user.id)
     .maybeSingle();
 
   if (error) throw error;
-  return (data as CloudTournamentRow | null) ?? null;
+  if (!data) return null;
+  const { data: { user } } = await supabase.auth.getUser();
+  return {
+    ...data,
+    access_role: data.owner_id === user?.id ? "owner" : "co_organizer",
+  } as CloudTournamentRow;
 }
 
 export async function getPublicCloudTournament(id: string) {

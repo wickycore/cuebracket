@@ -10,6 +10,7 @@ import { PlayerManager } from "@/components/PlayerManager";
 import { ShareTournament } from "@/components/ShareTournament";
 import { TournamentStats } from "@/components/TournamentStats";
 import { TournamentRegistrationManager } from "@/components/TournamentRegistrationManager";
+import { TournamentCollaborators } from "@/components/TournamentCollaborators";
 import {
   deleteTournament,
   getFormatLabel,
@@ -28,6 +29,7 @@ export default function TournamentDetailPage() {
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [missing, setMissing] = useState(false);
   const [selectedMatchId, setSelectedMatchId] = useState("");
+  const [cloudAccessRole, setCloudAccessRole] = useState<"owner" | "co_organizer" | null>(null);
 
   useEffect(() => {
     const load = () => {
@@ -140,12 +142,12 @@ export default function TournamentDetailPage() {
               </button>
             ) : null}
 
-            <details className="relative">
+            {cloudAccessRole !== "co_organizer" ? <details className="relative">
               <summary className="grid h-12 w-12 cursor-pointer list-none place-items-center rounded-xl border border-white/10 text-xl font-black text-slate-300 hover:bg-white/5">•••</summary>
               <div className="absolute right-0 z-30 mt-2 min-w-48 rounded-2xl border border-white/10 bg-slate-900 p-2 shadow-2xl">
                 <button onClick={handleDelete} className="w-full rounded-xl px-3 py-2.5 text-left text-sm font-bold text-rose-300 hover:bg-rose-400/10">Delete tournament</button>
               </div>
-            </details>
+            </details> : null}
           </div>
         </div>
 
@@ -174,7 +176,12 @@ export default function TournamentDetailPage() {
           ))}
         </div>
 
-        {!structureReady ? (
+        <TournamentCollaborators
+          tournament={tournament}
+          onAccessRoleChange={setCloudAccessRole}
+        />
+
+        {!structureReady && cloudAccessRole !== "co_organizer" ? (
           <>
             <TournamentRegistrationManager
               tournament={tournament}
@@ -215,7 +222,7 @@ export default function TournamentDetailPage() {
         )}
 
         {structureReady ? <TournamentStats tournament={tournament} /> : null}
-        {structureReady ? (
+        {structureReady && cloudAccessRole !== "co_organizer" ? (
           <details className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5">
             <summary className="cursor-pointer list-none font-black text-slate-200">
               <span className="flex items-center justify-between gap-3"><span>Share tournament</span><span className="text-sm font-bold text-slate-500">Link · Social · QR</span></span>

@@ -1,4 +1,5 @@
 import { AppHeader } from "@/components/AppHeader";
+import { CollaborationInbox } from "@/components/CollaborationInbox";
 import { CloudSyncPanel } from "@/components/CloudSyncPanel";
 import { createClient } from "@/lib/supabase/server";
 
@@ -22,6 +23,9 @@ export default async function CloudPage() {
           Signed in as {user?.email}. CueBracket now backs up every tournament
           change automatically and pushes live updates to spectators.
         </p>
+        <div className="mt-8">
+          <CollaborationInbox />
+        </div>
         <div className="mt-8">
           <CloudSyncPanel />
         </div>

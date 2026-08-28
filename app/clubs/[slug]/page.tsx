@@ -6,6 +6,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { ClubCommunityPanel, type ClubMemberView } from "@/components/ClubCommunityPanel";
 import type { ClubMembershipRequestRow, ClubMemberRow, ClubRow } from "@/lib/clubs";
 import type { RegistrationSettingsRow } from "@/lib/cloud/registrations";
+import type { ClubPlayerRankingRow } from "@/lib/rankings";
 import { createClient } from "@/lib/supabase/server";
 
 interface Props { params: Promise<{ slug: string }> }
@@ -41,7 +42,7 @@ export default async function ClubPage({ params }: Props) {
   const isAdmin = Boolean(user && (club.owner_id === user.id || ownMembership?.role === "owner" || ownMembership?.role === "admin"));
 
   const memberIds = memberships.map((item) => item.user_id);
-  const [{ data: profileRows }, ownRequestResult, pendingResult] = await Promise.all([
+  const [{ data: profileRows }, ownRequestResult, pendingResult, { data: clubRankingData }] = await Promise.all([
     memberIds.length
       ? supabase.from("profiles").select("id, display_name, username, tournament_name").in("id", memberIds)
       : Promise.resolve({ data: [] }),
@@ -51,6 +52,7 @@ export default async function ClubPage({ params }: Props) {
     isAdmin
       ? supabase.from("club_membership_requests").select("*").eq("club_id", club.id).eq("status", "pending").order("created_at")
       : Promise.resolve({ data: [] }),
+    supabase.from("club_player_rankings").select("*").eq("club_id", club.id).order("club_rank").limit(10),
   ]);
   const profileMap = new Map((profileRows ?? []).map((profile) => [profile.id, profile]));
   const members: ClubMemberView[] = memberships.map((membership) => {
@@ -64,6 +66,7 @@ export default async function ClubPage({ params }: Props) {
   });
   const ownProfile = user ? profileMap.get(user.id) : null;
   const events = (eventsData ?? []) as RegistrationSettingsRow[];
+  const clubRankings = (clubRankingData ?? []) as ClubPlayerRankingRow[];
   const initial = club.name.charAt(0).toUpperCase();
 
   return (
@@ -111,6 +114,24 @@ export default async function ClubPage({ params }: Props) {
                   ))}
                 </div>
               ) : <div className="mt-5 rounded-2xl border border-dashed border-white/10 p-7 text-center text-sm text-slate-500">No registration is open right now. Follow the club so future events are easy to find.</div>}
+            </section>
+
+            <section className="rounded-[1.75rem] border border-white/10 bg-slate-900/60 p-5 sm:p-7">
+              <div className="flex items-end justify-between gap-4">
+                <div><p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">Club rankings</p><h2 className="mt-2 text-2xl font-black">Top players</h2></div>
+                <Link href="/rankings" className="text-sm font-black text-cyan-300">Overall →</Link>
+              </div>
+              {clubRankings.length ? (
+                <div className="mt-5 divide-y divide-white/8 overflow-hidden rounded-2xl border border-white/10 bg-slate-950/45">
+                  {clubRankings.map((player) => (
+                    <Link key={player.profile_id} href={`/players/${player.username}`} className="grid grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3.5 hover:bg-white/[0.04]">
+                      <span className="font-black text-slate-500">#{player.club_rank}</span>
+                      <span className="min-w-0"><span className="block truncate font-black text-white">{player.tournament_name || player.display_name}</span><span className="mt-0.5 block text-xs font-bold text-slate-600">{player.wins}–{player.losses} · {player.win_percentage}%</span></span>
+                      <span className="font-black text-cyan-300">{player.ranking_points} pts</span>
+                    </Link>
+                  ))}
+                </div>
+              ) : <p className="mt-5 rounded-2xl border border-dashed border-white/10 p-6 text-center text-sm text-slate-500">Club members will rank here after their verified tournament results arrive.</p>}
             </section>
 
             <section className="rounded-[1.75rem] border border-white/10 bg-slate-900/60 p-5 sm:p-7">
