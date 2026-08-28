@@ -7,6 +7,7 @@ import { ClubCommunityPanel, type ClubMemberView } from "@/components/ClubCommun
 import type { ClubMembershipRequestRow, ClubMemberRow, ClubRow } from "@/lib/clubs";
 import type { RegistrationSettingsRow } from "@/lib/cloud/registrations";
 import type { ClubPlayerRankingRow } from "@/lib/rankings";
+import type { League } from "@/lib/leagues";
 import { createClient } from "@/lib/supabase/server";
 
 interface Props { params: Promise<{ slug: string }> }
@@ -31,10 +32,11 @@ export default async function ClubPage({ params }: Props) {
   if (!club) notFound();
 
   const { data: { user } } = await supabase.auth.getUser();
-  const [{ data: memberRows }, { data: followerRows }, { data: eventsData }] = await Promise.all([
+  const [{ data: memberRows }, { data: followerRows }, { data: eventsData }, { data: leagueData }] = await Promise.all([
     supabase.from("club_members").select("*").eq("club_id", club.id).order("created_at"),
     supabase.from("club_followers").select("club_id, user_id").eq("club_id", club.id),
     supabase.from("event_registration_settings").select("*").eq("club_id", club.id).eq("registration_open", true).order("scheduled_at", { ascending: true, nullsFirst: false }).limit(12),
+    supabase.from("cloud_leagues").select("id, name, season, payload, updated_at").eq("club_id", club.id).eq("is_public", true).order("updated_at", { ascending: false }).limit(12),
   ]);
   const memberships = (memberRows ?? []) as ClubMemberRow[];
   const followerIds = (followerRows ?? []).map((item) => item.user_id);
@@ -66,6 +68,7 @@ export default async function ClubPage({ params }: Props) {
   });
   const ownProfile = user ? profileMap.get(user.id) : null;
   const events = (eventsData ?? []) as RegistrationSettingsRow[];
+  const clubLeagues = (leagueData ?? []) as Array<{ id: string; name: string; season: string; payload: League }>;
   const clubRankings = (clubRankingData ?? []) as ClubPlayerRankingRow[];
   const initial = club.name.charAt(0).toUpperCase();
 
@@ -115,6 +118,23 @@ export default async function ClubPage({ params }: Props) {
                 </div>
               ) : <div className="mt-5 rounded-2xl border border-dashed border-white/10 p-7 text-center text-sm text-slate-500">No registration is open right now. Follow the club so future events are easy to find.</div>}
             </section>
+
+            {clubLeagues.length ? (
+              <section className="rounded-[1.75rem] border border-violet-400/15 bg-slate-900/60 p-5 sm:p-7">
+                <div className="flex items-end justify-between gap-4">
+                  <div><p className="text-xs font-black uppercase tracking-[0.22em] text-violet-300">Club leagues</p><h2 className="mt-2 text-2xl font-black">Seasons & playoffs</h2></div>
+                  {isAdmin ? <Link href="/leagues/new" className="text-sm font-black text-violet-300">Create season →</Link> : null}
+                </div>
+                <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                  {clubLeagues.map((item) => (
+                    <Link key={item.id} href={`/league/${item.id}`} className="rounded-2xl border border-white/10 bg-slate-950/45 p-5 transition hover:border-violet-300/30">
+                      <div className="flex items-center justify-between gap-3"><p className="font-black text-white">{item.name}</p><span className="rounded-full bg-violet-300/10 px-2.5 py-1 text-xs font-black text-violet-200">{item.season}</span></div>
+                      <p className="mt-3 text-sm font-bold capitalize text-slate-500">{item.payload?.status ?? "draft"}{item.payload?.playoff?.enabled ? ` · Top ${item.payload.playoff.qualifierCount} playoffs` : ""}</p>
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            ) : null}
 
             <section className="rounded-[1.75rem] border border-white/10 bg-slate-900/60 p-5 sm:p-7">
               <div className="flex items-end justify-between gap-4">

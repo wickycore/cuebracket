@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { deleteLeague, duplicateLeague, League } from "@/lib/leagues";
+import { deleteLeague, duplicateLeague, getPlayerName, League } from "@/lib/leagues";
 
 interface Props {
   league: League;
@@ -41,6 +41,7 @@ export function LeagueCard({ league, onChange }: Props) {
 
       <h3 className="mt-4 text-xl font-black text-white">{league.name}</h3>
       <p className="mt-1 text-sm text-slate-400">{league.venue || "Venue not set"}</p>
+      {league.championPlayerId ? <p className="mt-3 rounded-xl bg-amber-300/10 px-3 py-2 text-sm font-black text-amber-200">🏆 {getPlayerName(league, league.championPlayerId)}</p> : league.playoff.enabled ? <p className="mt-3 text-xs font-black uppercase tracking-wider text-violet-300">Top {league.playoff.qualifierCount} playoffs</p> : null}
 
       <div className="mt-5 grid grid-cols-3 gap-3">
         <div className="rounded-2xl bg-slate-950/60 p-3">

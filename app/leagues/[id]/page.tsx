@@ -7,7 +7,8 @@ import { AppHeader } from "@/components/AppHeader";
 import { LeagueFixtures } from "@/components/LeagueFixtures";
 import { LeaguePlayerManager } from "@/components/LeaguePlayerManager";
 import { LeagueStandings } from "@/components/LeagueStandings";
-import { deleteLeague, getLeague, League, subscribeToLeagueChanges } from "@/lib/leagues";
+import { LeaguePlayoffs } from "@/components/LeaguePlayoffs";
+import { createNextLeagueSeason, deleteLeague, getLeague, getLeagueSeasons, getPlayerName, League, subscribeToLeagueChanges } from "@/lib/leagues";
 
 export default function LeagueManagePage() {
   const params = useParams<{ id: string }>();
@@ -32,6 +33,15 @@ export default function LeagueManagePage() {
 
   const completed = league.fixtures.filter((fixture) => fixture.completed).length;
   const progress = league.fixtures.length ? Math.round((completed / league.fixtures.length) * 100) : 0;
+  const seasons = getLeagueSeasons(league);
+
+  function createSeason() {
+    if (!league) return;
+    const value = window.prompt("Name the next season", `Season ${seasons.length + 1}`);
+    if (!value) return;
+    const next = createNextLeagueSeason(league.id, value);
+    if (next) router.push(`/leagues/${next.id}`);
+  }
 
   return (
     <main className="min-h-screen bg-slate-950 text-white">
@@ -48,9 +58,26 @@ export default function LeagueManagePage() {
           </div>
           <div className="flex flex-wrap gap-2">
             <Link href={`/league/${league.id}`} className="rounded-xl bg-cyan-400 px-4 py-3 text-sm font-black text-slate-950">Open public view</Link>
+            <button onClick={createSeason} className="rounded-xl border border-white/10 px-4 py-3 text-sm font-bold text-slate-200">Create next season</button>
             <button onClick={() => { if (window.confirm(`Delete “${league.name}”?`)) { deleteLeague(league.id); router.push("/dashboard"); } }} className="rounded-xl border border-rose-400/20 px-4 py-3 text-sm font-bold text-rose-300">Delete</button>
           </div>
         </div>
+
+        {league.championPlayerId ? (
+          <div className="mt-8 rounded-3xl border border-amber-300/25 bg-amber-300/[0.07] p-6">
+            <p className="text-xs font-black uppercase tracking-[0.24em] text-amber-200">Season champion</p>
+            <p className="mt-2 text-3xl font-black text-white">🏆 {getPlayerName(league, league.championPlayerId)}</p>
+          </div>
+        ) : null}
+
+        {seasons.length > 1 ? (
+          <div className="mt-8 rounded-3xl border border-white/10 bg-slate-900/55 p-5">
+            <p className="text-sm font-black uppercase tracking-wider text-slate-400">Season history</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {seasons.map((season) => <Link key={season.id} href={`/leagues/${season.id}`} className={`rounded-xl px-4 py-2 text-sm font-bold ${season.id === league.id ? "bg-cyan-400 text-slate-950" : "border border-white/10 text-slate-300"}`}>{season.season}{season.championPlayerId ? " 🏆" : ""}</Link>)}
+            </div>
+          </div>
+        ) : null}
 
         <div className="mt-8 rounded-3xl border border-white/10 bg-slate-900/70 p-5">
           <div className="flex justify-between text-sm font-bold text-slate-300"><span>League progress</span><span>{progress}%</span></div>
@@ -62,6 +89,7 @@ export default function LeagueManagePage() {
           <LeaguePlayerManager league={league} onChange={setLeague} />
           <LeagueStandings league={league} />
           <LeagueFixtures league={league} admin onChange={setLeague} />
+          <LeaguePlayoffs league={league} admin onChange={setLeague} />
         </div>
       </div>
     </main>

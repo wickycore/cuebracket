@@ -7,6 +7,7 @@ import {
   League,
   resetFixtureResult,
   saveFixtureResult,
+  validateLeagueResult,
 } from "@/lib/leagues";
 
 interface Props {
@@ -33,11 +34,11 @@ export function LeagueFixtures({ league, admin = false, onChange }: Props) {
     return (
       <section className="rounded-3xl border border-white/10 bg-slate-900/70 p-6 text-center">
         <h2 className="text-2xl font-black text-white">Fixtures not generated</h2>
-        <p className="mt-2 text-slate-400">Add at least two players, then generate the round-robin schedule.</p>
+        <p className="mt-2 text-slate-400">Add {league.playoff.enabled ? `at least ${league.playoff.qualifierCount} players for the selected playoffs` : "at least two players"}, then generate the round-robin schedule.</p>
         {admin ? (
           <button
             onClick={generate}
-            disabled={league.players.length < 2}
+            disabled={league.players.length < 2 || (league.playoff.enabled && league.players.length < league.playoff.qualifierCount)}
             className="mt-5 rounded-xl bg-cyan-400 px-5 py-3 font-black text-slate-950 disabled:opacity-40"
           >
             Generate Fixtures
@@ -96,8 +97,9 @@ function FixtureRow({
   const away = getPlayerName(league, fixture.awayPlayerId);
 
   function save() {
-    if (homeScore === awayScore) {
-      window.alert("Pool league matches cannot finish level. Enter a winner.");
+    const validation = validateLeagueResult(league.raceTo, homeScore, awayScore);
+    if (validation) {
+      window.alert(validation);
       return;
     }
     const updated = saveFixtureResult(league.id, fixture.id, homeScore, awayScore);
@@ -125,6 +127,7 @@ function FixtureRow({
             <input
               type="number"
               min={0}
+              max={league.raceTo}
               value={homeScore}
               onChange={(event) => setHomeScore(Number(event.target.value))}
               className="w-16 rounded-lg border border-white/10 bg-slate-900 px-2 py-2 text-center font-black text-white"
@@ -133,6 +136,7 @@ function FixtureRow({
             <input
               type="number"
               min={0}
+              max={league.raceTo}
               value={awayScore}
               onChange={(event) => setAwayScore(Number(event.target.value))}
               className="w-16 rounded-lg border border-white/10 bg-slate-900 px-2 py-2 text-center font-black text-white"

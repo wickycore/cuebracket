@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import { CloudAutoSyncProvider } from "@/components/CloudAutoSyncProvider";
+import { LeagueCloudSyncProvider } from "@/components/LeagueCloudSyncProvider";
 
 import "./globals.css";
 
@@ -45,7 +46,9 @@ export default function RootLayout({
       data-scroll-behavior="smooth"
     >
       <body className="min-h-full">
-        <CloudAutoSyncProvider>{children}</CloudAutoSyncProvider>
+        <CloudAutoSyncProvider>
+          <LeagueCloudSyncProvider>{children}</LeagueCloudSyncProvider>
+        </CloudAutoSyncProvider>
       </body>
     </html>
   );

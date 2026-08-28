@@ -1,9 +1,12 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
 import { createLeague, LeagueFormat, LeagueInput } from "@/lib/leagues";
+import { getManagedClubs } from "@/lib/cloud/clubs";
+import type { ClubRow } from "@/lib/clubs";
 
 export default function NewLeaguePage() {
   const router = useRouter();
@@ -18,8 +21,18 @@ export default function NewLeaguePage() {
     lossPoints: 0,
     startDate: "",
     endDate: "",
+    clubId: null,
+    playoffEnabled: true,
+    playoffQualifierCount: 4,
   });
+  const [managedClubs, setManagedClubs] = useState<ClubRow[]>([]);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    void getManagedClubs().then((clubs) => { if (active) setManagedClubs(clubs); }).catch(() => undefined);
+    return () => { active = false; };
+  }, []);
 
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -49,6 +62,13 @@ export default function NewLeaguePage() {
           </Field>
           <Field label="Venue">
             <input value={form.venue} onChange={(e) => setForm({ ...form, venue: e.target.value })} placeholder="Pool club or venue" className={input} />
+          </Field>
+          <Field label="Hosted by">
+            <select value={form.clubId ?? ""} onChange={(e) => setForm({ ...form, clubId: e.target.value || null })} className={input}>
+              <option value="">Independent league</option>
+              {managedClubs.map((club) => <option key={club.id} value={club.id}>{club.name}</option>)}
+            </select>
+            {!managedClubs.length ? <span className="mt-2 block text-xs text-slate-500"><Link href="/clubs/new" className="font-black text-cyan-300">Create a club</Link> to run club seasons and import its registered roster.</span> : null}
           </Field>
           <Field label="Game type">
             <select value={form.gameType} onChange={(e) => setForm({ ...form, gameType: e.target.value as LeagueInput["gameType"] })} className={input}>
@@ -82,6 +102,23 @@ export default function NewLeaguePage() {
           <Field label="End date">
             <input type="date" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} className={input} />
           </Field>
+
+          <div className="md:col-span-2 rounded-2xl border border-violet-400/20 bg-violet-400/[0.055] p-5">
+            <label className="flex items-start gap-3">
+              <input type="checkbox" checked={form.playoffEnabled} onChange={(e) => setForm({ ...form, playoffEnabled: e.target.checked })} className="mt-1 h-5 w-5 accent-violet-300" />
+              <span><span className="block font-black text-white">Finish with league playoffs</span><span className="mt-1 block text-sm leading-6 text-slate-400">Qualifiers are seeded from the final table into a single-elimination championship bracket.</span></span>
+            </label>
+            {form.playoffEnabled ? (
+              <label className="mt-4 block max-w-xs text-sm font-bold text-slate-300">
+                Playoff field
+                <select value={form.playoffQualifierCount} onChange={(e) => setForm({ ...form, playoffQualifierCount: Number(e.target.value) as LeagueInput["playoffQualifierCount"] })} className={`${input} mt-2`}>
+                  <option value={2}>Top 2 · Final</option>
+                  <option value={4}>Top 4 · Semi-finals</option>
+                  <option value={8}>Top 8 · Quarter-finals</option>
+                </select>
+              </label>
+            ) : null}
+          </div>
 
           {error ? <p className="md:col-span-2 rounded-xl bg-rose-400/10 p-4 font-bold text-rose-300">{error}</p> : null}
 

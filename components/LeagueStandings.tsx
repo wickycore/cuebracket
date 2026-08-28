@@ -27,9 +27,9 @@ export function LeagueStandings({ league }: { league: League }) {
             </tr>
           </thead>
           <tbody>
-            {rows.map((row, index) => (
+            {rows.map((row) => (
               <tr key={row.playerId} className="border-t border-white/5 text-slate-300">
-                <td className="px-5 py-4 font-black text-cyan-300">{index + 1}</td>
+                <td className="px-5 py-4 font-black text-cyan-300">{row.rank}</td>
                 <td className="px-5 py-4 font-black text-white">{row.playerName}</td>
                 <td className="px-5 py-4">{row.played}</td>
                 <td className="px-5 py-4">{row.won}</td>
