@@ -362,21 +362,21 @@ export function ReadOnlyBracket({
   return (
     <div>
       {showChampion && bracket.champion ? <div className="mb-6"><ChampionCelebration champion={bracket.champion} description={getTournamentChampionDescription(tournament)} tournament={tournament} /></div> : null}
-      <section className="rounded-xl border border-[#2a5680] bg-[#0d2a50] p-2 sm:rounded-[1.5rem] sm:p-4">
-        <div className="flex items-center gap-1.5 sm:justify-between sm:gap-2">
+      <section className="rounded-2xl border border-[#2a5680] bg-[#0d2a50] p-2.5 sm:rounded-[1.5rem] sm:p-4">
+        <div className="flex items-center gap-2 sm:justify-between">
           <div className="hidden px-1 sm:block">
             <p className="text-[0.68rem] font-black uppercase tracking-[0.18em] text-[#dce8f4]">Tournament view</p>
             <p className="mt-1 text-sm font-bold text-[#d2dfec]">Choose the view that is easiest to follow.</p>
           </div>
-          <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:flex-none sm:gap-2">
+          <div className="flex min-w-0 flex-1 items-center gap-2 sm:flex-none">
             {liveMatches ? <span className="hidden rounded-full bg-rose-400/15 px-3 py-1.5 text-xs font-black text-rose-300 ring-1 ring-rose-400/25 sm:inline">● {liveMatches} live</span> : null}
-            <div className="grid flex-1 grid-cols-2 rounded-lg border border-[#356a98] bg-[#09213f] p-0.5 sm:flex-none sm:rounded-2xl sm:p-1" role="tablist" aria-label="Tournament display mode">
+            <div className="grid flex-1 grid-cols-2 rounded-xl border border-[#356a98] bg-[#09213f] p-1 sm:flex-none sm:rounded-2xl" role="tablist" aria-label="Tournament display mode">
               <button
                 type="button"
                 role="tab"
                 aria-selected={singleView === "flowchart"}
                 onClick={() => selectSingleView("flowchart")}
-                className={`min-h-8 rounded-lg px-2.5 text-[0.62rem] font-black transition sm:min-h-10 sm:rounded-xl sm:px-4 sm:text-xs ${singleView === "flowchart" ? "bg-[#27c2e6] text-[#071a35]" : "text-[#d2dfec] hover:text-[#fafcff]"}`}
+                className={`min-h-10 rounded-xl px-3.5 text-xs font-black transition sm:px-4 ${singleView === "flowchart" ? "bg-[#27c2e6] text-[#071a35]" : "text-[#d2dfec] hover:text-[#fafcff]"}`}
               >
                 ⑂ Flowchart
               </button>
@@ -385,7 +385,7 @@ export function ReadOnlyBracket({
                 role="tab"
                 aria-selected={singleView === "list"}
                 onClick={() => selectSingleView("list")}
-                className={`min-h-8 rounded-lg px-2.5 text-[0.62rem] font-black transition sm:min-h-10 sm:rounded-xl sm:px-4 sm:text-xs ${singleView === "list" ? "bg-[#27c2e6] text-[#071a35]" : "text-[#d2dfec] hover:text-[#fafcff]"}`}
+                className={`min-h-10 rounded-xl px-3.5 text-xs font-black transition sm:px-4 ${singleView === "list" ? "bg-[#27c2e6] text-[#071a35]" : "text-[#d2dfec] hover:text-[#fafcff]"}`}
               >
                 ☷ Match list
               </button>

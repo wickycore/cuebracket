@@ -94,9 +94,9 @@ export function NotificationBell() {
 
   return (
     <div ref={containerRef} className="relative">
-      <button type="button" onClick={() => setOpen((value) => !value)} aria-label={`Notifications${unread ? `, ${unread} unread` : ""}`} aria-expanded={open} className="relative grid h-8 w-8 place-items-center rounded-lg border border-white/10 bg-white/[0.045] text-sm text-slate-200 hover:border-cyan-400/25 hover:text-white sm:h-10 sm:w-10 sm:rounded-xl sm:text-lg">
+      <button type="button" onClick={() => setOpen((value) => !value)} aria-label={`Notifications${unread ? `, ${unread} unread` : ""}`} aria-expanded={open} className="relative grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/[0.045] text-lg text-slate-200 hover:border-cyan-400/25 hover:text-white">
         <span aria-hidden="true">🔔</span>
-        {unread ? <span className="absolute -right-1 -top-1 grid min-h-4 min-w-4 place-items-center rounded-full bg-cyan-400 px-1 text-[0.5rem] font-black text-slate-950 ring-2 ring-slate-950 sm:min-h-5 sm:min-w-5 sm:text-[0.62rem]">{unread > 9 ? "9+" : unread}</span> : null}
+        {unread ? <span className="absolute -right-1 -top-1 grid min-h-5 min-w-5 place-items-center rounded-full bg-cyan-400 px-1 text-[0.62rem] font-black text-slate-950 ring-2 ring-slate-950">{unread > 9 ? "9+" : unread}</span> : null}
       </button>
 
       {open ? (

@@ -98,11 +98,11 @@ export function RealtimeCloudTournament({ id }: { id: string }) {
 
   return (
     <>
-      <div className="mb-4 flex items-end justify-between gap-2 sm:mb-8 sm:gap-3">
+      <div className="mb-5 flex items-end justify-between gap-3 sm:mb-8">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <span
-              className={`rounded-full px-2 py-0.5 text-[0.52rem] font-black uppercase sm:px-3 sm:py-1 sm:text-xs ${
+              className={`rounded-full px-2.5 py-1 text-[0.68rem] font-black uppercase sm:px-3 sm:text-xs ${
                 connection === "live"
                   ? "bg-[#78c69b]/12 text-[#9fd7b7]"
                   : "bg-amber-300/10 text-amber-200"
@@ -114,20 +114,20 @@ export function RealtimeCloudTournament({ id }: { id: string }) {
               Public read-only
             </span>
           </div>
-          <div className="mt-2 flex min-w-0 flex-wrap items-baseline gap-x-1.5 gap-y-1 sm:mt-4 sm:gap-x-2">
-            <h1 className="min-w-0 truncate text-[1.4rem] font-black text-[#fafcff] sm:text-4xl">{tournament.name}</h1>
-            {eliminationLabel ? <span className="shrink-0 text-[0.58rem] font-black uppercase tracking-[0.12em] text-[#52d3ee] sm:text-sm">· {eliminationLabel}</span> : null}
+          <div className="mt-3 flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1 sm:mt-4">
+            <h1 className="min-w-0 truncate text-3xl font-black text-[#fafcff] sm:text-4xl">{tournament.name}</h1>
+            {eliminationLabel ? <span className="shrink-0 text-xs font-black uppercase tracking-[0.12em] text-[#52d3ee] sm:text-sm">· {eliminationLabel}</span> : null}
           </div>
-          <p className="mt-0.5 truncate text-[0.68rem] text-[#d2dfec] sm:mt-2 sm:text-base">
+          <p className="mt-1 truncate text-sm text-[#d2dfec] sm:mt-2 sm:text-base">
             {tournament.venue || "Venue not set"} · Race to {tournament.raceTo}
           </p>
         </div>
 
-        <div className="shrink-0 rounded-lg border border-[#2a5680] bg-[#10305a] px-2 py-1.5 sm:rounded-2xl sm:px-5 sm:py-4">
+        <div className="shrink-0 rounded-xl border border-[#2a5680] bg-[#10305a] px-3 py-2 sm:rounded-2xl sm:px-5 sm:py-4">
           <p className="hidden text-xs font-black uppercase tracking-wider text-[#9fb4ca] sm:block">
             Status
           </p>
-          <p className="text-[0.68rem] font-black capitalize text-[#52d3ee] sm:mt-1 sm:text-base">
+          <p className="text-sm font-black capitalize text-[#52d3ee] sm:mt-1 sm:text-base">
             {tournament.status}
           </p>
         </div>

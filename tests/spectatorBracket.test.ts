@@ -61,14 +61,14 @@ test("spectator match list keeps one visual match card per row", () => {
     "utf8",
   );
 
-  assert.match(source, /space-y-2 border-t border-\[#263c54\]/);
+  assert.match(source, /space-y-2\.5 border-t border-\[#263c54\]/);
   assert.doesNotMatch(source, /sm:grid-cols-2|xl:grid-cols-3/);
   assert.match(source, /bg-\[linear-gradient\(110deg,#172a43/);
   assert.match(source, /playerInitials/);
-  assert.match(source, /grid-cols-\[minmax\(0,1fr\)_1\.5rem_1\.125rem_1\.5rem_minmax\(0,1fr\)\]/);
-  assert.match(source, /break-words text-\[0\.7rem\] font-black/);
+  assert.match(source, /grid-cols-\[minmax\(0,1fr\)_2rem_1\.5rem_2rem_minmax\(0,1fr\)\]/);
+  assert.match(source, /break-words text-sm font-black/);
   assert.doesNotMatch(source, /min-w-0 truncate/);
-  assert.match(source, /h-\[5\.15625rem\].*sm:h-auto/);
+  assert.match(source, /h-\[6\.875rem\].*sm:h-auto/);
   assert.match(source, /Race to \{raceTo\}/);
   assert.doesNotMatch(source, /Best of/);
 });
@@ -82,7 +82,7 @@ test("automatic advances use a dedicated BYE card", () => {
   assert.match(source, /const advancingPlayer = match\.player1 \?\? match\.player2 \?\? match\.winner/);
   assert.match(source, /BYE<\/strong> — No opponent/);
   assert.match(source, /border-dashed border-\[#a873ee\]/);
-  assert.match(source, /h-\[5\.625rem\].*sm:h-auto/);
+  assert.match(source, /h-\[7\.5rem\].*sm:h-auto/);
   assert.match(source, /whitespace-nowrap.*Automatic advance<\/strong> · no match played/);
 });
 
@@ -136,29 +136,11 @@ test("phone list uses a single edge-to-edge gutter and keeps CueBracket controls
     "utf8",
   );
 
-  assert.match(source, /-mx-3 mt-2\.5 overflow-hidden border-y/);
+  assert.match(source, /-mx-3 mt-3 overflow-hidden border-y/);
   assert.match(source, /Find a player — e\.g\. Wicky/);
   assert.match(source, /Jump to round/);
   assert.match(source, /\[scrollbar-width:none\]/);
   assert.match(source, /\[&::\-webkit-scrollbar\]:hidden/);
-});
-
-test("phone list reproduces the compact 75-percent visual density at normal zoom", () => {
-  const listSource = readFileSync(
-    new URL("../components/BracketMatchList.tsx", import.meta.url),
-    "utf8",
-  );
-  const pageSource = readFileSync(
-    new URL("../app/cloud/live/[id]/page.tsx", import.meta.url),
-    "utf8",
-  );
-
-  assert.match(listSource, /h-\[5\.15625rem\]/);
-  assert.match(listSource, /h-\[5\.625rem\]/);
-  assert.match(listSource, /h-9 w-full rounded-lg/);
-  assert.match(listSource, /min-h-7 shrink-0 rounded-md/);
-  assert.match(listSource, /min-h-8 shrink-0 rounded-lg/);
-  assert.match(pageSource, /min-h-12.*sm:min-h-16/);
 });
 
 test("flowchart removes the bulky zoom toolbar but keeps gesture navigation", () => {
@@ -189,4 +171,14 @@ test("spectator list uses the match-card palette while the flowchart stays Royal
   assert.match(listSource, /text-\[#dce8f4\]/);
   assert.match(bracketSource, /bg-\[#123763\]/);
   assert.doesNotMatch(bracketSource, /shadow-\[0_0_30px_rgba\(34,211,238/);
+});
+
+test("the entire phone website uses the approved 75-percent density at normal zoom", () => {
+  const source = readFileSync(
+    new URL("../app/globals.css", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(source, /@media \(max-width: 639px\)[\s\S]*html \{[\s\S]*font-size: 75%;/);
+  assert.match(source, /input,[\s\S]*select,[\s\S]*textarea \{[\s\S]*font-size: 1rem;/);
 });

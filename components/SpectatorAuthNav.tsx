@@ -35,24 +35,24 @@ export function SpectatorAuthNav({ returnTo }: { returnTo: string }) {
   }, [supabase]);
 
   if (!ready) {
-    return <span aria-hidden="true" className="h-8 w-20 animate-pulse rounded-lg bg-[#11335d] ring-1 ring-[#356a98] sm:h-10 sm:w-28 sm:rounded-xl" />;
+    return <span aria-hidden="true" className="h-10 w-28 animate-pulse rounded-xl bg-[#11335d] ring-1 ring-[#356a98]" />;
   }
 
   if (!user) {
     const next = encodeURIComponent(returnTo);
     return (
-      <div className="flex items-center gap-1 sm:gap-2">
+      <div className="flex items-center gap-1.5 sm:gap-2">
         <a
           data-cb-hard-navigation="true"
           href={`/auth/login?next=${next}`}
-          className="inline-flex h-8 items-center justify-center rounded-lg border border-[#2a5680] px-2.5 text-[0.62rem] font-black text-[#dce8f4] transition hover:border-[#27c2e6] hover:text-[#fafcff] sm:h-10 sm:rounded-xl sm:px-4 sm:text-sm"
+          className="inline-flex h-10 items-center justify-center rounded-xl border border-[#2a5680] px-3 text-xs font-black text-[#dce8f4] transition hover:border-[#27c2e6] hover:text-[#fafcff] sm:px-4 sm:text-sm"
         >
           Sign in
         </a>
         <a
           data-cb-hard-navigation="true"
           href={`/auth/signup?next=${next}`}
-          className="inline-flex h-8 items-center justify-center rounded-lg bg-[#27c2e6] px-2.5 text-[0.62rem] font-black text-[#071a35] transition hover:bg-[#52d3ee] sm:h-10 sm:rounded-xl sm:px-4 sm:text-sm"
+          className="inline-flex h-10 items-center justify-center rounded-xl bg-[#27c2e6] px-3 text-xs font-black text-[#071a35] transition hover:bg-[#52d3ee] sm:px-4 sm:text-sm"
         >
           Sign up
         </a>
@@ -64,14 +64,14 @@ export function SpectatorAuthNav({ returnTo }: { returnTo: string }) {
   const initial = label.trim().charAt(0).toUpperCase() || "C";
 
   return (
-    <div className="flex items-center gap-1.5 sm:gap-2">
+    <div className="flex items-center gap-2">
       <NotificationBell />
       <a
         data-cb-hard-navigation="true"
         href="/account"
         title={label}
         aria-label="Open player account"
-        className="grid h-8 w-8 place-items-center rounded-lg border border-[#27c2e6]/40 bg-[#27c2e6]/12 text-xs font-black text-[#c8f3fb] transition hover:border-[#52d3ee]/70 hover:bg-[#27c2e6]/18 sm:h-10 sm:w-10 sm:rounded-xl sm:text-sm"
+        className="grid h-10 w-10 place-items-center rounded-xl border border-[#27c2e6]/40 bg-[#27c2e6]/12 text-sm font-black text-[#c8f3fb] transition hover:border-[#52d3ee]/70 hover:bg-[#27c2e6]/18"
       >
         {initial}
       </a>

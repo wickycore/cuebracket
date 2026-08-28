@@ -200,6 +200,14 @@ canvas {
   }
 }
 
+/* Keep every phone view at the compact density users previously got by
+   zooming the browser to 75%, while leaving tablet and desktop sizing intact. */
+@media (max-width: 639px) {
+  html {
+    font-size: 75%;
+  }
+}
+
 @media (max-width: 640px) {
   .cb-shell {
     width: min(100% - 1.25rem, 80rem);
@@ -212,7 +220,7 @@ canvas {
   input,
   select,
   textarea {
-    font-size: 16px;
+    font-size: 1rem;
   }
 }
 
