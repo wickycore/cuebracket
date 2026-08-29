@@ -5,6 +5,13 @@ import { ChampionCelebration } from "@/components/ChampionCelebration";
 import { PlayerNameEditor } from "@/components/PlayerNameEditor";
 import { FreeForAllStandingsTable, StandingsTable } from "@/components/StandingsTable";
 import { recordMatchStarted } from "@/lib/cloud/notifications";
+import {
+  assignVenueTable,
+  getEventVenueTables,
+  releaseVenueTable,
+  subscribeToVenueTables,
+  type VenueTableRow,
+} from "@/lib/cloud/tables";
 import { buildTournamentCompetition } from "@/lib/competition";
 import { isValidRaceResult } from "@/lib/bracket/singleElimination";
 import { clearFreeForAllHeat, FREE_FOR_ALL_PLAYOFF_OPTIONS, updateFreeForAllHeat, updateFreeForAllPlayoffMatch } from "@/lib/competition/freeForAll";
@@ -80,6 +87,8 @@ function PairRounds({
   onSave,
   onUndo,
   onStart,
+  tables,
+  onAssignTable,
   eyebrow,
   byePoints,
 }: {
@@ -90,6 +99,8 @@ function PairRounds({
   onSave: (match: BracketMatch, score1: number, score2: number) => void;
   onUndo: (match: BracketMatch) => void;
   onStart: (match: BracketMatch) => void;
+  tables: VenueTableRow[];
+  onAssignTable: (match: BracketMatch, tableId: number | null) => void;
   eyebrow?: string;
   byePoints?: number;
 }) {
@@ -121,12 +132,23 @@ function PairRounds({
                   <article key={match.id} className={`overflow-hidden rounded-2xl border bg-slate-950/65 ${match.completed ? "border-emerald-400/25" : "border-white/10"}`}>
                     <div className="flex items-center justify-between border-b border-white/10 px-4 py-2.5">
                       <span className="text-[0.64rem] font-black uppercase tracking-wider text-slate-500">
-                        {match.tableNumber ? `Table ${match.tableNumber}` : `Match ${matchIndex + 1}`}
+                        {match.tableNumber || `Match ${matchIndex + 1}`}
                       </span>
                       <span className={`rounded-full px-2 py-0.5 text-[0.6rem] font-black uppercase ${match.completed ? "bg-emerald-400/10 text-emerald-300" : match.status === "live" ? "bg-rose-400/15 text-rose-300" : "bg-cyan-400/10 text-cyan-300"}`}>
                         {match.completed ? "Finished" : match.status === "live" ? "● Live" : `Race to ${raceTo}`}
                       </span>
                     </div>
+                    {!match.completed ? (
+                      <div className="border-b border-white/10 px-4 py-2.5">
+                        <select value={match.tableId ?? ""} onChange={(event) => onAssignTable(match, event.target.value ? Number(event.target.value) : null)} aria-label={`Table for ${match.player1} versus ${match.player2}`} className="w-full rounded-lg border border-white/10 bg-slate-900 px-3 py-2 text-xs font-bold text-white">
+                          <option value="">{tables.length ? "No table assigned" : "Add tables in Floor Control"}</option>
+                          {tables.map((table) => {
+                            const busy = Boolean(table.active_match_id && table.active_match_id !== match.id);
+                            return <option key={table.id} value={table.id} disabled={busy}>{table.name}{busy ? ` · ${table.active_match_label || "Busy"}` : ""}</option>;
+                          })}
+                        </select>
+                      </div>
+                    ) : null}
                     {[match.player1, match.player2].map((player, index) => {
                       const key = index === 0 ? "score1" : "score2";
                       const isWinner = Boolean(player && match.completed && match.winner === player);
@@ -264,7 +286,24 @@ export function CompetitionManager({ tournament, onTournamentChange }: Props) {
   const [message, setMessage] = useState("");
   const [drafts, setDrafts] = useState<Record<string, DraftScore>>({});
   const [heatDrafts, setHeatDrafts] = useState<Record<string, Record<string, string>>>({});
+  const [venueTables, setVenueTables] = useState<VenueTableRow[]>([]);
   const minPlayers = minimumPlayers(tournament);
+  const tableScope = useMemo(() => ({ id: tournament.id, clubId: tournament.clubId ?? null, type: "tournament" as const }), [tournament.clubId, tournament.id]);
+
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      try {
+        const tables = await getEventVenueTables(tableScope);
+        if (active) setVenueTables(tables);
+      } catch (error) {
+        if (active) setMessage(error instanceof Error ? error.message : "Unable to load venue tables.");
+      }
+    };
+    void load();
+    const unsubscribe = subscribeToVenueTables(() => void load());
+    return () => { active = false; unsubscribe(); };
+  }, [tableScope]);
 
   function saveCompetition(next: TournamentCompetition | undefined) {
     const champion = next?.champion ?? null;
@@ -334,43 +373,50 @@ export function CompetitionManager({ tournament, onTournamentChange }: Props) {
     setDrafts((current) => ({ ...current, [target.id]: { score1: "", score2: "" } }));
   }
 
-  function savePairMatch(match: BracketMatch, score1: number, score2: number, groupId?: string) {
-    if (!competition || !validateScores(score1, score2)) return;
-    const updater = finishMutator(score1, score2);
+  function applyPairMatchUpdate(matchId: string, updater: (target: BracketMatch) => void, groupId?: string) {
+    if (!competition) return;
     if (competition.type === "round_robin") {
-      saveCompetition(updateRoundRobinMatch(competition, tournament.players, tournament.options, match.id, updater));
+      saveCompetition(updateRoundRobinMatch(competition, tournament.players, tournament.options, matchId, updater));
     } else if (competition.type === "swiss") {
-      saveCompetition(updateSwissMatch(competition, tournament.players, tournament.options, match.id, updater));
+      saveCompetition(updateSwissMatch(competition, tournament.players, tournament.options, matchId, updater));
     } else if (competition.type === "leaderboard") {
-      saveCompetition(updateLeaderboardMatch(competition, tournament.players, tournament.options, match.id, updater));
+      saveCompetition(updateLeaderboardMatch(competition, tournament.players, tournament.options, matchId, updater));
     } else if (competition.type === "free_for_all") {
-      saveCompetition(updateFreeForAllPlayoffMatch(competition, match.id, updater));
+      saveCompetition(updateFreeForAllPlayoffMatch(competition, matchId, updater));
     } else if (competition.type === "two_stage") {
       saveCompetition(groupId
-        ? updateTwoStageGroupMatch(competition, tournament.options, groupId, match.id, updater)
-        : updateTwoStageFinalMatch(competition, match.id, updater));
+        ? updateTwoStageGroupMatch(competition, tournament.options, groupId, matchId, updater)
+        : updateTwoStageFinalMatch(competition, matchId, updater));
     }
+  }
+
+  async function savePairMatch(match: BracketMatch, score1: number, score2: number, groupId?: string) {
+    if (!competition || !validateScores(score1, score2)) return;
+    if (match.tableId) {
+      try {
+        await releaseVenueTable({ tableId: match.tableId, scope: tableScope, matchId: match.id });
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : "Unable to release the table.");
+      }
+    }
+    applyPairMatchUpdate(match.id, finishMutator(score1, score2), groupId);
   }
 
   function undoPairMatch(match: BracketMatch, groupId?: string) {
-    if (!competition) return;
-    if (competition.type === "round_robin") {
-      saveCompetition(updateRoundRobinMatch(competition, tournament.players, tournament.options, match.id, undoMutator));
-    } else if (competition.type === "swiss") {
-      saveCompetition(updateSwissMatch(competition, tournament.players, tournament.options, match.id, undoMutator));
-    } else if (competition.type === "leaderboard") {
-      saveCompetition(updateLeaderboardMatch(competition, tournament.players, tournament.options, match.id, undoMutator));
-    } else if (competition.type === "free_for_all") {
-      saveCompetition(updateFreeForAllPlayoffMatch(competition, match.id, undoMutator));
-    } else if (competition.type === "two_stage") {
-      saveCompetition(groupId
-        ? updateTwoStageGroupMatch(competition, tournament.options, groupId, match.id, undoMutator)
-        : updateTwoStageFinalMatch(competition, match.id, undoMutator));
-    }
+    applyPairMatchUpdate(match.id, undoMutator, groupId);
   }
 
-  function startPairMatch(match: BracketMatch, groupId?: string) {
+  async function startPairMatch(match: BracketMatch, groupId?: string) {
     if (!competition) return;
+    if (match.tableId) {
+      try {
+        await assignVenueTable({ tableId: match.tableId, scope: tableScope, matchId: match.id, matchLabel: `${match.player1} vs ${match.player2}`, status: "playing" });
+        setMessage("");
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : "Unable to start this match on the selected table.");
+        return;
+      }
+    }
     void recordMatchStarted(tournament, match).catch(() => undefined);
     const updater = (target: BracketMatch) => {
       target.status = "live";
@@ -379,18 +425,24 @@ export function CompetitionManager({ tournament, onTournamentChange }: Props) {
       target.score2 = target.score2 ?? 0;
       target.scoreHistory = target.scoreHistory ?? [];
     };
-    if (competition.type === "round_robin") {
-      saveCompetition(updateRoundRobinMatch(competition, tournament.players, tournament.options, match.id, updater));
-    } else if (competition.type === "swiss") {
-      saveCompetition(updateSwissMatch(competition, tournament.players, tournament.options, match.id, updater));
-    } else if (competition.type === "leaderboard") {
-      saveCompetition(updateLeaderboardMatch(competition, tournament.players, tournament.options, match.id, updater));
-    } else if (competition.type === "free_for_all") {
-      saveCompetition(updateFreeForAllPlayoffMatch(competition, match.id, updater));
-    } else if (competition.type === "two_stage") {
-      saveCompetition(groupId
-        ? updateTwoStageGroupMatch(competition, tournament.options, groupId, match.id, updater)
-        : updateTwoStageFinalMatch(competition, match.id, updater));
+    applyPairMatchUpdate(match.id, updater, groupId);
+  }
+
+  async function assignPairMatchTable(match: BracketMatch, tableId: number | null, groupId?: string) {
+    if (match.completed || match.tableId === tableId) return;
+    try {
+      if (match.tableId) await releaseVenueTable({ tableId: match.tableId, scope: tableScope, matchId: match.id });
+      const table = venueTables.find((item) => item.id === tableId);
+      if (table) {
+        await assignVenueTable({ tableId: table.id, scope: tableScope, matchId: match.id, matchLabel: `${match.player1} vs ${match.player2}`, status: match.status === "live" ? "playing" : "reserved" });
+      }
+      applyPairMatchUpdate(match.id, (target) => {
+        target.tableId = table?.id ?? null;
+        target.tableNumber = table?.name ?? "";
+      }, groupId);
+      setMessage("");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Unable to assign that table.");
     }
   }
 
@@ -407,6 +459,7 @@ export function CompetitionManager({ tournament, onTournamentChange }: Props) {
   }
 
   const champion = competition.champion;
+  const pairTableProps = { tables: venueTables, onAssignTable: assignPairMatchTable };
 
   return (
     <section className="mt-8 space-y-6">
@@ -440,7 +493,7 @@ export function CompetitionManager({ tournament, onTournamentChange }: Props) {
             <p className="mt-2 text-sm text-slate-400">CueBracket generated official playoff fixtures automatically. No player can become champion alphabetically or by array order.</p>
           </div>
           <StandingsTable rows={competition.playoffStandings} title="Playoff standings" rules={TABLE_RULES} />
-          <PairRounds rounds={competition.playoffRounds} raceTo={tournament.raceTo} drafts={drafts} setDrafts={setDrafts} onSave={savePairMatch} onUndo={undoPairMatch} onStart={startPairMatch} />
+          <PairRounds {...pairTableProps} rounds={competition.playoffRounds} raceTo={tournament.raceTo} drafts={drafts} setDrafts={setDrafts} onSave={savePairMatch} onUndo={undoPairMatch} onStart={startPairMatch} />
           {competition.playoffRounds.flatMap((round) => round.matches).filter((match) => match.player1 && match.player2).every((match) => match.completed) ? (
             <button
               type="button"
@@ -460,7 +513,7 @@ export function CompetitionManager({ tournament, onTournamentChange }: Props) {
       {competition.type === "round_robin" ? (
         <>
           <StandingsTable rows={competition.standings} rules={TABLE_RULES} />
-          <PairRounds rounds={competition.rounds} raceTo={tournament.raceTo} drafts={drafts} setDrafts={setDrafts} onSave={savePairMatch} onUndo={undoPairMatch} onStart={startPairMatch} />
+          <PairRounds {...pairTableProps} rounds={competition.rounds} raceTo={tournament.raceTo} drafts={drafts} setDrafts={setDrafts} onSave={savePairMatch} onUndo={undoPairMatch} onStart={startPairMatch} />
           {competition.playoffRounds.length ? (
             <section className="space-y-5 rounded-[2rem] border border-amber-300/25 bg-amber-300/[0.05] p-5 sm:p-6">
               <div>
@@ -468,7 +521,7 @@ export function CompetitionManager({ tournament, onTournamentChange }: Props) {
                 <p className="mt-2 text-sm text-slate-400">The regular table could not separate first place. The champion must be decided on the table.</p>
               </div>
               <StandingsTable rows={competition.playoffStandings} title="Playoff standings" rules={TABLE_RULES} />
-              <PairRounds rounds={competition.playoffRounds} raceTo={tournament.raceTo} drafts={drafts} setDrafts={setDrafts} onSave={savePairMatch} onUndo={undoPairMatch} onStart={startPairMatch} />
+              <PairRounds {...pairTableProps} rounds={competition.playoffRounds} raceTo={tournament.raceTo} drafts={drafts} setDrafts={setDrafts} onSave={savePairMatch} onUndo={undoPairMatch} onStart={startPairMatch} />
               {!competition.champion && competition.playoffRounds.flatMap((round) => round.matches).filter((match) => match.player1 && match.player2).every((match) => match.completed) ? (
                 <button type="button" onClick={() => saveCompetition(generateRoundRobinPlayoffRematch(competition, tournament.options))} className="rounded-2xl bg-amber-300 px-5 py-3 font-black text-slate-950">Generate playoff rematch</button>
               ) : null}
@@ -485,7 +538,7 @@ export function CompetitionManager({ tournament, onTournamentChange }: Props) {
               <button type="button" onClick={() => saveCompetition(generateNextSwissRound(competition, tournament.players, tournament.options))} className="rounded-2xl bg-violet-400 px-5 py-3 font-black text-slate-950">Generate next round →</button>
             ) : null}
           </div>
-          <PairRounds rounds={competition.rounds} raceTo={tournament.raceTo} drafts={drafts} setDrafts={setDrafts} onSave={savePairMatch} onUndo={undoPairMatch} onStart={startPairMatch} byePoints={tournament.options.pointsForWin} />
+          <PairRounds {...pairTableProps} rounds={competition.rounds} raceTo={tournament.raceTo} drafts={drafts} setDrafts={setDrafts} onSave={savePairMatch} onUndo={undoPairMatch} onStart={startPairMatch} byePoints={tournament.options.pointsForWin} />
         </>
       ) : null}
 
@@ -503,7 +556,7 @@ export function CompetitionManager({ tournament, onTournamentChange }: Props) {
               ))}
             </div>
           </section>
-          <PairRounds rounds={competition.rounds} raceTo={tournament.raceTo} drafts={drafts} setDrafts={setDrafts} onSave={savePairMatch} onUndo={undoPairMatch} onStart={startPairMatch} />
+          <PairRounds {...pairTableProps} rounds={competition.rounds} raceTo={tournament.raceTo} drafts={drafts} setDrafts={setDrafts} onSave={savePairMatch} onUndo={undoPairMatch} onStart={startPairMatch} />
         </>
       ) : null}
 
@@ -550,13 +603,13 @@ export function CompetitionManager({ tournament, onTournamentChange }: Props) {
                       <p className="mt-2 text-sm text-slate-400">CueBracket generated fixtures for the tied qualification places. The required qualifier{group.qualificationTieSlots === 1 ? "" : "s"} will be selected from the playoff results.</p>
                     </div>
                     <StandingsTable rows={group.qualificationPlayoffStandings ?? []} title="Qualification playoff standings" rules={TABLE_RULES} />
-                    <PairRounds rounds={group.qualificationPlayoffRounds ?? []} raceTo={tournament.raceTo} drafts={drafts} setDrafts={setDrafts} onSave={(match, score1, score2) => savePairMatch(match, score1, score2, group.id)} onUndo={(match) => undoPairMatch(match, group.id)} onStart={(match) => startPairMatch(match, group.id)} eyebrow={`${group.name} playoff`} />
+                    <PairRounds tables={venueTables} onAssignTable={(match, tableId) => void assignPairMatchTable(match, tableId, group.id)} rounds={group.qualificationPlayoffRounds ?? []} raceTo={tournament.raceTo} drafts={drafts} setDrafts={setDrafts} onSave={(match, score1, score2) => void savePairMatch(match, score1, score2, group.id)} onUndo={(match) => undoPairMatch(match, group.id)} onStart={(match) => void startPairMatch(match, group.id)} eyebrow={`${group.name} playoff`} />
                     {!areTwoStageQualificationTiesResolved(competition) && (group.qualificationPlayoffRounds ?? []).flatMap((round) => round.matches).filter((match) => match.player1 && match.player2).every((match) => match.completed) ? (
                       <button type="button" onClick={() => saveCompetition(generateTwoStageQualificationPlayoffRematch(competition, tournament.options, group.id))} className="rounded-xl bg-amber-300 px-4 py-2.5 text-sm font-black text-slate-950">Generate qualification rematch</button>
                     ) : null}
                   </section>
                 ) : null}
-                <PairRounds rounds={group.rounds} raceTo={tournament.raceTo} drafts={drafts} setDrafts={setDrafts} onSave={(match, score1, score2) => savePairMatch(match, score1, score2, group.id)} onUndo={(match) => undoPairMatch(match, group.id)} onStart={(match) => startPairMatch(match, group.id)} eyebrow={group.name} />
+                <PairRounds tables={venueTables} onAssignTable={(match, tableId) => void assignPairMatchTable(match, tableId, group.id)} rounds={group.rounds} raceTo={tournament.raceTo} drafts={drafts} setDrafts={setDrafts} onSave={(match, score1, score2) => void savePairMatch(match, score1, score2, group.id)} onUndo={(match) => undoPairMatch(match, group.id)} onStart={(match) => void startPairMatch(match, group.id)} eyebrow={group.name} />
               </div>
             ))}
           </div>
@@ -578,6 +631,7 @@ export function CompetitionManager({ tournament, onTournamentChange }: Props) {
                 <p className="mt-2 text-sm text-slate-400">Opening pairings use cross-group seeding. {competition.finalFormat === "double" && tournament.options.bracketResetEnabled ? "A bracket reset is automatically created if the losers-bracket winner beats the undefeated finalist in the first Grand Final." : ""}</p>
               </div>
               <PairRounds
+                {...pairTableProps}
                 rounds={getBracketRounds(competition.finalBracket).filter((round) => competition.finalBracket?.type !== "double" || round.name !== "Bracket Reset" || competition.finalBracket.resetRequired)}
                 raceTo={tournament.raceTo}
                 drafts={drafts}

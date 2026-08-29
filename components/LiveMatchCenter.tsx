@@ -5,6 +5,13 @@ import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { updateDoubleMatch } from "@/lib/bracket/doubleElimination";
 import { updateSingleEliminationMatch } from "@/lib/bracket/singleElimination";
 import { recordMatchStarted } from "@/lib/cloud/notifications";
+import {
+  assignVenueTable,
+  getEventVenueTables,
+  releaseVenueTable,
+  subscribeToVenueTables,
+  type VenueTableRow,
+} from "@/lib/cloud/tables";
 import type { BracketMatch, Tournament, TournamentBracket } from "@/lib/tournaments";
 import {
   formatDuration,
@@ -47,6 +54,13 @@ export function LiveMatchCenter({
     ? requestedSelectedId
     : playableMatches[0]?.id ?? selectableMatches[0]?.id ?? "";
   const [now, setNow] = useState(() => Date.now());
+  const [venueTables, setVenueTables] = useState<VenueTableRow[]>([]);
+  const [tableMessage, setTableMessage] = useState("");
+  const tableScope = useMemo(() => ({
+    id: tournament.id,
+    clubId: tournament.clubId ?? null,
+    type: "tournament" as const,
+  }), [tournament.clubId, tournament.id]);
 
   function selectMatch(matchId: string) {
     setInternalSelectedId(matchId);
@@ -57,6 +71,24 @@ export function LiveMatchCenter({
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    const loadTables = async () => {
+      try {
+        const rows = await getEventVenueTables(tableScope);
+        if (active) setVenueTables(rows);
+      } catch (error) {
+        if (active) setTableMessage(error instanceof Error ? error.message : "Unable to load venue tables.");
+      }
+    };
+    void loadTables();
+    const unsubscribe = subscribeToVenueTables(() => void loadTables());
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, [tableScope]);
 
   const match =
     selectableMatches.find((item) => item.id === selectedId) ?? null;
@@ -123,8 +155,27 @@ export function LiveMatchCenter({
     saveBracket(nextBracket);
   }
 
-  function startMatch() {
-    if (match) void recordMatchStarted(tournament, match).catch(() => undefined);
+  async function markAssignedTablePlaying(targetMatch: BracketMatch) {
+    if (!targetMatch.tableId) return;
+    await assignVenueTable({
+      tableId: targetMatch.tableId,
+      scope: tableScope,
+      matchId: targetMatch.id,
+      matchLabel: `${targetMatch.player1} vs ${targetMatch.player2}`,
+      status: "playing",
+    });
+  }
+
+  async function startMatch() {
+    if (!match) return;
+    try {
+      await markAssignedTablePlaying(match);
+      setTableMessage("");
+    } catch (error) {
+      setTableMessage(error instanceof Error ? error.message : "Unable to start this match on the selected table.");
+      return;
+    }
+    void recordMatchStarted(tournament, match).catch(() => undefined);
     updateMatch((target) => {
       target.status = "live";
       target.startedAt = target.startedAt ?? new Date().toISOString();
@@ -134,10 +185,23 @@ export function LiveMatchCenter({
     });
   }
 
-  function addPoint(player: 1 | 2) {
+  async function addPoint(player: 1 | 2) {
+    if (!match) return;
+    if (match.status !== "live" && !match.completed) {
+      try {
+        await markAssignedTablePlaying(match);
+        setTableMessage("");
+      } catch (error) {
+        setTableMessage(error instanceof Error ? error.message : "Unable to use the selected table.");
+        return;
+      }
+    }
     if (match && match.status !== "live" && !match.completed) {
       void recordMatchStarted(tournament, match).catch(() => undefined);
     }
+    const finishesMatch = player === 1
+      ? (match.score1 ?? 0) + 1 >= tournament.raceTo
+      : (match.score2 ?? 0) + 1 >= tournament.raceTo;
     updateMatch((target) => {
       if (target.completed) return;
       if (target.status !== "live") {
@@ -175,6 +239,36 @@ export function LiveMatchCenter({
         target.winner = score1 > score2 ? target.player1 : target.player2;
       }
     });
+    if (finishesMatch && match.tableId) {
+      void releaseVenueTable({ tableId: match.tableId, scope: tableScope, matchId: match.id })
+        .catch((error) => setTableMessage(error instanceof Error ? error.message : "Result saved, but the table could not be released."));
+    }
+  }
+
+  async function assignTable(tableId: number | null) {
+    if (!match || match.completed) return;
+    const oldTableId = match.tableId ?? null;
+    if (oldTableId === tableId) return;
+    try {
+      if (oldTableId) await releaseVenueTable({ tableId: oldTableId, scope: tableScope, matchId: match.id });
+      const table = venueTables.find((item) => item.id === tableId);
+      if (table) {
+        await assignVenueTable({
+          tableId: table.id,
+          scope: tableScope,
+          matchId: match.id,
+          matchLabel: `${match.player1} vs ${match.player2}`,
+          status: match.status === "live" ? "playing" : "reserved",
+        });
+      }
+      updateMatch((target) => {
+        target.tableId = table?.id ?? null;
+        target.tableNumber = table?.name ?? "";
+      });
+      setTableMessage("");
+    } catch (error) {
+      setTableMessage(error instanceof Error ? error.message : "Unable to assign that table.");
+    }
   }
 
   function undoScore() {
@@ -289,7 +383,7 @@ export function LiveMatchCenter({
               </div>
               <button
                 type="button"
-                onClick={() => addPoint(player)}
+                onClick={() => void addPoint(player)}
                 disabled={match.completed}
                 className="mt-4 min-h-12 w-full rounded-2xl bg-cyan-400 px-4 py-3 font-black text-slate-950 hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-40"
               >
@@ -317,16 +411,18 @@ export function LiveMatchCenter({
         </div>
         <label className="rounded-2xl border border-white/10 bg-slate-950/50 p-4 text-sm font-bold text-slate-300">
           Table assignment
-          <input
-            value={match.tableNumber ?? ""}
-            onChange={(event: ChangeEvent<HTMLInputElement>) =>
-              updateMatch((target) => {
-                target.tableNumber = event.target.value;
-              })
-            }
-            placeholder="e.g. Table 2"
+          <select
+            value={match.tableId ?? ""}
+            onChange={(event: ChangeEvent<HTMLSelectElement>) => void assignTable(event.target.value ? Number(event.target.value) : null)}
+            disabled={match.completed}
             className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/60 px-4 py-3 text-white"
-          />
+          >
+            <option value="">{venueTables.length ? "No table" : "Add tables in Floor Control"}</option>
+            {venueTables.map((table) => {
+              const busy = Boolean(table.active_match_id && table.active_match_id !== match.id);
+              return <option key={table.id} value={table.id} disabled={busy}>{table.name}{busy ? ` · ${table.active_match_label || "Busy"}` : table.status !== "available" && table.active_match_id !== match.id ? ` · ${table.status}` : ""}</option>;
+            })}
+          </select>
         </label>
         <label className="rounded-2xl border border-white/10 bg-slate-950/50 p-4 text-sm font-bold text-slate-300">
           Breaker
@@ -362,11 +458,13 @@ export function LiveMatchCenter({
         />
       </label>
 
+      {tableMessage ? <p className="mt-4 rounded-xl bg-amber-400/10 px-4 py-3 text-sm font-bold text-amber-200">{tableMessage}</p> : null}
+
       <div className="mt-5 flex flex-wrap gap-3">
         {!match.startedAt && !match.completed ? (
           <button
             type="button"
-            onClick={startMatch}
+            onClick={() => void startMatch()}
             className="rounded-xl bg-emerald-400 px-5 py-3 font-black text-slate-950"
           >
             Start match

@@ -21,6 +21,8 @@ export interface LeagueFixture {
   awayScore: number | null;
   completed: boolean;
   playedAt: string | null;
+  tableId?: number | null;
+  tableName?: string;
 }
 
 export interface LeaguePlayoffMatch {
@@ -36,6 +38,8 @@ export interface LeaguePlayoffMatch {
   winnerPlayerId: string | null;
   completed: boolean;
   playedAt: string | null;
+  tableId?: number | null;
+  tableName?: string;
 }
 
 export interface LeaguePlayoffRound {
@@ -143,14 +147,25 @@ export function normalizeLeague(raw: League): League {
     seriesId: raw.seriesId || raw.id,
     clubId: raw.clubId ?? null,
     players: Array.isArray(raw.players) ? raw.players : [],
-    fixtures: Array.isArray(raw.fixtures) ? raw.fixtures : [],
+    fixtures: Array.isArray(raw.fixtures) ? raw.fixtures.map((fixture) => ({
+      ...fixture,
+      tableId: fixture.tableId ?? null,
+      tableName: fixture.tableName ?? "",
+    })) : [],
     winPoints: Number.isFinite(raw.winPoints) ? raw.winPoints : 3,
     lossPoints: Number.isFinite(raw.lossPoints) ? raw.lossPoints : 0,
     playoff: {
       ...emptyPlayoff(playoff.enabled, playoff.qualifierCount),
       ...playoff,
       qualifierPlayerIds: Array.isArray(playoff.qualifierPlayerIds) ? playoff.qualifierPlayerIds : [],
-      rounds: Array.isArray(playoff.rounds) ? playoff.rounds : [],
+      rounds: Array.isArray(playoff.rounds) ? playoff.rounds.map((round) => ({
+        ...round,
+        matches: (round.matches ?? []).map((match) => ({
+          ...match,
+          tableId: match.tableId ?? null,
+          tableName: match.tableName ?? "",
+        })),
+      })) : [],
     },
     championPlayerId: raw.championPlayerId ?? null,
   };
@@ -360,6 +375,7 @@ export function buildLeagueFixtures(league: League): LeagueFixture[] {
   const add = (round: number, homePlayerId: string, awayPlayerId: string) => fixtures.push({
     id: makeId("fixture"), round, homePlayerId, awayPlayerId,
     homeScore: null, awayScore: null, completed: false, playedAt: null,
+    tableId: null, tableName: "",
   });
   firstLeg.forEach((round, roundIndex) => round.forEach(([home, away]) => add(roundIndex + 1, home.id, away.id)));
   if (league.format === "home-and-away") {
@@ -413,6 +429,18 @@ export function saveFixtureResult(leagueId: string, fixtureId: string, homeScore
       ...emptyPlayoff(league.playoff.enabled, league.playoff.qualifierCount),
       status: completion.playoffStatus,
     },
+  });
+}
+
+export function setLeagueFixtureTable(leagueId: string, fixtureId: string, tableId: number | null, tableName: string): League | undefined {
+  const league = getLeague(leagueId);
+  if (!league) return undefined;
+  return updateLeague(leagueId, {
+    fixtures: league.fixtures.map((fixture) => fixture.id === fixtureId ? {
+      ...fixture,
+      tableId,
+      tableName: tableName.trim(),
+    } : fixture),
   });
 }
 
@@ -510,6 +538,7 @@ export function buildLeaguePlayoff(league: League): LeaguePlayoff {
         id: makeId("playoff-match"), round, position,
         player1Id: null, player2Id: null, seed1: null, seed2: null,
         score1: null, score2: null, winnerPlayerId: null, completed: false, playedAt: null,
+        tableId: null, tableName: "",
       })),
     });
   }
@@ -570,6 +599,24 @@ export function saveLeaguePlayoffResult(leagueId: string, matchId: string, score
     playoff: recomputed.playoff,
     championPlayerId: recomputed.championPlayerId,
     status: recomputed.championPlayerId ? "completed" : "live",
+  });
+}
+
+export function setLeaguePlayoffMatchTable(leagueId: string, matchId: string, tableId: number | null, tableName: string): League | undefined {
+  const league = getLeague(leagueId);
+  if (!league) return undefined;
+  return updateLeague(leagueId, {
+    playoff: {
+      ...league.playoff,
+      rounds: league.playoff.rounds.map((round) => ({
+        ...round,
+        matches: round.matches.map((match) => match.id === matchId ? {
+          ...match,
+          tableId,
+          tableName: tableName.trim(),
+        } : match),
+      })),
+    },
   });
 }
 

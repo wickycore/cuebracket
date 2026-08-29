@@ -49,6 +49,7 @@ export interface BracketMatch {
   winner: string | null;
   completed: boolean;
   status?: MatchStatus;
+  tableId?: number | null;
   tableNumber?: string;
   breakPlayer?: 1 | 2 | null;
   startedAt?: string | null;
@@ -295,6 +296,7 @@ function normalizeMatch(match: BracketMatch): BracketMatch {
   return {
     ...match,
     status: match.status ?? (match.completed ? "finished" : "pending"),
+    tableId: match.tableId ?? null,
     tableNumber: match.tableNumber ?? "",
     breakPlayer: match.breakPlayer ?? null,
     startedAt: match.startedAt ?? null,

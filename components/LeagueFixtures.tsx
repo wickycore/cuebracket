@@ -1,12 +1,21 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  assignVenueTable,
+  getEventVenueTables,
+  releaseVenueTable,
+  subscribeToVenueTables,
+  type VenueEventScope,
+  type VenueTableRow,
+} from "@/lib/cloud/tables";
 import {
   generateLeagueFixtures,
   getPlayerName,
   League,
   resetFixtureResult,
   saveFixtureResult,
+  setLeagueFixtureTable,
   validateLeagueResult,
 } from "@/lib/leagues";
 
@@ -18,12 +27,31 @@ interface Props {
 
 export function LeagueFixtures({ league, admin = false, onChange }: Props) {
   const [round, setRound] = useState<number | "all">("all");
+  const [tables, setTables] = useState<VenueTableRow[]>([]);
+  const [tableMessage, setTableMessage] = useState("");
+  const tableScope = useMemo<VenueEventScope>(() => ({ id: league.id, clubId: league.clubId, type: "league" }), [league.clubId, league.id]);
   const rounds = [...new Set(league.fixtures.map((fixture) => fixture.round))].sort((a, b) => a - b);
 
   const fixtures = useMemo(
     () => league.fixtures.filter((fixture) => round === "all" || fixture.round === round),
     [league.fixtures, round],
   );
+
+  useEffect(() => {
+    if (!admin) return;
+    let active = true;
+    const load = async () => {
+      try {
+        const rows = await getEventVenueTables(tableScope);
+        if (active) setTables(rows);
+      } catch (error) {
+        if (active) setTableMessage(error instanceof Error ? error.message : "Unable to load venue tables.");
+      }
+    };
+    void load();
+    const unsubscribe = subscribeToVenueTables(() => void load());
+    return () => { active = false; unsubscribe(); };
+  }, [admin, tableScope]);
 
   function generate() {
     const updated = generateLeagueFixtures(league.id);
@@ -66,6 +94,7 @@ export function LeagueFixtures({ league, admin = false, onChange }: Props) {
       </div>
 
       <div className="mt-5 space-y-3">
+        {tableMessage ? <p className="rounded-xl bg-amber-400/10 px-4 py-3 text-sm font-bold text-amber-200">{tableMessage}</p> : null}
         {fixtures.map((fixture) => (
           <FixtureRow
             key={fixture.id}
@@ -73,6 +102,9 @@ export function LeagueFixtures({ league, admin = false, onChange }: Props) {
             league={league}
             admin={admin}
             onChange={onChange}
+            tables={tables}
+            tableScope={tableScope}
+            onTableError={setTableMessage}
           />
         ))}
       </div>
@@ -85,25 +117,54 @@ function FixtureRow({
   league,
   admin,
   onChange,
+  tables,
+  tableScope,
+  onTableError,
 }: {
   fixture: League["fixtures"][number];
   league: League;
   admin: boolean;
   onChange?: (league: League) => void;
+  tables: VenueTableRow[];
+  tableScope: VenueEventScope;
+  onTableError: (message: string) => void;
 }) {
   const [homeScore, setHomeScore] = useState(fixture.homeScore ?? 0);
   const [awayScore, setAwayScore] = useState(fixture.awayScore ?? 0);
   const home = getPlayerName(league, fixture.homePlayerId);
   const away = getPlayerName(league, fixture.awayPlayerId);
 
-  function save() {
+  async function save() {
     const validation = validateLeagueResult(league.raceTo, homeScore, awayScore);
     if (validation) {
       window.alert(validation);
       return;
     }
+    if (fixture.tableId) {
+      try {
+        await releaseVenueTable({ tableId: fixture.tableId, scope: tableScope, matchId: fixture.id });
+      } catch (error) {
+        onTableError(error instanceof Error ? error.message : "Unable to release the table.");
+      }
+    }
     const updated = saveFixtureResult(league.id, fixture.id, homeScore, awayScore);
     if (updated && onChange) onChange(updated);
+  }
+
+  async function assignTable(tableId: number | null) {
+    if (fixture.completed || fixture.tableId === tableId) return;
+    try {
+      if (fixture.tableId) await releaseVenueTable({ tableId: fixture.tableId, scope: tableScope, matchId: fixture.id });
+      const table = tables.find((item) => item.id === tableId);
+      if (table) {
+        await assignVenueTable({ tableId: table.id, scope: tableScope, matchId: fixture.id, matchLabel: `${home} vs ${away}`, status: "playing" });
+      }
+      const updated = setLeagueFixtureTable(league.id, fixture.id, table?.id ?? null, table?.name ?? "");
+      if (updated && onChange) onChange(updated);
+      onTableError("");
+    } catch (error) {
+      onTableError(error instanceof Error ? error.message : "Unable to assign that table.");
+    }
   }
 
   function reset() {
@@ -151,8 +212,21 @@ function FixtureRow({
       </div>
 
       {admin ? (
+        <label className="mx-auto mt-3 block max-w-xs text-xs font-bold uppercase tracking-wider text-slate-500">
+          Venue table
+          <select value={fixture.tableId ?? ""} onChange={(event) => void assignTable(event.target.value ? Number(event.target.value) : null)} disabled={fixture.completed} className="mt-1.5 w-full rounded-lg border border-white/10 bg-slate-900 px-3 py-2 text-sm font-bold normal-case tracking-normal text-white disabled:opacity-60">
+            <option value="">{tables.length ? "No table" : "Add tables in Floor Control"}</option>
+            {tables.map((table) => {
+              const busy = Boolean(table.active_match_id && table.active_match_id !== fixture.id);
+              return <option key={table.id} value={table.id} disabled={busy}>{table.name}{busy ? ` · ${table.active_match_label || "Busy"}` : ""}</option>;
+            })}
+          </select>
+        </label>
+      ) : fixture.tableName ? <p className="mt-3 text-center text-xs font-black uppercase tracking-wider text-cyan-300">{fixture.tableName}</p> : null}
+
+      {admin ? (
         <div className="mt-3 flex justify-center gap-2">
-          <button onClick={save} className="rounded-lg bg-cyan-400 px-4 py-2 text-sm font-black text-slate-950">
+          <button onClick={() => void save()} className="rounded-lg bg-cyan-400 px-4 py-2 text-sm font-black text-slate-950">
             Save result
           </button>
           {fixture.completed ? (
