@@ -77,6 +77,12 @@ export default function Home() {
                   Create a tournament →
                 </Link>
                 <Link
+                  href="/events"
+                  className="flex min-h-13 items-center justify-center rounded-2xl border border-cyan-400/20 bg-cyan-400/[0.06] px-6 py-3.5 text-sm font-black text-cyan-200 transition hover:bg-cyan-400/10"
+                >
+                  Discover events
+                </Link>
+                <Link
                   href="/dashboard"
                   className="flex min-h-13 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.045] px-6 py-3.5 text-sm font-black text-white transition hover:bg-white/[0.08]"
                 >

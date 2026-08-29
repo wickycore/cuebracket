@@ -8,6 +8,7 @@ import { NotificationBell } from "@/components/NotificationBell";
 
 const navigation = [
   { href: "/dashboard", label: "Dashboard", shortLabel: "Home" },
+  { href: "/events", label: "Discover", shortLabel: "Discover" },
   { href: "/tournaments", label: "Tournaments", shortLabel: "Events" },
   { href: "/leagues", label: "Leagues", shortLabel: "Leagues" },
   { href: "/clubs", label: "Clubs", shortLabel: "Clubs" },
