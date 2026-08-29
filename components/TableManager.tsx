@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ClubRow } from "@/lib/clubs";
 import { getManagedClubs } from "@/lib/cloud/clubs";
 import {
@@ -20,18 +20,18 @@ const style: Record<VenueTableStatus, string> = {
   reserved: "border-amber-400/25 bg-amber-400/[0.055] text-amber-300",
 };
 
-export function TableManager({ compact = false }: { compact?: boolean }) {
+export function TableManager({ compact = false, clubId = null }: { compact?: boolean; clubId?: string | null }) {
   const [tables, setTables] = useState<VenueTableRow[]>([]);
   const [clubs, setClubs] = useState<ClubRow[]>([]);
   const [name, setName] = useState("");
-  const [scope, setScope] = useState("");
+  const [scope, setScope] = useState(clubId ?? "");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
 
-  async function load() {
+  const load = useCallback(async () => {
     try {
       const [nextTables, nextClubs] = await Promise.all([getManagedVenueTables(), getManagedClubs()]);
-      setTables(nextTables);
+      setTables(clubId ? nextTables.filter((table) => table.club_id === clubId) : nextTables);
       setClubs(nextClubs);
       setMessage("");
     } catch (error) {
@@ -39,7 +39,7 @@ export function TableManager({ compact = false }: { compact?: boolean }) {
     } finally {
       setLoading(false);
     }
-  }
+  }, [clubId]);
 
   useEffect(() => {
     const initialLoad = window.setTimeout(() => void load(), 0);
@@ -48,7 +48,7 @@ export function TableManager({ compact = false }: { compact?: boolean }) {
       window.clearTimeout(initialLoad);
       unsubscribe();
     };
-  }, []);
+  }, [load]);
 
   const clubNames = useMemo(() => new Map(clubs.map((club) => [club.id, club.name])), [clubs]);
   const counts = useMemo(() => ({
@@ -60,7 +60,7 @@ export function TableManager({ compact = false }: { compact?: boolean }) {
   async function create() {
     setMessage("");
     try {
-      await createVenueTable({ clubId: scope || null, name: name || `Table ${tables.length + 1}`, sortOrder: tables.length });
+      await createVenueTable({ clubId: clubId ?? (scope || null), name: name || `Table ${tables.length + 1}`, sortOrder: tables.length });
       setName("");
       await load();
     } catch (error) {
@@ -111,11 +111,11 @@ export function TableManager({ compact = false }: { compact?: boolean }) {
           <p className="mt-1 text-sm text-slate-400">Assignments now follow the match, update every organizer in realtime and release automatically after the result.</p>
         </div>
         {!compact ? (
-          <div className="grid gap-2 sm:grid-cols-[11rem_minmax(0,1fr)_auto]">
-            <select value={scope} onChange={(event) => setScope(event.target.value)} className="rounded-xl border border-white/10 bg-slate-950/60 px-3 py-3 text-sm font-bold text-white">
+          <div className={`grid gap-2 ${clubId ? "sm:grid-cols-[minmax(0,1fr)_auto]" : "sm:grid-cols-[11rem_minmax(0,1fr)_auto]"}`}>
+            {clubId ? null : <select value={scope} onChange={(event) => setScope(event.target.value)} className="rounded-xl border border-white/10 bg-slate-950/60 px-3 py-3 text-sm font-bold text-white">
               <option value="">My independent venue</option>
               {clubs.map((club) => <option key={club.id} value={club.id}>{club.name}</option>)}
-            </select>
+            </select>}
             <input value={name} onChange={(event) => setName(event.target.value)} placeholder={`Table ${tables.length + 1}`} className="min-w-0 rounded-xl border border-white/10 bg-slate-950/60 px-4 py-3 text-white outline-none" />
             <button onClick={create} className="rounded-xl bg-cyan-400 px-4 py-3 font-black text-slate-950">Add table</button>
           </div>
