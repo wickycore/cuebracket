@@ -29,7 +29,7 @@ Applied migrations (canonical remote timestamps):
 
 `push-notifications` Edge Function v2 supports the new alert type. It retains user-token validation and Vault-backed dispatch authentication; no signing keys or service credentials are shipped to the browser.
 
-- 89 Node regression tests; lint, TypeScript and a CI-environment production build.
+- 90 Node regression tests; lint, TypeScript and a CI-environment production build. Deployed-browser checks cover club navigation, the public watchboard and club guide; sticky tabs stay below the main app header.
 - `supabase/tests/player-following.sql` verifies real PostgreSQL RLS/grants, default opt-out, ownership, club-guide permissions, deduplication, privacy/muting/completion, tournament and league lifecycle, and unrelated-table spoof prevention. It creates isolated fixtures inside one transaction and rolls them back. No real club records are edited.
 - One explicitly marked automatic delivery check was sent only to the verified opted-in account. Queue status was `sent` on attempt 1. No real match was started to test push.
 - Security advisor: no new security warnings. Existing leaked-password-protection warning remains; enabling it is a separate auth configuration decision: https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection.

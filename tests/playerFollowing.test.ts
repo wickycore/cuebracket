@@ -28,6 +28,13 @@ test("club guide validation accepts empty unpublished content and enforces limit
   assert.ok(validateClubGuide("", "x".repeat(3001)));
 });
 
+test("club tabs remain below the main header after switching sections", () => {
+  const source = readFileSync(new URL("../components/ClubCommandCenter.tsx", import.meta.url), "utf8");
+  assert.match(source, /aria-label="Club sections" className="sticky top-16/);
+  assert.match(source, /sm:top-\[4\.5rem\]/);
+  assert.match(source, /scroll-mt-36/);
+});
+
 test("followed-player alerts have independent account preferences", () => {
   assert.equal(pushAllowed("followed_player_live", { match_alerts: false }), true);
   assert.equal(pushAllowed("followed_player_live", { followed_player_alerts: false }), false);

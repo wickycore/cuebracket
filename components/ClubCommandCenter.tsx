@@ -164,13 +164,13 @@ export function ClubCommandCenter(props: Props) {
         </div>
       </section>
 
-      <nav aria-label="Club sections" className="sticky top-0 z-30 border-b border-white/10 bg-[#06101f]/95 shadow-xl shadow-black/20 backdrop-blur-xl">
+      <nav aria-label="Club sections" className="sticky top-16 z-30 border-b border-white/10 bg-[#06101f]/95 shadow-xl shadow-black/20 backdrop-blur-xl sm:top-[4.5rem]">
         <div className="cb-shell flex overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {tabs.map((tab) => <button key={tab.id} type="button" onClick={() => chooseTab(tab.id)} aria-current={activeTab === tab.id ? "page" : undefined} className={`relative min-h-14 shrink-0 px-4 text-sm font-black transition sm:min-h-16 sm:px-6 ${activeTab === tab.id ? "text-white" : "text-slate-500 hover:text-slate-200"}`}>{tab.label}{activeTab === tab.id ? <span className="absolute inset-x-4 bottom-0 h-0.5 rounded-full bg-gradient-to-r from-cyan-300 to-blue-500" /> : null}</button>)}
         </div>
       </nav>
 
-      <div id="club-command-content" className="cb-shell scroll-mt-20 py-6 sm:py-9">
+      <div id="club-command-content" className="cb-shell scroll-mt-36 py-6 sm:scroll-mt-40 sm:py-9">
         {activeTab === "home" ? (
           <div className="space-y-6">
             {pinnedAnnouncement ? <button type="button" onClick={() => chooseTab("clubhouse")} className="group w-full overflow-hidden rounded-2xl border border-cyan-300/20 bg-[linear-gradient(100deg,rgba(8,47,73,.8),rgba(15,23,42,.72))] text-left"><div className="flex items-stretch"><span className="w-1.5 shrink-0 bg-gradient-to-b from-cyan-300 to-blue-500" /><span className="flex min-w-0 flex-1 flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5"><span className="min-w-0"><span className="text-[0.62rem] font-black uppercase tracking-[0.18em] text-cyan-300">{pinnedAnnouncement.is_pinned ? "Pinned notice" : "Latest notice"} · {clubAnnouncementLabel(pinnedAnnouncement.kind)}</span><span className="mt-1 block truncate font-black text-white">{pinnedAnnouncement.title}</span></span><span className="shrink-0 text-xs font-black text-cyan-300 group-hover:text-cyan-200">Open noticeboard →</span></span></div></button> : null}
