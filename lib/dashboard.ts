@@ -12,6 +12,7 @@ export interface DashboardClub extends ClubRow {
 }
 
 export interface DashboardData {
+  profile: DashboardProfile | null;
   tournaments: Tournament[] | null;
   leagues: League[] | null;
   clubs: DashboardClub[] | null;
@@ -23,6 +24,32 @@ export interface DashboardData {
   confirmedRegistrations: number | null;
   registrationEventIds: string[];
   issues: string[];
+}
+
+export interface DashboardProfile {
+  display_name: string | null;
+  username: string | null;
+  tournament_name: string | null;
+  is_public: boolean | null;
+}
+
+// Optional biography, photo and public visibility never count as missing setup.
+export function dashboardProfileProgress(profile: DashboardProfile | null) {
+  const name = profile?.display_name?.trim() ?? "";
+  const username = profile?.username?.trim() ?? "";
+  const tournamentName = profile?.tournament_name?.trim() ?? "";
+  const steps = [
+    { label: "Profile name", complete: name.length >= 2 && name.length <= 50 },
+    { label: "CueBracket username", complete: /^[a-z0-9_]{3,24}$/.test(username) },
+    { label: "Tournament name", complete: tournamentName.length >= 2 && tournamentName.length <= 40 },
+  ];
+  const completed = steps.filter((step) => step.complete).length;
+  return {
+    steps, completed, total: steps.length,
+    percent: Math.round(completed / steps.length * 100),
+    nextStep: steps.find((step) => !step.complete)?.label ?? null,
+    publicHref: profile?.is_public && steps[1].complete ? `/players/${username}` : null,
+  };
 }
 
 export interface DashboardEvent {

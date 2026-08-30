@@ -1,7 +1,8 @@
 "use client";
 
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ClubMemberRow, ClubRow } from "@/lib/clubs";
-import type { DashboardClub, DashboardData } from "@/lib/dashboard";
+import type { DashboardClub, DashboardData, DashboardProfile } from "@/lib/dashboard";
 import type { NotificationRow } from "@/lib/notifications";
 import type { RegistrationSettingsRow } from "@/lib/cloud/registrations";
 import { getMyCloudTournaments, rowToTournament } from "@/lib/cloud/tournaments";
@@ -10,6 +11,12 @@ import { getManagedVenueTables } from "@/lib/cloud/tables";
 import { createClient } from "@/lib/supabase/client";
 
 interface QueryResult<T> { data: T[] | null; error: { message: string } | null }
+
+export async function loadDashboardProfile(supabase: SupabaseClient, userId: string) {
+  const result = await supabase.from("profiles").select("display_name,username,tournament_name,is_public").eq("id", userId).maybeSingle();
+  if (result.error) throw result.error;
+  return result.data as DashboardProfile | null;
+}
 
 // Paginate lists used for counts, so PostgREST's default row limit cannot silently undercount.
 export async function dashboardRows<T>(query: (start: number, end: number) => PromiseLike<QueryResult<T>>) {
@@ -31,7 +38,8 @@ export async function loadDashboardData(expectedUserId: string): Promise<Dashboa
   async function section<T>(label: string, task: () => PromiseLike<T>): Promise<T | null> {
     try { return await task(); } catch { issues.push(label); return null; }
   }
-  const [cloudTournaments, cloudLeagues, tables, memberships, followed, owned, notifications, unreadCount] = await Promise.all([
+  const [profile, cloudTournaments, cloudLeagues, tables, memberships, followed, owned, notifications, unreadCount] = await Promise.all([
+    section("player profile", () => loadDashboardProfile(supabase, user.id)),
     section("tournaments", getMyCloudTournaments),
     section("leagues", getMyCloudLeagues),
     section("tables", getManagedVenueTables),
@@ -79,6 +87,7 @@ export async function loadDashboardData(expectedUserId: string): Promise<Dashboa
   const { data: { user: currentUser } } = await supabase.auth.getUser();
   if (currentUser?.id !== expectedUserId) throw new Error("Your session changed. Please sign in again.");
   return {
+    profile,
     tournaments: cloudTournaments?.map(rowToTournament) ?? null,
     leagues: cloudLeagues?.map(rowToLeague) ?? null, tables,
     clubs: memberships === null || owned === null || followed === null ? null : clubs,

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { loadDashboardData } from "@/lib/cloud/dashboard";
 import { getLocalCloudOwner } from "@/lib/cloud/local-ownership";
-import { dashboardDate, dashboardEvents, dashboardGreeting, dashboardLiveMatchCount, dashboardSafeHref, mergeDashboardRecords, upcomingDashboardEvents, type DashboardData, type DashboardEvent } from "@/lib/dashboard";
+import { dashboardDate, dashboardEvents, dashboardGreeting, dashboardLiveMatchCount, dashboardProfileProgress, dashboardSafeHref, mergeDashboardRecords, upcomingDashboardEvents, type DashboardData, type DashboardEvent } from "@/lib/dashboard";
 import { getLeagues, subscribeToLeagueChanges, type League } from "@/lib/leagues";
 import { notificationIcon } from "@/lib/notifications";
 import { createClient } from "@/lib/supabase/client";
@@ -112,9 +112,10 @@ export function DashboardCommandCenter({ userId, displayName, initialNow }: { us
   const quickActions = [
     ["Create tournament", "/tournaments/new", "+", "New draw"],
     ["Create league", "/leagues/new", "L", "Season & playoffs"],
-    ["Open club", "#my-clubs", "8", "Your communities"],
+    [clubs.length ? "Open club" : "Find a club", clubs.length ? "#my-clubs" : "/clubs", "8", "Your communities"],
     ["Manage tables", "/tables", "▦", "Venue floor"],
-    ...(managedClubs.length ? [["Post update", managedClubs.length === 1 ? `/clubs/${managedClubs[0].slug}?tab=clubhouse` : "#my-clubs", "↗", "Club noticeboard"]] : [["Discover events", "/events", "↗", "Find your next game"]]),
+    ["Discover events", "/events", "↗", "Browse & register"],
+    ...(managedClubs.length ? [["Post update", managedClubs.length === 1 ? `/clubs/${managedClubs[0].slug}?tab=clubhouse` : "#my-clubs", "✎", "Club noticeboard"]] : [["Player profile", "/account", "@", "Your pool identity"]]),
   ];
 
   if (!accountValid) return <div className="cb-shell py-12" role="status">Updating your account…</div>;
@@ -150,7 +151,9 @@ export function DashboardCommandCenter({ userId, displayName, initialNow }: { us
       </section>
     </div>
 
-    <section aria-label="Quick actions" className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">{quickActions.map(([title, href, icon, detail]) => <Link key={title} href={href} className="group flex min-h-20 items-center gap-3 rounded-2xl border border-white/10 bg-slate-900/55 p-3.5 transition hover:border-cyan-300/30"><span aria-hidden="true" className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white/5 text-lg font-black text-cyan-200">{icon}</span><span><span className="block text-xs font-black text-slate-100 sm:text-sm">{title}</span><span className="mt-1 block text-[0.65rem] text-slate-400">{detail}</span></span></Link>)}</section>
+    <section aria-label="Quick actions" className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">{quickActions.map(([title, href, icon, detail]) => <Link key={title} href={href} className="group flex min-h-20 items-center gap-3 rounded-2xl border border-white/10 bg-slate-900/55 p-3.5 transition hover:border-cyan-300/30"><span aria-hidden="true" className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white/5 text-lg font-black text-cyan-200">{icon}</span><span className="min-w-0"><span className="block text-xs font-black text-slate-100 sm:text-sm">{title}</span><span className="mt-1 block text-[0.65rem] text-slate-400">{detail}</span></span></Link>)}</section>
+
+    <ProfileProgress data={data} loading={loading} />
 
     <section aria-label="Activity snapshot" className="grid grid-cols-2 gap-3 lg:grid-cols-4">{stats.map((stat) => <Link key={stat.label} href={stat.href} className="rounded-2xl border border-white/10 bg-slate-900/50 p-4 transition hover:bg-slate-900"><p className="text-[0.65rem] font-black uppercase tracking-wider text-slate-400">{stat.label}</p><p className={`mt-2 text-3xl font-black tabular-nums ${stat.tone}`}>{stat.value ?? "—"}</p><p className="mt-2 text-xs leading-5 text-slate-400">{stat.detail}</p></Link>)}</section>
 
@@ -175,7 +178,7 @@ export function DashboardCommandCenter({ userId, displayName, initialNow }: { us
 
         <section className={`${panel} order-6 lg:order-5`}>
           <Heading eyebrow="Recently finished" title="Your latest results" link={{ href: "/hall-of-champions", label: "Champions" }} />
-          {events.some((event) => event.status === "completed") ? <div className="space-y-3">{events.filter((event) => event.status === "completed").slice(0, 3).map((event) => <EventCard key={`${event.kind}:${event.id}`} event={event} />)}</div> : <Empty title="A space for your next champion" text="Completed tournaments and seasons will appear here for you to revisit." />}
+          {events.some((event) => event.status === "completed") ? <div className="space-y-3">{events.filter((event) => event.status === "completed").slice(0, 3).map((event) => <EventCard key={`${event.kind}:${event.id}`} event={event} />)}</div> : <Empty title={!activeLoaded ? loading ? "Loading your recent results…" : "Recent results unavailable" : "A space for your next champion"} text="Completed tournaments and seasons will appear here for you to revisit." />}
           <div className="mt-4 flex flex-wrap gap-4 text-xs font-black text-cyan-300"><Link href="/tournaments" className="py-2">Tournament history →</Link><Link href="/leagues" className="py-2">All league seasons →</Link></div>
         </section>
       </div>
@@ -200,6 +203,32 @@ export function DashboardCommandCenter({ userId, displayName, initialNow }: { us
       </div>
     </div>
   </div>;
+}
+
+function ProfileProgress({ data, loading }: { data: DashboardData | null; loading: boolean }) {
+  if (!data || data.issues.includes("player profile")) {
+    return <section className={panel} aria-label="Player profile"><p role="status" className="text-sm text-slate-400">{!data && loading ? "Loading your player profile…" : "Your player profile is temporarily unavailable."}</p><Link href="/account" className="mt-2 inline-flex min-h-11 items-center text-sm font-bold text-cyan-300">Open account →</Link></section>;
+  }
+  const progress = dashboardProfileProgress(data.profile);
+  const complete = progress.completed === progress.total;
+  return <section aria-labelledby="profile-progress-title" className="rounded-3xl border border-cyan-300/15 bg-slate-900/65 p-5 sm:p-6">
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-center">
+      <div className="min-w-0">
+        <p className="cb-kicker">Your pool identity · Optional setup</p>
+        <h2 id="profile-progress-title" className="mt-2 text-xl font-black tracking-tight">{complete ? "Your player profile is ready" : "Make your next registration easier"}</h2>
+        <p className="mt-2 text-sm leading-6 text-slate-400">{complete ? "Your saved tournament name is ready to use when you enter an event." : `Next: add your ${progress.nextStep!.toLowerCase()}. You can keep organizing without completing a player profile.`}</p>
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
+          <Link href="/account" className="inline-flex min-h-11 items-center text-sm font-black text-cyan-300">{complete ? "Edit profile" : "Complete profile"} →</Link>
+          {progress.publicHref ? <Link href={progress.publicHref} className="inline-flex min-h-11 items-center text-sm font-bold text-slate-300">View public profile →</Link> : <span className="text-xs text-slate-500">{data.profile?.is_public === false ? "Profile visibility: private" : "You control your profile visibility"}</span>}
+        </div>
+      </div>
+      <div>
+        <div className="flex items-center justify-between gap-3 text-xs font-bold text-slate-300"><span>Profile setup</span><span className="tabular-nums text-cyan-200">{progress.completed} of {progress.total} · {progress.percent}%</span></div>
+        <div role="progressbar" aria-label="Player profile setup" aria-valuemin={0} aria-valuemax={progress.total} aria-valuenow={progress.completed} aria-valuetext={`${progress.completed} of ${progress.total} profile fields ready`} className="mt-3 h-2 overflow-hidden rounded-full bg-slate-950/70"><div className="h-full rounded-full bg-gradient-to-r from-cyan-300 to-emerald-400" style={{ width: `${progress.percent}%` }} /></div>
+        <ul className="mt-4 grid gap-2 sm:grid-cols-3">{progress.steps.map((step) => <li key={step.label} className={`flex items-center gap-2 text-xs ${step.complete ? "text-emerald-200" : "text-slate-400"}`}><span aria-hidden="true">{step.complete ? "✓" : "○"}</span><span>{step.label}<span className="sr-only">{step.complete ? ": ready" : ": not set"}</span></span></li>)}</ul>
+      </div>
+    </div>
+  </section>;
 }
 
 function Attention({ href, value, title, detail }: { href: string; value: number | null | undefined; title: string; detail: string }) {

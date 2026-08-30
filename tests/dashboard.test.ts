@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { buildSingleEliminationBracket } from "@/lib/bracket/singleElimination";
-import { dashboardRows } from "@/lib/cloud/dashboard";
+import { dashboardRows, loadDashboardProfile } from "@/lib/cloud/dashboard";
 import type { RegistrationSettingsRow } from "@/lib/cloud/registrations";
 import type { VenueTableRow } from "@/lib/cloud/tables";
-import { dashboardDate, dashboardEvents, dashboardGreeting, dashboardLiveMatchCount, dashboardSafeHref, mergeDashboardRecords, upcomingDashboardEvents } from "@/lib/dashboard";
+import { dashboardDate, dashboardEvents, dashboardGreeting, dashboardLiveMatchCount, dashboardProfileProgress, dashboardSafeHref, mergeDashboardRecords, upcomingDashboardEvents } from "@/lib/dashboard";
 import type { League } from "@/lib/leagues";
 import { DEFAULT_TOURNAMENT_OPTIONS, getBracketRounds, type Tournament } from "@/lib/tournaments";
 
@@ -21,6 +22,60 @@ test("dashboard greeting uses Nairobi time consistently across server and browse
   assert.equal(dashboardGreeting(new Date("2026-08-30T09:00:00Z")), "Good afternoon");
   assert.equal(dashboardGreeting(new Date("2026-08-30T14:00:00Z")), "Good evening");
   assert.equal(dashboardDate("invalid"), "Date to be announced");
+});
+
+test("profile setup counts only valid identity fields, not optional biography or visibility", () => {
+  const empty = dashboardProfileProgress(null);
+  assert.equal(empty.completed, 0);
+  assert.equal(empty.percent, 0);
+  assert.equal(empty.nextStep, "Profile name");
+  assert.equal(empty.publicHref, null);
+  const privateProfile = dashboardProfileProgress({ display_name: " Wicky ", username: "wicky", tournament_name: "Wicky", is_public: false });
+  assert.equal(privateProfile.completed, 3);
+  assert.equal(privateProfile.percent, 100);
+  assert.equal(privateProfile.nextStep, null);
+  assert.equal(privateProfile.publicHref, null, "Private profiles must not have a public-profile CTA");
+  const partial = dashboardProfileProgress({ display_name: "Wicky", username: null, tournament_name: "Wicky", is_public: true });
+  assert.equal(partial.completed, 2);
+  assert.equal(partial.percent, 67);
+  assert.equal(partial.nextStep, "CueBracket username");
+});
+
+test("profile progress rejects invalid fields and only links valid public usernames", () => {
+  const publicProfile = { display_name: "Wicky", username: "wicky_8", tournament_name: "Wicky", is_public: true };
+  assert.equal(dashboardProfileProgress(publicProfile).publicHref, "/players/wicky_8");
+  for (const username of [" ", "aa", "CAPITALS", "../account", "x".repeat(25)]) {
+    const progress = dashboardProfileProgress({ ...publicProfile, username });
+    assert.equal(progress.publicHref, null);
+    assert.equal(progress.steps[1].complete, false);
+  }
+  const invalidNames = dashboardProfileProgress({ ...publicProfile, display_name: " ", tournament_name: "x".repeat(41) });
+  assert.equal(invalidNames.completed, 1);
+  assert.equal(invalidNames.nextStep, "Profile name");
+});
+
+test("profile query scopes display-only fields to the account and preserves unavailable vs missing", async () => {
+  const profile = { display_name: "Wicky", username: "wicky", tournament_name: "Wicky", is_public: false };
+  let payload: unknown = [profile];
+  let status = 200;
+  let requestedUrl = "";
+  const client = createSupabaseClient("https://dashboard-test.supabase.co", "test-public-key", {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    global: { fetch: async (input) => {
+      requestedUrl = String(input);
+      return new Response(JSON.stringify(payload), { status, headers: { "Content-Type": "application/json" } });
+    } },
+  });
+  assert.deepEqual(await loadDashboardProfile(client, "account-a"), profile);
+  const url = new URL(requestedUrl);
+  assert.equal(url.pathname, "/rest/v1/profiles");
+  assert.equal(url.searchParams.get("id"), "eq.account-a");
+  assert.equal(url.searchParams.get("select"), "display_name,username,tournament_name,is_public");
+  payload = [];
+  assert.equal(await loadDashboardProfile(client, "account-a"), null);
+  payload = { message: "Profile unavailable", code: "42501" };
+  status = 403;
+  await assert.rejects(() => loadDashboardProfile(client, "account-a"), { message: "Profile unavailable" });
 });
 
 test("dashboard prioritizes live events, then drafts, then history", () => {
@@ -119,7 +174,9 @@ test("dashboard has authenticated account data and working club tab destinations
   assert.match(cloud, /user\.id !== expectedUserId/);
   assert.match(cloud, /eq\("user_id", user\.id\)/);
   assert.doesNotMatch(cloud, /service_role/);
-  for (const title of ["Continue where you stopped", "My clubs", "Coming up", "Latest notifications", "Table snapshot", "Registration requests"]) assert.ok(component.includes(title));
+  for (const title of ["Continue where you stopped", "My clubs", "Coming up", "Latest notifications", "Table snapshot", "Registration requests", "Profile setup", "Browse & register", "Loading your recent results…", "Recent results unavailable"]) assert.ok(component.includes(title));
+  assert.match(cloud, /loadDashboardProfile\(supabase, user\.id\)/);
+  assert.match(component, /data\.issues\.includes\("player profile"\)/);
   assert.match(component, /setAccountValid\(false\)/);
   assert.match(component, /setData\(null\)/);
   assert.match(clubPage, /initialTab=\{tab\}/);
