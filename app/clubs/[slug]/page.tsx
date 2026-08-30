@@ -51,7 +51,7 @@ export default async function ClubPage({ params, searchParams }: Props) {
   const memberIds = memberships.map((item) => item.user_id);
 
   const [profilesResult, ownRequestResult, pendingResult, settingsResult, tournamentsResult, leaguesResult, rankingsResult, announcementsResult, tablesResult] = await Promise.all([
-    memberIds.length ? supabase.from("profiles").select("id, display_name, username, tournament_name").in("id", memberIds) : Promise.resolve({ data: [] }),
+    memberIds.length ? supabase.from("profiles").select("id, display_name, username, tournament_name, is_public").in("id", memberIds) : Promise.resolve({ data: [] }),
     user ? supabase.from("club_membership_requests").select("*").eq("club_id", club.id).eq("user_id", user.id).eq("status", "pending").maybeSingle() : Promise.resolve({ data: null }),
     isAdmin ? supabase.from("club_membership_requests").select("*").eq("club_id", club.id).eq("status", "pending").order("created_at") : Promise.resolve({ data: [] }),
     supabase.from("event_registration_settings").select("*").eq("club_id", club.id).order("scheduled_at", { ascending: true, nullsFirst: false }).limit(100),
@@ -70,6 +70,7 @@ export default async function ClubPage({ params, searchParams }: Props) {
       role: membership.role,
       name: profile?.tournament_name || profile?.display_name || "Club member",
       username: profile?.username ?? null,
+      isPublic: profile?.is_public ?? false,
     };
   });
   const ownProfile = user ? profileMap.get(user.id) : null;

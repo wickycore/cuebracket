@@ -19,6 +19,7 @@ export function NotificationInbox({ initialNotifications, initialPreferences }: 
       club_events: initialPreferences.club_events,
       registration_updates: initialPreferences.registration_updates,
       match_alerts: initialPreferences.match_alerts,
+      followed_player_alerts: initialPreferences.followed_player_alerts ?? true,
     } : {}),
   });
   const [busy, setBusy] = useState("");
@@ -78,18 +79,20 @@ export function NotificationInbox({ initialNotifications, initialPreferences }: 
               </div>
             ))}
           </div>
-        ) : <div className="px-6 py-16 text-center"><p className="text-3xl">🔔</p><p className="mt-4 text-lg font-black">Nothing here yet.</p><p className="mt-2 text-sm text-slate-500">Follow a club or register for a tournament to receive useful updates.</p></div>}
+        ) : <div className="px-6 py-16 text-center"><p className="text-3xl">🔔</p><p className="mt-4 text-lg font-black">Nothing here yet.</p><p className="mt-2 text-sm text-slate-500">Follow a player, follow a club or register for a tournament to receive useful updates.</p></div>}
       </section>
 
       <section className="rounded-[2rem] border border-white/10 bg-slate-900/65 p-5 sm:p-6">
         <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">Preferences</p>
         <h2 className="mt-2 text-xl font-black">Only useful alerts.</h2>
+        <Link href="/following" className="mt-3 inline-block text-sm font-black text-cyan-300">Manage followed players →</Link>
         <p className="mt-2 text-sm leading-6 text-slate-500">Choose your inbox updates and opted-in phone alerts. These preferences apply across your devices.</p>
         <div className="mt-5 space-y-3">
           {([
             ["club_events", "Club tournaments", "Registration openings from clubs you follow or belong to."],
             ["registration_updates", "Registration updates", "Approval, waitlist, check-in and membership decisions."],
             ["match_alerts", "Match & table alerts", "A notice when your match starts or a table is assigned."],
+            ["followed_player_alerts", "Players you follow", "Match-start alerts for players whose Match alerts switch you turn on."],
           ] as const).map(([key, title, description]) => (
             <label key={key} className="flex cursor-pointer items-start gap-3 rounded-2xl border border-white/10 bg-slate-950/45 p-4">
               <input type="checkbox" checked={preferences[key]} disabled={busy.startsWith("preference-")} onChange={(event) => void changePreference(key, event.target.checked)} className="mt-1 h-5 w-5 accent-cyan-400" />

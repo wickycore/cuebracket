@@ -31,7 +31,7 @@ export async function deleteNotification(id: string) {
 }
 
 export async function saveNotificationPreferences(
-  preferences: Pick<NotificationPreferencesRow, "club_events" | "registration_updates" | "match_alerts">,
+  preferences: Pick<NotificationPreferencesRow, "club_events" | "registration_updates" | "match_alerts" | "followed_player_alerts">,
 ) {
   const { supabase, user } = await requireUser();
   const { data, error } = await supabase

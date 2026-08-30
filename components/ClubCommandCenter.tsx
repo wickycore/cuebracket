@@ -5,6 +5,9 @@ import { useMemo, useState } from "react";
 
 import { ClubAnnouncementBoard } from "@/components/ClubAnnouncementBoard";
 import { ClubCommunityPanel, type ClubMemberView } from "@/components/ClubCommunityPanel";
+import { ClubGuide } from "@/components/ClubGuide";
+import { LiveMatchFeed } from "@/components/LiveMatchFeed";
+import { FollowPlayerButton, PlayerFollowingProvider } from "@/components/PlayerFollowing";
 import { TableManager } from "@/components/TableManager";
 import type { ClubMembershipRequestRow, ClubRole, ClubRow } from "@/lib/clubs";
 import {
@@ -18,7 +21,7 @@ import {
 import type { RegistrationSettingsRow } from "@/lib/cloud/registrations";
 import type { ClubPlayerRankingRow } from "@/lib/rankings";
 
-type ClubTab = "home" | "events" | "rankings" | "members" | "clubhouse";
+type ClubTab = "home" | "live" | "events" | "rankings" | "members" | "clubhouse";
 type EventFilter = "all" | "open" | "live" | "finished";
 
 interface Props {
@@ -44,6 +47,7 @@ interface Props {
 
 const tabs: Array<{ id: ClubTab; label: string }> = [
   { id: "home", label: "Home" },
+  { id: "live", label: "Live now" },
   { id: "events", label: "Events" },
   { id: "rankings", label: "Rankings" },
   { id: "members", label: "Members" },
@@ -109,6 +113,9 @@ export function ClubCommandCenter(props: Props) {
 
   function chooseTab(tab: ClubTab) {
     setActiveTab(tab);
+    const url = new URL(window.location.href);
+    url.searchParams.set("tab", tab);
+    window.history.replaceState(null, "", url);
     window.requestAnimationFrame(() => document.getElementById("club-command-content")?.scrollIntoView({ behavior: "smooth", block: "start" }));
   }
 
@@ -128,7 +135,7 @@ export function ClubCommandCenter(props: Props) {
   }
 
   return (
-    <div className="pb-16">
+    <PlayerFollowingProvider><div className="pb-16">
       <section className="relative overflow-hidden border-b border-white/10 bg-[radial-gradient(circle_at_8%_0%,rgba(34,211,238,.22),transparent_28rem),radial-gradient(circle_at_90%_12%,rgba(59,130,246,.16),transparent_26rem),linear-gradient(180deg,#0a1a2d,#06101f)]">
         <div className="pointer-events-none absolute inset-0 opacity-30 [background-image:linear-gradient(rgba(125,211,252,.08)_1px,transparent_1px),linear-gradient(90deg,rgba(125,211,252,.08)_1px,transparent_1px)] [background-size:42px_42px] [mask-image:linear-gradient(to_bottom,black,transparent)]" />
         <div className="cb-shell relative py-7 sm:py-11">
@@ -144,7 +151,7 @@ export function ClubCommandCenter(props: Props) {
                   {isAdmin ? <span className="rounded-full border border-amber-300/20 bg-amber-300/10 px-2.5 py-1 text-[0.6rem] font-black uppercase tracking-wider text-amber-200">Organizer view</span> : null}
                 </div>
                 <h1 className="mt-2 break-words text-4xl font-black tracking-[-0.05em] sm:text-6xl">{club.name}</h1>
-                <p className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm font-bold text-slate-400"><span>{club.location ? `📍 ${club.location}` : "CueBracket pool club"}</span><span className="text-slate-600">cuebracket.app/clubs/{club.slug}</span></p>
+                <p className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm font-bold text-slate-400"><span>{club.location ? `📍 ${club.location}` : "CueBracket pool club"}</span><span className="text-slate-600">/clubs/{club.slug}</span></p>
               </div>
             </div>
             <div className="flex flex-wrap gap-2 sm:gap-3">
@@ -183,7 +190,7 @@ export function ClubCommandCenter(props: Props) {
 
               <section className="rounded-[2rem] border border-white/10 bg-slate-900/65 p-5 sm:p-6">
                 <div className="flex items-center justify-between gap-3"><div><p className="cb-kicker">Club pulse</p><h2 className="mt-2 text-xl font-black">Right now</h2></div><span className="cb-live-dot" /></div>
-                <div className="mt-5 space-y-3">{[[liveTournaments.length, "Live tournaments", "text-emerald-300"], [liveLeagues.length, "Live league seasons", "text-violet-300"], [openEvents.length, "Open entries", "text-cyan-300"], [pendingRequests.length, isAdmin ? "Membership requests" : "Club announcements", "text-amber-300"]].map(([value, label, color]) => <div key={String(label)} className="flex items-center justify-between rounded-xl border border-white/8 bg-slate-950/40 px-4 py-3"><span className="text-sm font-bold text-slate-400">{label}</span><span className={`text-lg font-black ${color}`}>{value}</span></div>)}</div>
+                <div className="mt-5 space-y-3">{[[liveTournaments.length, "Live tournaments", "text-emerald-300"], [liveLeagues.length, "Live league seasons", "text-violet-300"], [openEvents.length, "Open entries", "text-cyan-300"], [isAdmin ? pendingRequests.length : announcements.length, isAdmin ? "Membership requests" : "Club announcements", "text-amber-300"]].map(([value, label, color]) => <div key={String(label)} className="flex items-center justify-between rounded-xl border border-white/8 bg-slate-950/40 px-4 py-3"><span className="text-sm font-bold text-slate-400">{label}</span><span className={`text-lg font-black ${color}`}>{value}</span></div>)}</div>
               </section>
             </div>
 
@@ -195,6 +202,8 @@ export function ClubCommandCenter(props: Props) {
             </div>
           </div>
         ) : null}
+
+        {activeTab === "live" ? <LiveMatchFeed clubId={club.id} /> : null}
 
         {activeTab === "events" ? (
           <section>
@@ -224,6 +233,7 @@ export function ClubCommandCenter(props: Props) {
         {activeTab === "clubhouse" ? (
           <div className="space-y-6">
             <div><p className="cb-kicker">Inside the clubhouse</p><h2 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">News, leagues & venue</h2><p className="mt-2 text-sm text-slate-500">Everything that keeps the club moving between tournament days.</p></div>
+            <ClubGuide clubId={club.id} isAdmin={isAdmin} location={club.location} />
             <ClubAnnouncementBoard key={announcements.map((item) => item.updated_at).join("|")} clubId={club.id} initialAnnouncements={announcements} isAdmin={isAdmin} />
             <section className="rounded-[2rem] border border-violet-300/15 bg-slate-900/60 p-5 sm:p-7"><div className="flex items-end justify-between gap-4"><div><p className="cb-kicker !text-violet-300">League room</p><h2 className="mt-2 text-2xl font-black">Club seasons</h2></div>{isAdmin ? <Link href="/leagues/new" className="text-sm font-black text-violet-300">+ New season</Link> : null}</div><div className="mt-5 grid gap-4 lg:grid-cols-2"><LeagueList leagues={leagues} cards /></div></section>
             {isAdmin ? <TableManager clubId={club.id} /> : <section className="rounded-[2rem] border border-white/10 bg-slate-900/60 p-6"><p className="cb-kicker">Venue operations</p><div className="mt-3 flex items-center justify-between gap-4"><div><h2 className="text-2xl font-black">The live table floor</h2><p className="mt-2 text-sm leading-6 text-slate-500">Club organizers use this area to assign tables and keep matches moving in realtime.</p></div><span className="hidden rounded-2xl border border-white/10 bg-slate-950/50 px-5 py-4 text-center sm:block"><span className="block text-2xl font-black text-cyan-300">Live</span><span className="text-[0.6rem] font-black uppercase text-slate-600">Organizer managed</span></span></div></section>}
@@ -232,7 +242,7 @@ export function ClubCommandCenter(props: Props) {
           </div>
         ) : null}
       </div>
-    </div>
+    </div></PlayerFollowingProvider>
   );
 }
 
@@ -277,7 +287,7 @@ function LeagueList({ leagues, cards = false }: { leagues: ClubLeagueSummary[]; 
 
 function MemberCard({ member }: { member: ClubMemberView }) {
   const content = <><span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-white/10 bg-gradient-to-br from-cyan-300/15 to-blue-500/10 text-lg font-black text-cyan-100">{member.name.charAt(0).toUpperCase()}</span><span className="min-w-0 flex-1"><span className="block truncate font-black text-white">{member.name}</span><span className="mt-1 block truncate text-xs font-bold text-slate-600">{member.username ? `@${member.username}` : "CueBracket member"}</span></span><span className="rounded-full border border-white/10 px-2.5 py-1 text-[0.58rem] font-black uppercase tracking-wider text-slate-400">{member.role}</span></>;
-  return member.username ? <Link href={`/players/${member.username}`} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-900/60 p-4 transition hover:border-cyan-300/25">{content}</Link> : <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-900/60 p-4">{content}</div>;
+  return <article className="space-y-4 rounded-2xl border border-white/10 bg-slate-900/60 p-4">{member.username ? <Link href={`/players/${member.username}`} className="flex items-center gap-3">{content}</Link> : <div className="flex items-center gap-3">{content}</div>}{member.isPublic && member.username ? <FollowPlayerButton playerId={member.userId} profile={{ id: member.userId, username: member.username, display_name: member.name, tournament_name: member.name, is_public: true }} /> : <p className="text-xs text-slate-500">A public player profile is needed to follow.</p>}</article>;
 }
 
 function InviteCard({ club, chooseTab }: { club: ClubRow; chooseTab: (tab: ClubTab) => void }) {
@@ -286,5 +296,5 @@ function InviteCard({ club, chooseTab }: { club: ClubRow; chooseTab: (tab: ClubT
     try { await navigator.clipboard.writeText(window.location.href); setMessage("Invite link copied"); }
     catch { setMessage("Copy this page link from your browser"); }
   }
-  return <aside className="rounded-[2rem] border border-cyan-300/20 bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,.14),transparent_16rem),rgba(15,23,42,.7)] p-5 sm:p-6"><p className="cb-kicker">Grow the club</p><h3 className="mt-2 text-2xl font-black">Invite players in one tap.</h3><p className="mt-3 text-sm leading-6 text-slate-400">Share this club page. Players can follow {club.name}, request membership and register for open events.</p><div className="mt-5 rounded-xl border border-white/10 bg-slate-950/55 px-4 py-3 text-xs font-bold text-slate-500">cuebracket.app/clubs/{club.slug}</div><button type="button" onClick={() => void copy()} className="mt-3 min-h-12 w-full rounded-xl bg-cyan-400 px-4 py-3 font-black text-slate-950">{message || "Copy invite link"}</button><button type="button" onClick={() => chooseTab("events")} className="mt-2 min-h-11 w-full rounded-xl border border-white/10 px-4 py-2.5 text-sm font-black text-slate-300">Show upcoming events</button></aside>;
+  return <aside className="rounded-[2rem] border border-cyan-300/20 bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,.14),transparent_16rem),rgba(15,23,42,.7)] p-5 sm:p-6"><p className="cb-kicker">Grow the club</p><h3 className="mt-2 text-2xl font-black">Invite players in one tap.</h3><p className="mt-3 text-sm leading-6 text-slate-400">Share this club page. Players can follow {club.name}, request membership and register for open events.</p><div className="mt-5 rounded-xl border border-white/10 bg-slate-950/55 px-4 py-3 text-xs font-bold text-slate-500">/clubs/{club.slug}</div><button type="button" onClick={() => void copy()} className="mt-3 min-h-12 w-full rounded-xl bg-cyan-400 px-4 py-3 font-black text-slate-950">{message || "Copy invite link"}</button><button type="button" onClick={() => chooseTab("events")} className="mt-2 min-h-11 w-full rounded-xl border border-white/10 px-4 py-2.5 text-sm font-black text-slate-300">Show upcoming events</button></aside>;
 }

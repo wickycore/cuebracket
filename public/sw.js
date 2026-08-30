@@ -17,7 +17,7 @@ self.addEventListener("fetch", (event) => {
 self.addEventListener("push", (event) => {
   let payload = {};
   try { payload = event.data?.json() || {}; } catch { /* Show a generic update for malformed payloads. */ }
-  const titles = { club_event: "New club event", registration_status: "Registration update", membership_status: "Club membership update", match_live: "Your match is live", table_assignment: "Your table is ready", test: "CueBracket alerts are working" };
+  const titles = { club_event: "New club event", registration_status: "Registration update", membership_status: "Club membership update", match_live: "Your match is live", table_assignment: "Your table is ready", followed_player_live: "A player you follow is live", delivery_test: "Automatic delivery check", test: "CueBracket alerts are working" };
   event.waitUntil(self.registration.showNotification(titles[payload.type] || "CueBracket update", {
     body: payload.type === "test" ? "This device is ready for your opted-in alerts." : "Open CueBracket to view your update.",
     icon: "/pwa-icon/192", badge: "/pwa-icon/192",

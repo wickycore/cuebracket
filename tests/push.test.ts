@@ -23,8 +23,8 @@ test("push endpoints allow real providers but reject SSRF and invalid subscripti
 });
 
 test("delivery honors every preference and removes only expired endpoints", () => {
-  const off = { club_events: false, registration_updates: false, match_alerts: false };
-  for (const type of ["club_event", "registration_status", "membership_status", "match_live", "table_assignment"]) {
+  const off = { club_events: false, registration_updates: false, match_alerts: false, followed_player_alerts: false };
+  for (const type of ["club_event", "registration_status", "membership_status", "match_live", "table_assignment", "followed_player_live"]) {
     assert.equal(pushAllowed(type, off), false);
     assert.equal(pushAllowed(type, null), true);
   }

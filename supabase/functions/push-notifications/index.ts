@@ -33,8 +33,12 @@ async function dispatch() {
         checked(db.from("notifications").select("id,user_id,type,read_at,created_at").eq("id", job.notification_id).maybeSingle()),
         checked(db.from("push_subscriptions").select("id,user_id,endpoint,p256dh,auth").eq("id", job.subscription_id).maybeSingle()),
       ]);
-      const preferences = notification ? await checked(db.from("notification_preferences").select("club_events,registration_updates,match_alerts").eq("user_id", notification.user_id).maybeSingle()) : null;
+      const preferences = notification ? await checked(db.from("notification_preferences").select("club_events,registration_updates,match_alerts,followed_player_alerts").eq("user_id", notification.user_id).maybeSingle()) : null;
       if (!notification || !subscription || notification.user_id !== subscription.user_id || notification.read_at || Date.parse(notification.created_at) !== Date.parse(job.notification_version) || !pushAllowed(notification.type, preferences) || Date.parse(job.expires_at) <= Date.now()) {
+        await checked(db.from("push_delivery_jobs").update({ status: "skipped" }).eq("id", job.id));
+        continue;
+      }
+      if (notification.type === "followed_player_live" && !await checked(db.rpc("can_deliver_player_notification", { notification_id: notification.id }))) {
         await checked(db.from("push_delivery_jobs").update({ status: "skipped" }).eq("id", job.id));
         continue;
       }

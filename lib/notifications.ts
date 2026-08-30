@@ -1,4 +1,4 @@
-export type NotificationType = "club_event" | "registration_status" | "membership_status" | "match_live" | "table_assignment";
+export type NotificationType = "club_event" | "registration_status" | "membership_status" | "match_live" | "table_assignment" | "followed_player_live" | "delivery_test";
 
 export interface NotificationRow {
   id: string;
@@ -18,6 +18,7 @@ export interface NotificationPreferencesRow {
   club_events: boolean;
   registration_updates: boolean;
   match_alerts: boolean;
+  followed_player_alerts: boolean;
   updated_at: string;
 }
 
@@ -25,6 +26,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES = {
   club_events: true,
   registration_updates: true,
   match_alerts: true,
+  followed_player_alerts: true,
 };
 
 export function notificationIcon(type: NotificationType) {

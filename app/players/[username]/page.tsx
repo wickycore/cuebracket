@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { FollowPlayerButton, PlayerFollowingProvider } from "@/components/PlayerFollowing";
+import { LiveMatchFeed } from "@/components/LiveMatchFeed";
 import { AppHeader } from "@/components/AppHeader";
 import { placementLabel, type PlayerStatisticsRow, type PlayerTournamentHistoryRow } from "@/lib/rankings";
 import { createClient } from "@/lib/supabase/server";
@@ -13,7 +15,7 @@ async function getProfile(username: string) {
   const supabase = await createClient();
   const { data } = await supabase
     .from("profiles")
-    .select("id, display_name, username, tournament_name, bio, avatar_url, created_at")
+    .select("id, display_name, username, tournament_name, bio, avatar_url, created_at, is_public")
     .eq("username", username.toLowerCase())
     .maybeSingle();
 
@@ -80,6 +82,8 @@ export default async function PlayerProfilePage({ params }: PlayerProfilePagePro
               <p className="mt-7 max-w-2xl text-base leading-7 text-slate-300">{profile.bio}</p>
             ) : null}
 
+            <div className="mt-6 space-y-3"><PlayerFollowingProvider><FollowPlayerButton playerId={profile.id} profile={profile} /></PlayerFollowingProvider><p className="text-xs leading-5 text-slate-500">Follow first, then turn on match alerts. Enable phone delivery in Notifications.</p></div>
+
             <div className="mt-8 grid gap-4 sm:grid-cols-2">
               <div className="rounded-2xl border border-white/10 bg-slate-950/55 p-5">
                 <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Tournament name</p>
@@ -97,6 +101,8 @@ export default async function PlayerProfilePage({ params }: PlayerProfilePagePro
             </div>
           </div>
         </section>
+
+        {profile.is_public ? <div className="mt-6"><LiveMatchFeed playerIds={[profile.id]} /></div> : null}
 
         <section className="mt-6 rounded-[2rem] border border-white/10 bg-slate-900/60 p-5 sm:p-7">
           <div className="flex flex-wrap items-end justify-between gap-3">

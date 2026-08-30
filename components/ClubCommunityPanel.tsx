@@ -21,6 +21,7 @@ export interface ClubMemberView {
   role: ClubRole;
   name: string;
   username: string | null;
+  isPublic?: boolean;
 }
 
 interface Props {

@@ -12,6 +12,7 @@ const navigation = [
   { href: "/tournaments", label: "Tournaments", shortLabel: "Events" },
   { href: "/leagues", label: "Leagues", shortLabel: "Leagues" },
   { href: "/clubs", label: "Clubs", shortLabel: "Clubs" },
+  { href: "/following", label: "Following", shortLabel: "Following" },
   { href: "/rankings", label: "Rankings", shortLabel: "Ranks" },
   { href: "/tables", label: "Tables", shortLabel: "Tables" },
   { href: "/hall-of-champions", label: "Champions", shortLabel: "Winners" },
@@ -63,7 +64,7 @@ export function AppHeader() {
               </span>
             </a>
 
-            <nav className="hidden items-center gap-1 lg:flex">
+            <nav className="hidden items-center gap-1 2xl:flex">
               {navigation.map((item) => {
                 const active = isActivePath(pathname, item.href);
 
@@ -99,7 +100,7 @@ export function AppHeader() {
               </div>
             </nav>
 
-            <div className="flex items-center gap-2 lg:hidden">
+            <div className="flex items-center gap-2 2xl:hidden">
               <NotificationBell />
 
               <div className="hidden min-[360px]:block">
@@ -150,7 +151,7 @@ export function AppHeader() {
       </header>
 
       <div
-        className={`fixed inset-0 z-[125] bg-black/70 backdrop-blur-sm transition-opacity duration-200 lg:hidden ${
+        className={`fixed inset-0 z-[125] bg-black/70 backdrop-blur-sm transition-opacity duration-200 2xl:hidden ${
           menuOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
         }`}
         onClick={() => setMenuOpen(false)}
@@ -160,7 +161,7 @@ export function AppHeader() {
       <aside
         id="mobile-navigation"
         aria-hidden={!menuOpen}
-        className={`fixed right-0 top-0 z-[130] flex h-dvh w-[min(88vw,22rem)] flex-col border-l border-white/10 bg-[#020817] shadow-2xl shadow-black/70 transition-transform duration-200 lg:hidden ${
+        className={`fixed right-0 top-0 z-[130] flex h-dvh w-[min(88vw,22rem)] flex-col border-l border-white/10 bg-[#020817] shadow-2xl shadow-black/70 transition-transform duration-200 2xl:hidden ${
           menuOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >
