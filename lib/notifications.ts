@@ -1,4 +1,4 @@
-export type NotificationType = "club_event" | "registration_status" | "membership_status" | "match_live";
+export type NotificationType = "club_event" | "registration_status" | "membership_status" | "match_live" | "table_assignment";
 
 export interface NotificationRow {
   id: string;

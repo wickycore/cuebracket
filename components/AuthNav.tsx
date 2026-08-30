@@ -7,6 +7,8 @@ import type {
 } from "@supabase/supabase-js";
 
 import { createClient } from "@/lib/supabase/client";
+import { clearBrowserPush } from "@/lib/push";
+import { pushAction } from "@/lib/cloud/push";
 
 interface AuthNavProps {
   compact?: boolean;
@@ -50,6 +52,14 @@ export function AuthNav({ compact = false }: AuthNavProps) {
     const clearThisDevice = window.confirm(
       "Clear CueBracket tournaments, leagues and table data from this device when signing out?\n\nChoose Cancel to keep an offline copy. Organizer pages will still require you to sign in again before the data can be opened or edited.",
     );
+    try {
+      const registration = "serviceWorker" in navigator ? await navigator.serviceWorker.getRegistration("/") : undefined;
+      const sub = await registration?.pushManager?.getSubscription();
+      // Delete the account binding before signing out, then revoke the browser endpoint.
+      if (sub) await pushAction("unsubscribe", { endpoint: sub.endpoint });
+    } catch { /* Browser revocation below still prevents delivery if the server is offline. */ }
+    try { await clearBrowserPush(); }
+    catch { window.alert("Could not disable phone alerts. Block CueBracket notifications in browser settings before signing out on a shared device."); return; }
     await supabase.auth.signOut();
     if (clearThisDevice) {
       [

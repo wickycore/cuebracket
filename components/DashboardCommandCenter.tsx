@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { PwaInstallCard } from "@/components/PwaInstallCard";
 import { loadDashboardData } from "@/lib/cloud/dashboard";
 import { getLocalCloudOwner } from "@/lib/cloud/local-ownership";
 import { dashboardDate, dashboardEvents, dashboardGreeting, dashboardLiveMatchCount, dashboardProfileProgress, dashboardSafeHref, mergeDashboardRecords, upcomingDashboardEvents, type DashboardData, type DashboardEvent } from "@/lib/dashboard";
@@ -154,6 +155,7 @@ export function DashboardCommandCenter({ userId, displayName, initialNow }: { us
     <section aria-label="Quick actions" className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">{quickActions.map(([title, href, icon, detail]) => <Link key={title} href={href} className="group flex min-h-20 items-center gap-3 rounded-2xl border border-white/10 bg-slate-900/55 p-3.5 transition hover:border-cyan-300/30"><span aria-hidden="true" className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white/5 text-lg font-black text-cyan-200">{icon}</span><span className="min-w-0"><span className="block text-xs font-black text-slate-100 sm:text-sm">{title}</span><span className="mt-1 block text-[0.65rem] text-slate-400">{detail}</span></span></Link>)}</section>
 
     <ProfileProgress data={data} loading={loading} />
+    <PwaInstallCard />
 
     <section aria-label="Activity snapshot" className="grid grid-cols-2 gap-3 lg:grid-cols-4">{stats.map((stat) => <Link key={stat.label} href={stat.href} className="rounded-2xl border border-white/10 bg-slate-900/50 p-4 transition hover:bg-slate-900"><p className="text-[0.65rem] font-black uppercase tracking-wider text-slate-400">{stat.label}</p><p className={`mt-2 text-3xl font-black tabular-nums ${stat.tone}`}>{stat.value ?? "—"}</p><p className="mt-2 text-xs leading-5 text-slate-400">{stat.detail}</p></Link>)}</section>
 

@@ -22,6 +22,7 @@ export function NotificationInbox({ initialNotifications, initialPreferences }: 
     } : {}),
   });
   const [busy, setBusy] = useState("");
+  const [message, setMessage] = useState("");
   const unread = notifications.filter((item) => !item.read_at).length;
 
   async function markAll() {
@@ -51,9 +52,10 @@ export function NotificationInbox({ initialNotifications, initialPreferences }: 
   async function changePreference(key: keyof typeof preferences, checked: boolean) {
     const next = { ...preferences, [key]: checked };
     setPreferences(next);
+    setMessage("");
     setBusy(`preference-${key}`);
     try { await saveNotificationPreferences(next); }
-    catch { setPreferences(preferences); }
+    catch { setPreferences(preferences); setMessage("Your preference could not be saved. Try again when connected."); }
     finally { setBusy(""); }
   }
 
@@ -82,12 +84,12 @@ export function NotificationInbox({ initialNotifications, initialPreferences }: 
       <section className="rounded-[2rem] border border-white/10 bg-slate-900/65 p-5 sm:p-6">
         <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">Preferences</p>
         <h2 className="mt-2 text-xl font-black">Only useful alerts.</h2>
-        <p className="mt-2 text-sm leading-6 text-slate-500">Choose what appears in your CueBracket inbox.</p>
+        <p className="mt-2 text-sm leading-6 text-slate-500">Choose your inbox updates and opted-in phone alerts. These preferences apply across your devices.</p>
         <div className="mt-5 space-y-3">
           {([
             ["club_events", "Club tournaments", "Registration openings from clubs you follow or belong to."],
-            ["registration_updates", "Registration updates", "Approval, waitlist and check-in decisions."],
-            ["match_alerts", "Live match alerts", "A notice when the organizer starts your match."],
+            ["registration_updates", "Registration updates", "Approval, waitlist, check-in and membership decisions."],
+            ["match_alerts", "Match & table alerts", "A notice when your match starts or a table is assigned."],
           ] as const).map(([key, title, description]) => (
             <label key={key} className="flex cursor-pointer items-start gap-3 rounded-2xl border border-white/10 bg-slate-950/45 p-4">
               <input type="checkbox" checked={preferences[key]} disabled={busy.startsWith("preference-")} onChange={(event) => void changePreference(key, event.target.checked)} className="mt-1 h-5 w-5 accent-cyan-400" />
@@ -95,7 +97,8 @@ export function NotificationInbox({ initialNotifications, initialPreferences }: 
             </label>
           ))}
         </div>
-        <p className="mt-5 text-xs leading-5 text-slate-600">Phone push alerts will be the next opt-in layer. These settings will control them too.</p>
+        {message ? <p role="alert" className="mt-4 text-sm text-amber-200">{message}</p> : null}
+        <p className="mt-5 text-xs leading-5 text-slate-500">Changing these preferences does not grant phone notification permission. Use the device controls above to opt in or turn phone alerts off.</p>
       </section>
     </div>
   );

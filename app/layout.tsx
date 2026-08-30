@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 
 import { CloudAutoSyncProvider } from "@/components/CloudAutoSyncProvider";
 import { LeagueCloudSyncProvider } from "@/components/LeagueCloudSyncProvider";
+import { PwaProvider } from "@/components/PwaProvider";
 
 import "./globals.css";
 
@@ -24,6 +25,8 @@ export const metadata: Metadata = {
   description:
     "Run pool tournaments, live scores, brackets, tables, leagues and cloud spectator views.",
   applicationName: "CueBracket Pro",
+  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "CueBracket" },
+  icons: { apple: "/pwa-icon/180" },
 };
 
 export const viewport: Viewport = {
@@ -46,9 +49,9 @@ export default function RootLayout({
       data-scroll-behavior="smooth"
     >
       <body className="min-h-full">
-        <CloudAutoSyncProvider>
+        <PwaProvider><CloudAutoSyncProvider>
           <LeagueCloudSyncProvider>{children}</LeagueCloudSyncProvider>
-        </CloudAutoSyncProvider>
+        </CloudAutoSyncProvider></PwaProvider>
       </body>
     </html>
   );
