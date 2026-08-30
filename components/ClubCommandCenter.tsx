@@ -22,6 +22,7 @@ type ClubTab = "home" | "events" | "rankings" | "members" | "clubhouse";
 type EventFilter = "all" | "open" | "live" | "finished";
 
 interface Props {
+  initialTab?: string;
   club: ClubRow;
   userId: string | null;
   isAdmin: boolean;
@@ -75,7 +76,7 @@ export function ClubCommandCenter(props: Props) {
     members, defaultRequestName, tournaments, registrationSettings,
     registrationCounts, leagues, rankings, announcements, tableCounts,
   } = props;
-  const [activeTab, setActiveTab] = useState<ClubTab>("home");
+  const [activeTab, setActiveTab] = useState<ClubTab>(() => tabs.find((tab) => tab.id === props.initialTab)?.id ?? "home");
   const [eventFilter, setEventFilter] = useState<EventFilter>("all");
   const [memberQuery, setMemberQuery] = useState("");
   const [rankingQuery, setRankingQuery] = useState("");

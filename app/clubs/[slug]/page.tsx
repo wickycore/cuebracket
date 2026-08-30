@@ -15,7 +15,7 @@ import type { EventRegistrationRow, RegistrationSettingsRow } from "@/lib/cloud/
 import type { ClubPlayerRankingRow } from "@/lib/rankings";
 import { createClient } from "@/lib/supabase/server";
 
-interface Props { params: Promise<{ slug: string }> }
+interface Props { params: Promise<{ slug: string }>; searchParams: Promise<{ tab?: string }> }
 
 async function getClub(slug: string) {
   const supabase = await createClient();
@@ -31,8 +31,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     : { title: "Club not found" };
 }
 
-export default async function ClubPage({ params }: Props) {
+export default async function ClubPage({ params, searchParams }: Props) {
   const { slug } = await params;
+  const { tab } = await searchParams;
   const supabase = await createClient();
   const { data: clubData } = await supabase.from("clubs").select("*").eq("slug", slug.toLowerCase()).maybeSingle();
   const club = clubData as ClubRow | null;
@@ -93,6 +94,8 @@ export default async function ClubPage({ params }: Props) {
     <main className="min-h-dvh bg-[#020617] text-white">
       <AppHeader />
       <ClubCommandCenter
+        key={`${club.id}:${tab ?? "home"}`}
+        initialTab={tab}
         club={club}
         userId={user?.id ?? null}
         isAdmin={isAdmin}
