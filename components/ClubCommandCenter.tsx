@@ -4,16 +4,23 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { ClubAnnouncementBoard } from "@/components/ClubAnnouncementBoard";
+import { ClubCalendarBoard } from "@/components/ClubCalendarBoard";
 import { ClubCommunityPanel, type ClubMemberView } from "@/components/ClubCommunityPanel";
 import { ClubGuide } from "@/components/ClubGuide";
+import { ClubPracticeBoard } from "@/components/ClubPracticeBoard";
 import { LiveMatchFeed } from "@/components/LiveMatchFeed";
 import { FollowPlayerButton, PlayerFollowingProvider } from "@/components/PlayerFollowing";
 import { TableManager } from "@/components/TableManager";
 import type { ClubMembershipRequestRow, ClubRole, ClubRow } from "@/lib/clubs";
 import {
   clubAnnouncementLabel,
+  buildClubActivityFeed,
   clubDateLabel,
+  type ClubActivityItem,
   type ClubAnnouncementRow,
+  type ClubCalendarEventRow,
+  type ClubCalendarRsvpRow,
+  type ClubChallengeRow,
   type ClubLeagueSummary,
   type ClubRegistrationCount,
   type ClubTournamentSummary,
@@ -42,6 +49,9 @@ interface Props {
   leagues: ClubLeagueSummary[];
   rankings: ClubPlayerRankingRow[];
   announcements: ClubAnnouncementRow[];
+  calendarEvents: ClubCalendarEventRow[];
+  calendarRsvps: ClubCalendarRsvpRow[];
+  challenges: ClubChallengeRow[];
   tableCounts: { available: number; playing: number; reserved: number };
 }
 
@@ -78,7 +88,8 @@ export function ClubCommandCenter(props: Props) {
   const {
     club, userId, isAdmin, isFollowing, ownRole, ownRequest, pendingRequests,
     members, defaultRequestName, tournaments, registrationSettings,
-    registrationCounts, leagues, rankings, announcements, tableCounts,
+    registrationCounts, leagues, rankings, announcements, calendarEvents,
+    calendarRsvps, challenges, tableCounts,
   } = props;
   const [activeTab, setActiveTab] = useState<ClubTab>(() => tabs.find((tab) => tab.id === props.initialTab)?.id ?? "home");
   const [eventFilter, setEventFilter] = useState<EventFilter>("all");
@@ -99,6 +110,8 @@ export function ClubCommandCenter(props: Props) {
     return a.scheduled_at.localeCompare(b.scheduled_at);
   })[0] ?? null;
   const totalTitles = rankings.reduce((sum, player) => sum + player.titles, 0);
+  const activity = useMemo(() => buildClubActivityFeed({ announcements, tournaments, leagues, calendarEvents, challenges }), [announcements, tournaments, leagues, calendarEvents, challenges]);
+  const memberNames = useMemo(() => Object.fromEntries(members.map((member) => [member.userId, member.name])), [members]);
   const initial = club.name.charAt(0).toUpperCase();
 
   const visibleMembers = members.filter((member) => `${member.name} ${member.username ?? ""} ${member.role}`.toLowerCase().includes(memberQuery.trim().toLowerCase()));
@@ -196,6 +209,8 @@ export function ClubCommandCenter(props: Props) {
 
             {isAdmin ? <AdminQuickActions chooseTab={chooseTab} /> : null}
 
+            <ActivityFeed items={activity} chooseTab={chooseTab} />
+
             <div className="grid gap-6 lg:grid-cols-2">
               <section className="rounded-[2rem] border border-white/10 bg-slate-900/60 p-5 sm:p-7"><div className="flex items-end justify-between"><div><p className="cb-kicker">Form table</p><h2 className="mt-2 text-2xl font-black">Club leaders</h2></div><button type="button" onClick={() => chooseTab("rankings")} className="text-sm font-black text-cyan-300">Full table →</button></div><RankingList rankings={rankings.slice(0, 5)} /></section>
               <section className="rounded-[2rem] border border-white/10 bg-slate-900/60 p-5 sm:p-7"><div className="flex items-end justify-between"><div><p className="cb-kicker">League room</p><h2 className="mt-2 text-2xl font-black">Current seasons</h2></div><button type="button" onClick={() => chooseTab("clubhouse")} className="text-sm font-black text-violet-300">Clubhouse →</button></div><LeagueList leagues={leagues.slice(0, 4)} /></section>
@@ -208,6 +223,7 @@ export function ClubCommandCenter(props: Props) {
         {activeTab === "events" ? (
           <section>
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="cb-kicker">Club calendar</p><h2 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">Tournaments & events</h2><p className="mt-2 text-sm text-slate-500">Registration, live brackets and completed club history in one place.</p></div>{isAdmin ? <Link href="/tournaments/new" className="inline-flex min-h-12 items-center justify-center rounded-xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950">+ Create tournament</Link> : null}</div>
+            <div className="mt-6"><ClubCalendarBoard clubId={club.id} clubSlug={club.slug} isAdmin={isAdmin} isMember={Boolean(ownRole)} userId={userId} initialEvents={calendarEvents} initialRsvps={calendarRsvps} /></div>
             <div className="mt-6 flex overflow-x-auto rounded-2xl border border-white/10 bg-slate-900/65 p-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">{(["all", "open", "live", "finished"] as EventFilter[]).map((filter) => <button key={filter} type="button" onClick={() => setEventFilter(filter)} className={`min-h-11 shrink-0 rounded-xl px-4 text-xs font-black capitalize ${eventFilter === filter ? "bg-cyan-400 text-slate-950" : "text-slate-400 hover:text-white"}`}>{filter} {filter === "all" ? tournaments.length : filter === "open" ? openEvents.length : filter === "live" ? liveTournaments.length : completedTournaments.length}</button>)}</div>
             {visibleTournaments.length ? <div className="mt-5 grid gap-4 lg:grid-cols-2">{visibleTournaments.map((item) => <TournamentCard key={item.id} item={item} settings={settingsById.get(item.id)} counts={countsById.get(item.id)} />)}</div> : <div className="mt-5 rounded-[2rem] border border-dashed border-white/10 py-14 text-center"><p className="text-xl font-black text-slate-300">No events in this view</p><p className="mt-2 text-sm text-slate-600">Choose another filter or create the club’s next tournament.</p></div>}
             <div className="mt-9 flex items-end justify-between gap-3"><div><p className="cb-kicker">League calendar</p><h2 className="mt-2 text-2xl font-black">Seasons & playoffs</h2></div>{isAdmin ? <Link href="/leagues/new" className="text-sm font-black text-violet-300">Create season →</Link> : null}</div><div className="mt-4 grid gap-4 lg:grid-cols-2"><LeagueList leagues={leagues} cards /></div>
@@ -232,8 +248,9 @@ export function ClubCommandCenter(props: Props) {
 
         {activeTab === "clubhouse" ? (
           <div className="space-y-6">
-            <div><p className="cb-kicker">Inside the clubhouse</p><h2 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">News, leagues & venue</h2><p className="mt-2 text-sm text-slate-500">Everything that keeps the club moving between tournament days.</p></div>
+            <div><p className="cb-kicker">Inside the clubhouse</p><h2 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">Practice, news & venue</h2><p className="mt-2 text-sm text-slate-500">Everything that keeps the club moving between tournament days.</p></div>
             <ClubGuide clubId={club.id} isAdmin={isAdmin} location={club.location} />
+            <ClubPracticeBoard clubId={club.id} clubSlug={club.slug} userId={userId} isMember={Boolean(ownRole)} isAdmin={isAdmin} memberNames={memberNames} initialChallenges={challenges} />
             <ClubAnnouncementBoard key={announcements.map((item) => item.updated_at).join("|")} clubId={club.id} initialAnnouncements={announcements} isAdmin={isAdmin} />
             <section className="rounded-[2rem] border border-violet-300/15 bg-slate-900/60 p-5 sm:p-7"><div className="flex items-end justify-between gap-4"><div><p className="cb-kicker !text-violet-300">League room</p><h2 className="mt-2 text-2xl font-black">Club seasons</h2></div>{isAdmin ? <Link href="/leagues/new" className="text-sm font-black text-violet-300">+ New season</Link> : null}</div><div className="mt-5 grid gap-4 lg:grid-cols-2"><LeagueList leagues={leagues} cards /></div></section>
             {isAdmin ? <TableManager clubId={club.id} /> : <section className="rounded-[2rem] border border-white/10 bg-slate-900/60 p-6"><p className="cb-kicker">Venue operations</p><div className="mt-3 flex items-center justify-between gap-4"><div><h2 className="text-2xl font-black">The live table floor</h2><p className="mt-2 text-sm leading-6 text-slate-500">Club organizers use this area to assign tables and keep matches moving in realtime.</p></div><span className="hidden rounded-2xl border border-white/10 bg-slate-950/50 px-5 py-4 text-center sm:block"><span className="block text-2xl font-black text-cyan-300">Live</span><span className="text-[0.6rem] font-black uppercase text-slate-600">Organizer managed</span></span></div></section>}
@@ -253,6 +270,16 @@ function AdminQuickActions({ chooseTab }: { chooseTab: (tab: ClubTab) => void })
     ["Manage tables", "/tables", "Venue floor and assignments"],
   ];
   return <section className="rounded-[2rem] border border-cyan-300/15 bg-[linear-gradient(135deg,rgba(8,47,73,.38),rgba(15,23,42,.7))] p-5 sm:p-7"><div className="flex items-end justify-between"><div><p className="cb-kicker">Organizer launchpad</p><h2 className="mt-2 text-2xl font-black">Quick actions</h2></div><span className="rounded-full bg-cyan-300/10 px-3 py-1.5 text-[0.62rem] font-black uppercase tracking-wider text-cyan-200">Manage club</span></div><div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">{actions.map(([label, href, detail]) => <Link key={label} href={href} className="rounded-2xl border border-white/10 bg-slate-950/45 p-4 transition hover:border-cyan-300/25"><span className="font-black text-white">{label}</span><span className="mt-1 block text-xs leading-5 text-slate-600">{detail}</span></Link>)}<button type="button" onClick={() => chooseTab("members")} className="rounded-2xl border border-white/10 bg-slate-950/45 p-4 text-left transition hover:border-cyan-300/25"><span className="font-black">Invite members</span><span className="mt-1 block text-xs leading-5 text-slate-600">Share link and approve requests</span></button><button type="button" onClick={() => chooseTab("clubhouse")} className="rounded-2xl border border-white/10 bg-slate-950/45 p-4 text-left transition hover:border-cyan-300/25"><span className="font-black">Post update</span><span className="mt-1 block text-xs leading-5 text-slate-600">Publish to the noticeboard</span></button></div></section>;
+}
+
+function ActivityFeed({ items, chooseTab }: { items: ClubActivityItem[]; chooseTab: (tab: ClubTab) => void }) {
+  const tone = {
+    cyan: "bg-cyan-400",
+    emerald: "bg-emerald-400",
+    violet: "bg-violet-400",
+    amber: "bg-amber-300",
+  };
+  return <section className="rounded-[2rem] border border-white/10 bg-slate-900/60 p-5 sm:p-7"><div className="flex items-end justify-between gap-4"><div><p className="cb-kicker">One organised timeline</p><h2 className="mt-2 text-2xl font-black">Club activity</h2><p className="mt-2 text-sm text-slate-500">New events, results, league updates, notices and practice matches.</p></div><span className="hidden rounded-full border border-white/10 px-3 py-1.5 text-xs font-black text-slate-400 sm:inline-flex">Latest {items.length}</span></div>{items.length ? <div className="mt-5 grid gap-x-6 lg:grid-cols-2">{items.slice(0, 8).map((item) => <button key={item.id} type="button" onClick={() => chooseTab(item.tab)} className="group grid grid-cols-[auto_minmax(0,1fr)_auto] gap-3 border-b border-white/8 py-4 text-left"><span className={`mt-1.5 h-2.5 w-2.5 rounded-full ${tone[item.tone]}`} /><span className="min-w-0"><span className="text-[0.6rem] font-black uppercase tracking-wider text-slate-600">{item.label}</span><span className="mt-1 block truncate font-black text-white group-hover:text-cyan-200">{item.title}</span><span className="mt-1 block truncate text-xs font-bold text-slate-500">{item.detail}</span></span><span className="self-center text-xs font-black text-slate-700 group-hover:text-cyan-300">→</span></button>)}</div> : <div className="mt-5 rounded-2xl border border-dashed border-white/10 p-7 text-center text-sm text-slate-500">Club activity will gather here as the organizer publishes events and members post challenges.</div>}</section>;
 }
 
 function TournamentCard({ item, settings, counts }: { item: ClubTournamentSummary; settings?: RegistrationSettingsRow; counts?: ClubRegistrationCount }) {
