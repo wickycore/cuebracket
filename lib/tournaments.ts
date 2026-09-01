@@ -71,6 +71,10 @@ export interface SingleEliminationBracket {
   rounds: BracketRound[];
   generatedAt: string;
   champion: string | null;
+  /** Present on exact-size draws that use real play-in matches before the main draw. */
+  preliminaryMatchCount?: number;
+  mainDrawSize?: number;
+  entrantCount?: number;
 }
 
 export interface DoubleEliminationBracket {

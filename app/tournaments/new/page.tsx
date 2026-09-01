@@ -6,6 +6,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
+import { singleEliminationPlan } from "@/lib/bracket/singleElimination";
 import { getManagedClubs } from "@/lib/cloud/clubs";
 import { removePublicImage, uploadTournamentPoster, validateImageFile } from "@/lib/cloud/media";
 import type { ClubRow } from "@/lib/clubs";
@@ -55,6 +56,10 @@ export default function NewTournamentPage() {
   const [error, setError] = useState("");
 
   const selectedFormat = formats.find((item) => item.value === format)!;
+  const singlePlan = useMemo(
+    () => singleEliminationPlan(bracketSize),
+    [bracketSize],
+  );
   const capacities = useMemo(
     () => type === "single_stage" && (format === "single" || format === "double")
       ? eliminationCapacities
@@ -82,14 +87,16 @@ export default function NewTournamentPage() {
     setType(nextType);
     if (nextType === "two_stage") {
       if (![8, 10, 12, 16, 24, 32].includes(bracketSize)) setBracketSize(8);
-    } else if ((format === "single" || format === "double") && !eliminationCapacities.includes(bracketSize)) {
+    } else if (format === "double" && !eliminationCapacities.includes(bracketSize)) {
       setBracketSize(8);
     }
   }
 
   function chooseFormat(nextFormat: TournamentFormat) {
     setFormat(nextFormat);
-    if ((nextFormat === "single" || nextFormat === "double") && !eliminationCapacities.includes(bracketSize)) {
+    if (nextFormat === "double" && !eliminationCapacities.includes(bracketSize)) {
+      setBracketSize(8);
+    } else if (nextFormat === "single" && (bracketSize < 2 || bracketSize > 128)) {
       setBracketSize(8);
     } else if (nextFormat === "round_robin" && bracketSize < 2) {
       setBracketSize(2);
@@ -108,6 +115,10 @@ export default function NewTournamentPage() {
     }
     if (!Number.isInteger(raceTo) || raceTo < 1 || raceTo > 25) {
       setError("Race target must be between 1 and 25.");
+      return;
+    }
+    if (type === "single_stage" && format === "single" && (!Number.isInteger(bracketSize) || bracketSize < 2 || bracketSize > 128)) {
+      setError("Single Elimination player capacity must be between 2 and 128.");
       return;
     }
     if (type === "single_stage" && format === "round_robin" && (!Number.isInteger(bracketSize) || bracketSize < 2 || bracketSize > 128)) {
@@ -276,7 +287,11 @@ export default function NewTournamentPage() {
             {type === "single_stage" && (format === "single" || format === "double") ? (
               <div className="mt-6 rounded-3xl border border-cyan-400/15 bg-cyan-400/[0.05] p-5">
                 <p className="font-black">{selectedFormat.name}</p>
-                <p className="mt-1 text-sm text-slate-400">BYEs are distributed automatically and every winner advances through the correct path.</p>
+                <p className="mt-1 text-sm text-slate-400">
+                  {format === "single"
+                    ? "CueBracket builds only real matches. Any non-standard field gets a compact preliminary round before the main draw."
+                    : "BYEs are distributed automatically and every winner advances through the correct path."}
+                </p>
                 {format === "double" ? (
                   <label className="mt-4 flex items-center gap-3 text-sm font-bold text-slate-300">
                     <input type="checkbox" checked={options.bracketResetEnabled} onChange={(event) => updateOption("bracketResetEnabled", event.target.checked)} className="h-5 w-5 accent-cyan-400" />
@@ -345,17 +360,19 @@ export default function NewTournamentPage() {
                     ? "Choose any number from 2 to 128 players. Every player meets every opponent."
                     : type === "single_stage" && format === "swiss"
                       ? "Choose any number from 4 to 128 players. Odd fields receive one balanced BYE each round."
+                      : type === "single_stage" && format === "single"
+                        ? "Choose any number from 2 to 128. The confirmed lineup determines the compact preliminary round automatically."
                       : "You can run with fewer players; unused knockout slots become balanced BYEs."}
                 </p>
               </div>
             </div>
-            {type === "single_stage" && (format === "round_robin" || format === "swiss") ? (
+            {type === "single_stage" && (format === "single" || format === "round_robin" || format === "swiss") ? (
               <label className="mt-6 block max-w-xs">
                 <span className="mb-2 block text-sm font-bold text-slate-300">Maximum players</span>
                 <input
                   type="number"
                   inputMode="numeric"
-                  min={format === "round_robin" ? 2 : 4}
+                  min={format === "swiss" ? 4 : 2}
                   max={128}
                   step={1}
                   value={bracketSize}
@@ -370,6 +387,18 @@ export default function NewTournamentPage() {
                 ))}
               </div>
             )}
+            {type === "single_stage" && format === "single" ? (
+              <div className="mt-5 grid gap-3 rounded-2xl border border-cyan-400/20 bg-slate-950/45 p-4 sm:grid-cols-3">
+                <div><p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">Preliminary matches</p><p className="mt-1 text-2xl font-black text-cyan-300">{singlePlan.preliminaryMatches}</p></div>
+                <div><p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">Direct entries</p><p className="mt-1 text-2xl font-black text-white">{singlePlan.directEntries}</p></div>
+                <div><p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">Main draw</p><p className="mt-1 text-2xl font-black text-white">Round of {singlePlan.mainDrawSize}</p></div>
+                <p className="text-sm leading-6 text-slate-400 sm:col-span-3">
+                  {singlePlan.preliminaryMatches
+                    ? `${singlePlan.preliminaryPlayers} players contest ${singlePlan.preliminaryMatches} preliminary match${singlePlan.preliminaryMatches === 1 ? "" : "es"}; ${singlePlan.directEntries} advance directly. Exactly ${singlePlan.totalMatches} matches decide the champion.`
+                    : `No preliminary round is needed. Exactly ${singlePlan.totalMatches} matches decide the champion.`}
+                </p>
+              </div>
+            ) : null}
           </section>
 
           {error ? <p className="rounded-2xl bg-rose-400/10 px-4 py-3 text-sm font-bold text-rose-300 ring-1 ring-rose-400/20">{error}</p> : null}
