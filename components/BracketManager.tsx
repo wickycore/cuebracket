@@ -13,7 +13,6 @@ import {
   fillSingleEliminationByeSlot,
   getSingleEliminationLateEntrySlots,
   recomputeSingleEliminationBracket,
-  singleEliminationPlan,
 } from "@/lib/bracket/singleElimination";
 import type { Tournament, TournamentBracket } from "@/lib/tournaments";
 import { getTournament, updateTournament } from "@/lib/tournaments";
@@ -38,10 +37,6 @@ function SingleEliminationManager({ tournament, onTournamentChange, selectedMatc
   const [message, setMessage] = useState("");
   const bracket = tournament.bracket?.type === "single" ? tournament.bracket : undefined;
   const canGenerate = tournament.players.length >= 2;
-  const drawPlan = useMemo(
-    () => singleEliminationPlan(tournament.players.length),
-    [tournament.players.length],
-  );
 
   const playedMatches = useMemo(() => (bracket ? countSingleEliminationPlayedMatches(bracket) : 0), [bracket]);
   const automaticByes = useMemo(() => (bracket ? countSingleEliminationAutomaticByes(bracket) : 0), [bracket]);
@@ -131,14 +126,7 @@ function SingleEliminationManager({ tournament, onTournamentChange, selectedMatc
       <section className="rounded-3xl border border-white/10 bg-slate-950/70 p-6 shadow-2xl">
         <span className="text-xs font-black uppercase tracking-[0.24em] text-cyan-300">Single elimination</span>
         <h2 className="mt-2 text-2xl font-black text-white">Generate the tournament bracket</h2>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">The player order becomes the draw order. CueBracket uses the confirmed lineup to create only real matches, adding a compact preliminary round whenever the field is not a power of two.</p>
-        {canGenerate ? (
-          <div className="mt-4 flex flex-wrap gap-2 text-xs font-black">
-            <span className="rounded-full bg-cyan-400/10 px-3 py-1.5 text-cyan-200 ring-1 ring-cyan-400/20">{drawPlan.totalMatches} total matches</span>
-            {drawPlan.preliminaryMatches ? <span className="rounded-full bg-amber-300/10 px-3 py-1.5 text-amber-200 ring-1 ring-amber-300/20">{drawPlan.preliminaryMatches} preliminaries</span> : <span className="rounded-full bg-emerald-400/10 px-3 py-1.5 text-emerald-200 ring-1 ring-emerald-400/20">No preliminaries</span>}
-            <span className="rounded-full bg-white/5 px-3 py-1.5 text-slate-300 ring-1 ring-white/10">{drawPlan.directEntries} direct to Round of {drawPlan.mainDrawSize}</span>
-          </div>
-        ) : null}
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">The player order becomes the draw order. Empty first-round places are distributed as automatic BYEs.</p>
         {message ? <p className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/10 px-4 py-3 text-sm font-bold text-rose-200">{message}</p> : null}
         <button type="button" onClick={generateBracket} className="mt-5 rounded-xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950 hover:bg-cyan-300">Generate bracket</button>
       </section>

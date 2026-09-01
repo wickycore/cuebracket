@@ -402,7 +402,7 @@ export function ReadOnlyBracket({
             rounds={bracket.rounds}
             raceTo={tournament.raceTo}
             tone="cyan"
-            balancedGeometry={!bracket.preliminaryMatchCount}
+            balancedGeometry
             showHeader={false}
             edgeToEdge
           />

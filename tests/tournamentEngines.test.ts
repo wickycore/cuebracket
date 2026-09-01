@@ -1,12 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
-  buildSingleEliminationBracket,
-  countSingleEliminationAutomaticByes,
-  singleEliminationPlan,
-  updateSingleEliminationMatch,
-} from "@/lib/bracket/singleElimination";
+import { buildSingleEliminationBracket, updateSingleEliminationMatch } from "@/lib/bracket/singleElimination";
 import { buildDoubleEliminationBracket } from "@/lib/bracket/doubleElimination";
 import { buildFreeForAllCompetition, updateFreeForAllHeat, updateFreeForAllPlayoffMatch } from "@/lib/competition/freeForAll";
 import { buildLeaderboardCompetition, updateLeaderboardMatch } from "@/lib/competition/leaderboard";
@@ -69,86 +64,6 @@ test("32-player elimination structures have the expected match capacity", () => 
   assert.ok(activeMatches.length >= 62);
 });
 
-test("exact-size single elimination creates compact preliminary rounds for any field", () => {
-  const cases = [
-    { entrants: 33, preliminaries: 1, direct: 31 },
-    { entrants: 37, preliminaries: 5, direct: 27 },
-    { entrants: 40, preliminaries: 8, direct: 24 },
-    { entrants: 42, preliminaries: 10, direct: 22 },
-    { entrants: 50, preliminaries: 18, direct: 14 },
-    { entrants: 63, preliminaries: 31, direct: 1 },
-  ];
-
-  for (const expected of cases) {
-    const plan = singleEliminationPlan(expected.entrants);
-    assert.equal(plan.preliminaryMatches, expected.preliminaries);
-    assert.equal(plan.directEntries, expected.direct);
-    assert.equal(plan.mainDrawSize, 32);
-    assert.equal(plan.totalMatches, expected.entrants - 1);
-
-    const bracket = buildSingleEliminationBracket(players(expected.entrants), expected.entrants);
-    assert.equal(bracket.rounds[0].name, "Preliminary Round");
-    assert.equal(bracket.rounds[0].matches.length, expected.preliminaries);
-    assert.equal(bracket.rounds[1].name, "Round of 32");
-    assert.deepEqual(bracket.rounds.slice(1).map((round) => round.matches.length), [16, 8, 4, 2, 1]);
-    assert.equal(bracket.rounds.flatMap((round) => round.matches).length, expected.entrants - 1);
-    assert.equal(countSingleEliminationAutomaticByes(bracket), 0);
-
-    const seededPlayers = bracket.rounds
-      .flatMap((round) => round.matches)
-      .flatMap((match) => [match.source1, match.source2])
-      .flatMap((source) => source?.kind === "seed" && source.player ? [source.player] : []);
-    assert.equal(new Set(seededPlayers).size, expected.entrants);
-  }
-});
-
-test("a preliminary winner advances into the compact main draw and corrections propagate", () => {
-  let bracket = buildSingleEliminationBracket(players(42), 64);
-  const preliminary = bracket.rounds[0].matches[0];
-  const mainMatch = bracket.rounds[1].matches.find((match) =>
-    [match.source1, match.source2].some(
-      (source) => source?.kind === "winner" && source.matchId === preliminary.id,
-    ),
-  );
-  assert.ok(mainMatch);
-  assert.ok(mainMatch.player1 === null || mainMatch.player2 === null);
-
-  bracket = updateSingleEliminationMatch(bracket, preliminary.id, finish(5, 2));
-  const advanced = bracket.rounds[1].matches.find((match) => match.id === mainMatch.id)!;
-  assert.ok([advanced.player1, advanced.player2].includes(preliminary.player1));
-  assert.equal(advanced.completed, false);
-
-  bracket = updateSingleEliminationMatch(bracket, preliminary.id, finish(2, 5));
-  const corrected = bracket.rounds[1].matches.find((match) => match.id === mainMatch.id)!;
-  assert.ok([corrected.player1, corrected.player2].includes(preliminary.player2));
-  assert.ok(![corrected.player1, corrected.player2].includes(preliminary.player1));
-});
-
-test("a 50-player compact draw can finish all 49 matches without a dead end", () => {
-  let bracket = buildSingleEliminationBracket(players(50), 64);
-  let completedMatches = 0;
-
-  while (!bracket.champion) {
-    const ready = bracket.rounds
-      .flatMap((round) => round.matches)
-      .find((match) => !match.completed && match.player1 && match.player2);
-    assert.ok(ready, "the bracket should always expose another playable match");
-    bracket = updateSingleEliminationMatch(bracket, ready.id, finish(5, 1));
-    completedMatches += 1;
-    assert.ok(completedMatches <= 49, "the draw should terminate after N - 1 matches");
-  }
-
-  assert.equal(completedMatches, 49);
-  assert.ok(players(50).includes(bracket.champion ?? ""));
-});
-
-test("a confirmed power-of-two field ignores a larger registration capacity", () => {
-  const bracket = buildSingleEliminationBracket(players(32), 64);
-  assert.equal(bracket.preliminaryMatchCount, undefined);
-  assert.deepEqual(bracket.rounds.map((round) => round.matches.length), [16, 8, 4, 2, 1]);
-  assert.equal(countSingleEliminationAutomaticByes(bracket), 0);
-});
-
 test("reopening an upstream single-elimination result clears dependent progression", () => {
   let bracket = buildSingleEliminationBracket(["A", "B", "C", "D"], 4);
   const opener = bracket.rounds[0].matches[0];
@@ -167,7 +82,7 @@ test("reopening an upstream single-elimination result clears dependent progressi
   assert.equal(final.completed, false);
 });
 
-test("event statistics do not count compact preliminaries or empty downstream slots as BYEs", () => {
+test("event statistics do not count empty downstream slots as BYEs", () => {
   const full = tournamentFixture({
     bracketSize: 4,
     players: ["A", "B", "C", "D"],
@@ -180,7 +95,7 @@ test("event statistics do not count compact preliminaries or empty downstream sl
     players: ["A", "B", "C"],
     bracket: buildSingleEliminationBracket(["A", "B", "C"], 4),
   });
-  assert.equal(getTournamentEventCounts(withBye).byes, 0);
+  assert.equal(getTournamentEventCounts(withBye).byes, 1);
 });
 
 test("Swiss perfect ties generate and resolve a real playoff", () => {

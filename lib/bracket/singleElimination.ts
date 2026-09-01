@@ -21,46 +21,6 @@ function nextPowerOfTwo(value: number) {
   return size;
 }
 
-function previousPowerOfTwo(value: number) {
-  let size = 2;
-  while (size * 2 <= value && size < MAX_BRACKET_SIZE) size *= 2;
-  return size;
-}
-
-export type SingleEliminationPlan = {
-  entrantCount: number;
-  mainDrawSize: number;
-  preliminaryMatches: number;
-  preliminaryPlayers: number;
-  directEntries: number;
-  totalMatches: number;
-};
-
-/**
- * Builds the smallest fair knockout plan for an exact field size.
- * Example: 50 entrants play 18 preliminaries, with 14 direct entries joining
- * those winners in a 32-player main draw. No fake BYE matches are required.
- */
-export function singleEliminationPlan(entrantCount: number): SingleEliminationPlan {
-  const cleanCount = Math.max(
-    2,
-    Math.min(MAX_BRACKET_SIZE, Math.floor(Number.isFinite(entrantCount) ? entrantCount : 2)),
-  );
-  const mainDrawSize = previousPowerOfTwo(cleanCount);
-  const preliminaryMatches = cleanCount - mainDrawSize;
-  const preliminaryPlayers = preliminaryMatches * 2;
-  const directEntries = mainDrawSize - preliminaryMatches;
-
-  return {
-    entrantCount: cleanCount,
-    mainDrawSize,
-    preliminaryMatches,
-    preliminaryPlayers,
-    directEntries,
-    totalMatches: cleanCount - 1,
-  };
-}
-
 function normalizeBracketSize(playerCount: number, requestedSize?: number) {
   const minimum = Math.max(2, playerCount);
   const requested = Math.max(minimum, requestedSize ?? minimum);
@@ -138,11 +98,6 @@ function seedSource(player: string | null): MatchSourceValue {
 
 function winnerSource(matchId: string): MatchSourceValue {
   return { kind: "winner", matchId };
-}
-
-function loserFromMatch(match: BracketMatch) {
-  if (!match.completed || !match.player1 || !match.player2 || !match.winner) return null;
-  return match.winner === match.player1 ? match.player2 : match.player1;
 }
 
 function makeMatch(
@@ -242,104 +197,11 @@ export function buildSingleEliminationBracket(
   players: string[],
   requestedSize?: number,
 ): SingleEliminationBracket {
-  const requestedMaximum =
-    requestedSize === undefined || !Number.isFinite(requestedSize)
-      ? MAX_BRACKET_SIZE
-      : Math.floor(requestedSize);
-  const maximumPlayers = Math.max(
-    2,
-    Math.min(MAX_BRACKET_SIZE, requestedMaximum),
-  );
   const cleanPlayers = players
     .map((player) => player.trim())
     .filter(Boolean)
-    .slice(0, maximumPlayers);
-
-  const plan = singleEliminationPlan(cleanPlayers.length);
-
-  if (cleanPlayers.length >= 3 && plan.preliminaryMatches > 0) {
-    const directPlayers = cleanPlayers.slice(0, plan.directEntries);
-    const preliminaryPlayers = cleanPlayers.slice(plan.directEntries);
-    const preliminaryRound: BracketRound = {
-      round: 1,
-      name: "Preliminary Round",
-      matches: Array.from({ length: plan.preliminaryMatches }, (_, position) => {
-        const player1 = preliminaryPlayers[position] ?? null;
-        const player2 = preliminaryPlayers[preliminaryPlayers.length - 1 - position] ?? null;
-        const match = makeMatch(1, position, player1, player2);
-        match.source1 = seedSource(player1);
-        match.source2 = seedSource(player2);
-        return match;
-      }),
-    };
-
-    const preliminaryPositions = spreadPositions(
-      plan.mainDrawSize,
-      plan.preliminaryMatches,
-    );
-    let directIndex = 0;
-    let preliminaryIndex = 0;
-    const mainSources: MatchSourceValue[] = Array.from(
-      { length: plan.mainDrawSize },
-      (_, position) => {
-        if (preliminaryPositions.has(position)) {
-          const source = winnerSource(preliminaryRound.matches[preliminaryIndex].id);
-          preliminaryIndex += 1;
-          return source;
-        }
-        const source = seedSource(directPlayers[directIndex] ?? null);
-        directIndex += 1;
-        return source;
-      },
-    );
-
-    const mainRound: BracketRound = {
-      round: 2,
-      name: roundName(plan.mainDrawSize / 2),
-      matches: Array.from({ length: plan.mainDrawSize / 2 }, (_, position) => {
-        const match = makeMatch(2, position, null, null);
-        match.source1 = mainSources[position * 2];
-        match.source2 = mainSources[position * 2 + 1];
-        return match;
-      }),
-    };
-
-    const rounds: BracketRound[] = [preliminaryRound, mainRound];
-    let previousRound = mainRound;
-    let matchCount = mainRound.matches.length / 2;
-    let roundNumber = 3;
-
-    while (matchCount >= 1) {
-      const nextRound: BracketRound = {
-        round: roundNumber,
-        name: roundName(matchCount),
-        matches: Array.from({ length: matchCount }, (_, position) => {
-          const match = makeMatch(roundNumber, position, null, null);
-          match.source1 = winnerSource(previousRound.matches[position * 2].id);
-          match.source2 = winnerSource(previousRound.matches[position * 2 + 1].id);
-          return match;
-        }),
-      };
-      rounds.push(nextRound);
-      previousRound = nextRound;
-      matchCount /= 2;
-      roundNumber += 1;
-    }
-
-    return recomputeSingleEliminationBracket({
-      type: "single",
-      rounds,
-      generatedAt: new Date().toISOString(),
-      champion: null,
-      preliminaryMatchCount: plan.preliminaryMatches,
-      mainDrawSize: plan.mainDrawSize,
-      entrantCount: cleanPlayers.length,
-    });
-  }
-
-  // A power-of-two confirmed field starts directly in its natural round even
-  // when the tournament's registration capacity is larger.
-  const slots = balancedSlots(cleanPlayers, cleanPlayers.length);
+    .slice(0, MAX_BRACKET_SIZE);
+  const slots = balancedSlots(cleanPlayers, requestedSize);
   const firstRoundCount = slots.length / 2;
 
   const rounds: BracketRound[] = [
@@ -391,68 +253,6 @@ export function buildSingleEliminationBracket(
 export function recomputeSingleEliminationBracket(
   bracket: SingleEliminationBracket,
 ): SingleEliminationBracket {
-  if (bracket.preliminaryMatchCount) {
-    const rounds = bracket.rounds.map((round, roundIndex) => ({
-      ...round,
-      round: roundIndex + 1,
-      name: roundIndex === 0 ? "Preliminary Round" : roundName(round.matches.length),
-      matches: round.matches.map((match, position) => ({
-        ...cloneMatch(match),
-        round: roundIndex + 1,
-        position,
-      })),
-    }));
-    const matchById = new Map<string, BracketMatch>();
-
-    rounds.forEach((round) => {
-      round.matches.forEach((match) => {
-        const resolveSource = (source: BracketMatch["source1"]) => {
-          if (!source) return { resolved: false, player: null as string | null };
-          if (source.kind === "seed") return { resolved: true, player: source.player };
-
-          const feeder = matchById.get(source.matchId);
-          if (!feeder?.completed) return { resolved: false, player: null as string | null };
-          return {
-            resolved: true,
-            player: source.kind === "winner" ? feeder.winner : loserFromMatch(feeder),
-          };
-        };
-
-        const left = resolveSource(match.source1);
-        const right = resolveSource(match.source2);
-        const participantsChanged =
-          match.player1 !== left.player || match.player2 !== right.player;
-
-        if (participantsChanged) clearBracketMatch(match);
-        match.player1 = left.player;
-        match.player2 = right.player;
-
-        if (!left.resolved || !right.resolved) {
-          clearBracketMatch(match);
-          match.player1 = left.player;
-          match.player2 = right.player;
-        } else if (!match.player1 || !match.player2) {
-          resolveKnownParticipants(match);
-        } else if (match.completed && !hasValidStoredWinner(match)) {
-          clearBracketMatch(match);
-        }
-
-        matchById.set(match.id, match);
-      });
-    });
-
-    const final = rounds.at(-1)?.matches[0];
-    const champion =
-      final &&
-      hasValidStoredWinner(final) &&
-      final.winner &&
-      [final.player1, final.player2].includes(final.winner)
-        ? final.winner
-        : null;
-
-    return { ...bracket, rounds, champion };
-  }
-
   const rounds = bracket.rounds.map((round, roundIndex) => ({
     ...round,
     round: roundIndex + 1,
