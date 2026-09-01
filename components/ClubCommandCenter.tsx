@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { ClubAnnouncementBoard } from "@/components/ClubAnnouncementBoard";
+import { ClubAchievementWall } from "@/components/ClubAchievementWall";
 import { ClubCalendarBoard } from "@/components/ClubCalendarBoard";
 import { ClubCommunityPanel, type ClubMemberView } from "@/components/ClubCommunityPanel";
 import { ClubGuide } from "@/components/ClubGuide";
@@ -17,6 +18,7 @@ import {
   buildClubActivityFeed,
   clubDateLabel,
   type ClubActivityItem,
+  type ClubAchievementRow,
   type ClubAnnouncementRow,
   type ClubCalendarEventRow,
   type ClubCalendarRsvpRow,
@@ -52,6 +54,7 @@ interface Props {
   calendarEvents: ClubCalendarEventRow[];
   calendarRsvps: ClubCalendarRsvpRow[];
   challenges: ClubChallengeRow[];
+  achievements: ClubAchievementRow[];
   tableCounts: { available: number; playing: number; reserved: number };
 }
 
@@ -89,7 +92,7 @@ export function ClubCommandCenter(props: Props) {
     club, userId, isAdmin, isFollowing, ownRole, ownRequest, pendingRequests,
     members, defaultRequestName, tournaments, registrationSettings,
     registrationCounts, leagues, rankings, announcements, calendarEvents,
-    calendarRsvps, challenges, tableCounts,
+    calendarRsvps, challenges, achievements, tableCounts,
   } = props;
   const [activeTab, setActiveTab] = useState<ClubTab>(() => tabs.find((tab) => tab.id === props.initialTab)?.id ?? "home");
   const [eventFilter, setEventFilter] = useState<EventFilter>("all");
@@ -110,8 +113,11 @@ export function ClubCommandCenter(props: Props) {
     return a.scheduled_at.localeCompare(b.scheduled_at);
   })[0] ?? null;
   const totalTitles = rankings.reduce((sum, player) => sum + player.titles, 0);
-  const activity = useMemo(() => buildClubActivityFeed({ announcements, tournaments, leagues, calendarEvents, challenges }), [announcements, tournaments, leagues, calendarEvents, challenges]);
+  const activity = useMemo(() => buildClubActivityFeed({ announcements, tournaments, leagues, calendarEvents, challenges, achievements }), [announcements, tournaments, leagues, calendarEvents, challenges, achievements]);
   const memberNames = useMemo(() => Object.fromEntries(members.map((member) => [member.userId, member.name])), [members]);
+  const achievementCounts = useMemo(() => achievements.reduce<Record<string, number>>((counts, item) => { counts[item.recipient_id] = (counts[item.recipient_id] ?? 0) + 1; return counts; }, {}), [achievements]);
+  const spotlight = achievements.find((item) => item.is_featured) ?? achievements[0] ?? null;
+  const spotlightMember = spotlight ? members.find((member) => member.userId === spotlight.recipient_id) : null;
   const initial = club.name.charAt(0).toUpperCase();
 
   const visibleMembers = members.filter((member) => `${member.name} ${member.username ?? ""} ${member.role}`.toLowerCase().includes(memberQuery.trim().toLowerCase()));
@@ -209,6 +215,8 @@ export function ClubCommandCenter(props: Props) {
 
             {isAdmin ? <AdminQuickActions chooseTab={chooseTab} /> : null}
 
+            {spotlight ? <button type="button" onClick={() => chooseTab("rankings")} className="group w-full overflow-hidden rounded-[2rem] border border-amber-300/20 bg-[radial-gradient(circle_at_90%_0%,rgba(251,191,36,.16),transparent_22rem),linear-gradient(135deg,rgba(120,53,15,.22),rgba(15,23,42,.78))] p-5 text-left sm:p-7"><div className="flex flex-col gap-5 sm:flex-row sm:items-center"><span className="grid h-16 w-16 shrink-0 place-items-center rounded-[1.35rem] border border-amber-300/25 bg-amber-300/10 text-3xl">🏆</span><span className="min-w-0 flex-1"><span className="text-[0.62rem] font-black uppercase tracking-[0.2em] text-amber-300">Member spotlight · {spotlightMember?.name ?? "Club member"}</span><span className="mt-2 block text-2xl font-black text-white group-hover:text-amber-100">{spotlight.title}</span><span className="mt-2 block line-clamp-2 text-sm leading-6 text-slate-400">{spotlight.description}</span></span><span className="shrink-0 text-sm font-black text-amber-300">Club honours →</span></div></button> : null}
+
             <ActivityFeed items={activity} chooseTab={chooseTab} />
 
             <div className="grid gap-6 lg:grid-cols-2">
@@ -233,6 +241,7 @@ export function ClubCommandCenter(props: Props) {
         {activeTab === "rankings" ? (
           <section>
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="cb-kicker">Verified club rankings</p><h2 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">The club table</h2><p className="mt-2 max-w-2xl text-sm text-slate-500">Match wins, podiums and titles from cloud-synced CueBracket tournaments.</p></div><label className="relative sm:w-72"><span className="sr-only">Search rankings</span><input value={rankingQuery} onChange={(event) => setRankingQuery(event.target.value)} placeholder="Search a player" className="min-h-12 w-full rounded-xl border border-white/10 bg-slate-900/75 px-4 text-sm font-bold text-white outline-none focus:border-cyan-300/40" /></label></div>
+            <div className="mt-7"><ClubAchievementWall key={achievements.map((item) => item.updated_at).join("|")} clubId={club.id} clubSlug={club.slug} isAdmin={isAdmin} members={members} initialAchievements={achievements} /></div>
             {rankings.length >= 3 && !rankingQuery ? <div className="mt-7 grid gap-3 sm:grid-cols-3">{rankings.slice(0, 3).map((player, index) => <PodiumCard key={player.profile_id} player={player} index={index} />)}</div> : null}
             <div className="mt-6 overflow-hidden rounded-[2rem] border border-white/10 bg-slate-900/60"><div className="hidden grid-cols-[4rem_minmax(0,1fr)_repeat(5,5rem)] gap-3 border-b border-white/10 px-5 py-3 text-[0.62rem] font-black uppercase tracking-wider text-slate-600 md:grid"><span>Rank</span><span>Player</span><span>Played</span><span>Won</span><span>Diff</span><span>Titles</span><span>Points</span></div><RankingList rankings={visibleRankings} detailed /></div>
           </section>
@@ -241,7 +250,7 @@ export function ClubCommandCenter(props: Props) {
         {activeTab === "members" ? (
           <section>
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="cb-kicker">Club people</p><h2 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">Members & invitations</h2><p className="mt-2 text-sm text-slate-500">Find players, join the roster and manage trusted club roles.</p></div><input value={memberQuery} onChange={(event) => setMemberQuery(event.target.value)} placeholder="Search members" aria-label="Search club members" className="min-h-12 rounded-xl border border-white/10 bg-slate-900/75 px-4 text-sm font-bold text-white outline-none focus:border-cyan-300/40 sm:w-72" /></div>
-            <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(20rem,.65fr)] lg:items-start"><div><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{visibleMembers.map((member) => <MemberCard key={member.userId} member={member} />)}</div>{!visibleMembers.length ? <div className="rounded-2xl border border-dashed border-white/10 py-12 text-center text-slate-500">No members match that search.</div> : null}</div><InviteCard club={club} chooseTab={chooseTab} /></div>
+            <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(20rem,.65fr)] lg:items-start"><div><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{visibleMembers.map((member) => <MemberCard key={member.userId} member={member} achievementCount={achievementCounts[member.userId] ?? 0} />)}</div>{!visibleMembers.length ? <div className="rounded-2xl border border-dashed border-white/10 py-12 text-center text-slate-500">No members match that search.</div> : null}</div><InviteCard club={club} chooseTab={chooseTab} /></div>
             <div className="mt-7"><ClubCommunityPanel club={club} userId={userId} isFollowing={isFollowing} ownRole={ownRole} ownRequest={ownRequest} pendingRequests={pendingRequests} members={members} defaultRequestName={defaultRequestName} isAdmin={isAdmin} /></div>
           </section>
         ) : null}
@@ -312,8 +321,8 @@ function LeagueList({ leagues, cards = false }: { leagues: ClubLeagueSummary[]; 
   return <>{leagues.map((item) => <Link key={item.id} href={`/league/${item.id}`} className={`${cards ? "" : "mt-3 first:mt-5"} block rounded-2xl border border-white/10 bg-slate-950/40 p-4 transition hover:border-violet-300/25`}><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate font-black text-white">{item.name}</p><p className="mt-1 text-xs font-bold text-slate-600">{item.payload?.players?.length ?? 0} players · {item.payload?.fixtures?.filter((fixture) => fixture.completed).length ?? 0} results</p></div><span className="rounded-full border border-violet-300/15 bg-violet-300/10 px-2.5 py-1 text-[0.6rem] font-black text-violet-200">{item.season}</span></div><div className="mt-4 flex items-center justify-between text-xs font-bold"><span className="capitalize text-slate-500">{item.payload?.gameType ? cleanLabel(item.payload.gameType) : "League"} · {item.payload?.status ?? "draft"}</span><span className="text-violet-300">{item.payload?.playoff?.enabled ? `Top ${item.payload.playoff.qualifierCount} playoffs` : "League table"} →</span></div></Link>)}</>;
 }
 
-function MemberCard({ member }: { member: ClubMemberView }) {
-  const content = <><span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-white/10 bg-gradient-to-br from-cyan-300/15 to-blue-500/10 text-lg font-black text-cyan-100">{member.name.charAt(0).toUpperCase()}</span><span className="min-w-0 flex-1"><span className="block truncate font-black text-white">{member.name}</span><span className="mt-1 block truncate text-xs font-bold text-slate-600">{member.username ? `@${member.username}` : "CueBracket member"}</span></span><span className="rounded-full border border-white/10 px-2.5 py-1 text-[0.58rem] font-black uppercase tracking-wider text-slate-400">{member.role}</span></>;
+function MemberCard({ member, achievementCount }: { member: ClubMemberView; achievementCount: number }) {
+  const content = <><span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-white/10 bg-gradient-to-br from-cyan-300/15 to-blue-500/10 text-lg font-black text-cyan-100">{member.name.charAt(0).toUpperCase()}</span><span className="min-w-0 flex-1"><span className="block truncate font-black text-white">{member.name}</span><span className="mt-1 block truncate text-xs font-bold text-slate-600">{member.username ? `@${member.username}` : "CueBracket member"}</span></span><span className="space-y-1 text-right"><span className="block rounded-full border border-white/10 px-2.5 py-1 text-[0.58rem] font-black uppercase tracking-wider text-slate-400">{member.role}</span>{achievementCount ? <span className="block text-[0.6rem] font-black text-amber-300">🏆 {achievementCount}</span> : null}</span></>;
   return <article className="space-y-4 rounded-2xl border border-white/10 bg-slate-900/60 p-4">{member.username ? <Link href={`/players/${member.username}`} className="flex items-center gap-3">{content}</Link> : <div className="flex items-center gap-3">{content}</div>}{member.isPublic && member.username ? <FollowPlayerButton playerId={member.userId} profile={{ id: member.userId, username: member.username, display_name: member.name, tournament_name: member.name, is_public: true }} /> : <p className="text-xs text-slate-500">A public player profile is needed to follow.</p>}</article>;
 }
 

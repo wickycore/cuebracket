@@ -7,6 +7,7 @@ import type { ClubMemberView } from "@/components/ClubCommunityPanel";
 import type { ClubMembershipRequestRow, ClubMemberRow, ClubRow } from "@/lib/clubs";
 import type {
   ClubAnnouncementRow,
+  ClubAchievementRow,
   ClubCalendarEventRow,
   ClubCalendarRsvpRow,
   ClubChallengeRow,
@@ -56,7 +57,7 @@ export default async function ClubPage({ params, searchParams }: Props) {
   const currentTime = currentDate.toISOString();
   const calendarFloor = new Date(currentDate.getTime() - 30 * 86_400_000).toISOString();
 
-  const [profilesResult, ownRequestResult, pendingResult, settingsResult, tournamentsResult, leaguesResult, rankingsResult, announcementsResult, tablesResult, calendarResult, challengesResult] = await Promise.all([
+  const [profilesResult, ownRequestResult, pendingResult, settingsResult, tournamentsResult, leaguesResult, rankingsResult, announcementsResult, tablesResult, calendarResult, challengesResult, achievementsResult] = await Promise.all([
     memberIds.length ? supabase.from("profiles").select("id, display_name, username, tournament_name, is_public").in("id", memberIds) : Promise.resolve({ data: [] }),
     user ? supabase.from("club_membership_requests").select("*").eq("club_id", club.id).eq("user_id", user.id).eq("status", "pending").maybeSingle() : Promise.resolve({ data: null }),
     isAdmin ? supabase.from("club_membership_requests").select("*").eq("club_id", club.id).eq("status", "pending").order("created_at") : Promise.resolve({ data: [] }),
@@ -68,6 +69,7 @@ export default async function ClubPage({ params, searchParams }: Props) {
     isAdmin ? supabase.from("venue_tables").select("status").eq("club_id", club.id) : Promise.resolve({ data: [] }),
     supabase.from("club_calendar_events").select("*").eq("club_id", club.id).gte("starts_at", calendarFloor).order("starts_at", { ascending: true }).limit(100),
     supabase.from("club_challenges").select("*").eq("club_id", club.id).neq("status", "closed").gte("expires_at", currentTime).order("updated_at", { ascending: false }).limit(100),
+    supabase.from("club_achievements").select("*").eq("club_id", club.id).order("is_featured", { ascending: false }).order("awarded_on", { ascending: false }).order("created_at", { ascending: false }).limit(100),
   ]);
 
   const profileMap = new Map((profilesResult.data ?? []).map((profile) => [profile.id, profile]));
@@ -129,6 +131,7 @@ export default async function ClubPage({ params, searchParams }: Props) {
         calendarEvents={calendarEvents}
         calendarRsvps={(ownRsvpsResult.data ?? []) as ClubCalendarRsvpRow[]}
         challenges={(challengesResult.data ?? []) as ClubChallengeRow[]}
+        achievements={(achievementsResult.data ?? []) as ClubAchievementRow[]}
         tableCounts={tableCounts}
       />
     </main>

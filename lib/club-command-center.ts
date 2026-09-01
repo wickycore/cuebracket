@@ -99,6 +99,28 @@ export interface ClubChallengeRow {
   updated_at: string;
 }
 
+export type ClubAchievementKind =
+  | "champion"
+  | "podium"
+  | "milestone"
+  | "sportsmanship"
+  | "contribution"
+  | "custom";
+
+export interface ClubAchievementRow {
+  id: string;
+  club_id: string;
+  recipient_id: string;
+  awarded_by: string | null;
+  kind: ClubAchievementKind;
+  title: string;
+  description: string;
+  awarded_on: string;
+  is_featured: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface ClubActivityItem {
   id: string;
   label: string;
@@ -174,6 +196,55 @@ export function validateClubChallenge(input: {
   return { ok: true as const, value };
 }
 
+export function validateClubAchievement(input: {
+  recipientId: string;
+  kind: ClubAchievementKind;
+  title: string;
+  description: string;
+  awardedOn: string;
+  isFeatured: boolean;
+}, now = new Date()) {
+  const value = {
+    recipientId: input.recipientId.trim(),
+    kind: input.kind,
+    title: input.title.trim().replace(/\s+/g, " "),
+    description: input.description.trim(),
+    awardedOn: input.awardedOn.trim(),
+    isFeatured: input.isFeatured,
+  };
+  const kinds: ClubAchievementKind[] = ["champion", "podium", "milestone", "sportsmanship", "contribution", "custom"];
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(value.awardedOn) ? new Date(`${value.awardedOn}T00:00:00Z`) : new Date(Number.NaN);
+  const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value.recipientId)) return { ok: false as const, message: "Choose a club member to recognise." };
+  if (!kinds.includes(value.kind)) return { ok: false as const, message: "Choose a valid achievement type." };
+  if (value.title.length < 3 || value.title.length > 80) return { ok: false as const, message: "Achievement title must contain 3–80 characters." };
+  if (!value.description || value.description.length > 300) return { ok: false as const, message: "Recognition details must contain 1–300 characters." };
+  if (!Number.isFinite(date.getTime()) || date > today) return { ok: false as const, message: "Choose today or an earlier achievement date." };
+  return { ok: true as const, value };
+}
+
+export function clubAchievementLabel(kind: ClubAchievementKind) {
+  return {
+    champion: "Champion",
+    podium: "Podium finish",
+    milestone: "Milestone",
+    sportsmanship: "Sportsmanship",
+    contribution: "Club contribution",
+    custom: "Club honour",
+  }[kind];
+}
+
+export function clubAchievementIcon(kind: ClubAchievementKind) {
+  return {
+    champion: "🏆",
+    podium: "🥇",
+    milestone: "🎯",
+    sportsmanship: "🤝",
+    contribution: "⭐",
+    custom: "🎖️",
+  }[kind];
+}
+
 export function clubCalendarKindLabel(kind: ClubCalendarKind) {
   return { tournament: "Tournament", practice: "Practice", meeting: "Meeting", social: "Social", other: "Club event" }[kind];
 }
@@ -184,6 +255,7 @@ export function buildClubActivityFeed(input: {
   leagues: ClubLeagueSummary[];
   calendarEvents: ClubCalendarEventRow[];
   challenges: ClubChallengeRow[];
+  achievements?: ClubAchievementRow[];
 }, limit = 12): ClubActivityItem[] {
   return [
     ...input.announcements.map((item): ClubActivityItem => ({ id: `announcement:${item.id}`, label: clubAnnouncementLabel(item.kind), title: item.title, detail: item.body, occurredAt: item.published_at, tab: "clubhouse", tone: "cyan" })),
@@ -191,6 +263,7 @@ export function buildClubActivityFeed(input: {
     ...input.leagues.map((item): ClubActivityItem => ({ id: `league:${item.id}`, label: item.payload?.status === "live" ? "Live league" : "League season", title: item.name, detail: `${item.season} · ${item.payload?.players?.length ?? 0} players`, occurredAt: item.updated_at, tab: "clubhouse", tone: "violet" })),
     ...input.calendarEvents.map((item): ClubActivityItem => ({ id: `calendar:${item.id}`, label: item.is_cancelled ? "Cancelled event" : clubCalendarKindLabel(item.kind), title: item.title, detail: `${clubDateLabel(item.starts_at)}${item.location ? ` · ${item.location}` : ""}`, occurredAt: item.updated_at, tab: "events", tone: item.is_cancelled ? "amber" : "emerald" })),
     ...input.challenges.map((item): ClubActivityItem => ({ id: `challenge:${item.id}`, label: item.status === "matched" ? "Practice matched" : "Practice challenge", title: item.title, detail: `${item.game_type === "any" ? "Any cue game" : item.game_type}${item.race_to ? ` · Race to ${item.race_to}` : ""}`, occurredAt: item.updated_at, tab: "clubhouse", tone: item.status === "matched" ? "emerald" : "amber" })),
+    ...(input.achievements ?? []).map((item): ClubActivityItem => ({ id: `achievement:${item.id}`, label: clubAchievementLabel(item.kind), title: item.title, detail: item.description, occurredAt: item.updated_at, tab: "rankings", tone: "amber" })),
   ].filter((item) => Number.isFinite(new Date(item.occurredAt).getTime())).sort((a, b) => b.occurredAt.localeCompare(a.occurredAt)).slice(0, limit);
 }
 
