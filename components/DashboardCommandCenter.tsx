@@ -116,7 +116,7 @@ export function DashboardCommandCenter({ userId, displayName, initialNow }: { us
     [clubs.length ? "Open club" : "Find a club", clubs.length ? "#my-clubs" : "/clubs", "8", "Your communities"],
     ["Manage tables", "/tables", "▦", "Venue floor"],
     ["Discover events", "/events", "↗", "Browse & register"],
-    ...(managedClubs.length ? [["Post update", managedClubs.length === 1 ? `/clubs/${managedClubs[0].slug}?tab=clubhouse` : "#my-clubs", "✎", "Club noticeboard"]] : [["Player profile", "/account", "@", "Your pool identity"]]),
+    ...(managedClubs.length ? [["Manage club", managedClubs.length === 1 ? `/clubs/${managedClubs[0].slug}/manage?section=content` : "#my-clubs", "✎", "Club workspace"]] : [["Player profile", "/account", "@", "Your pool identity"]]),
   ];
 
   if (!accountValid) return <div className="cb-shell py-12" role="status">Updating your account…</div>;
@@ -145,7 +145,7 @@ export function DashboardCommandCenter({ userId, displayName, initialNow }: { us
         <Heading eyebrow="Needs your attention" title="Keep the room moving" />
         <div className="space-y-2">
           <Attention href={data?.registrationEventIds[0] ? `/tournaments/${data.registrationEventIds[0]}` : "/tournaments"} value={data?.pendingRegistrations} title="Registration requests" detail="Review players waiting for approval" />
-          <Attention href={pendingClubs[0] ? `/clubs/${pendingClubs[0].slug}?tab=members` : "#my-clubs"} value={requestsUnknown ? null : membershipCount} title="Membership requests" detail="Welcome new players into your clubs" />
+          <Attention href={pendingClubs[0] ? `/clubs/${pendingClubs[0].slug}/manage?section=people` : "#my-clubs"} value={requestsUnknown ? null : membershipCount} title="Membership requests" detail="Welcome new players into your clubs" />
           <Attention href="/notifications" value={data?.unreadCount} title="Unread notifications" detail="Club news and player updates" />
         </div>
         {data && attentionCount === 0 && !requestsUnknown && data.pendingRegistrations === 0 ? <p className="mt-4 text-xs font-bold text-emerald-300">✓ No registration or membership approvals waiting.</p> : null}
@@ -173,7 +173,7 @@ export function DashboardCommandCenter({ userId, displayName, initialNow }: { us
             const clubEvents = upcoming.filter((event) => event.club_id === club.id);
             return <article key={club.id} className="min-w-0 overflow-hidden rounded-2xl border border-violet-300/15 bg-gradient-to-br from-violet-300/[0.06] to-slate-950/50 p-4">
               <Link href={`/clubs/${club.slug}`} className="block"><div className="flex items-center justify-between gap-2"><span aria-hidden="true" className="grid h-11 w-11 place-items-center rounded-xl border border-white/10 bg-white/5 text-lg font-black text-violet-200">{club.name.charAt(0).toUpperCase()}</span><span className="rounded-full bg-white/5 px-2.5 py-1 text-[0.6rem] font-black uppercase tracking-wider text-violet-200">{club.role}</span></div><h3 className="mt-4 break-words font-black text-white">{club.name}</h3><p className="mt-1 truncate text-xs text-slate-400">{club.location || "CueBracket club"}</p><p className="mt-3 text-xs text-slate-300">{club.memberCount ?? "—"} members · {data?.events ? clubEvents.length : "—"} upcoming events</p><span className="mt-4 inline-flex min-h-8 items-center text-xs font-black text-cyan-300">Open Command Center →</span></Link>
-              {admin ? <div className="mt-2 flex flex-wrap gap-2 border-t border-white/10 pt-3"><Link href={`/clubs/${club.slug}?tab=members`} className="rounded-lg border border-white/10 px-3 py-2.5 text-xs font-bold text-slate-300">Members{club.pendingRequests ? ` · ${club.pendingRequests} pending` : ""}</Link><Link href={`/clubs/${club.slug}?tab=clubhouse`} className="rounded-lg bg-violet-300/10 px-3 py-2.5 text-xs font-bold text-violet-200">Post update</Link></div> : null}
+              {admin ? <div className="mt-2 flex flex-wrap gap-2 border-t border-white/10 pt-3"><Link href={`/clubs/${club.slug}/manage?section=people`} className="rounded-lg border border-white/10 px-3 py-2.5 text-xs font-bold text-slate-300">Requests{club.pendingRequests ? ` · ${club.pendingRequests} pending` : ""}</Link><Link href={`/clubs/${club.slug}/manage`} className="rounded-lg bg-violet-300/10 px-3 py-2.5 text-xs font-bold text-violet-200">Manage club</Link></div> : null}
             </article>;
           })}</div> : <Empty title={!data ? loading ? "Loading your clubs…" : "Club information unavailable" : data.clubs === null ? "Club information unavailable" : "Find your pool community"} text="Clubs you manage, belong to or follow will appear here. Club organizers can publish announcements from their Command Center." href="/clubs" action="Explore clubs" />}
         </section>

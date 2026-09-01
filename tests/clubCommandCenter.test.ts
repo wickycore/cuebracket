@@ -16,6 +16,14 @@ const clubPage = readFileSync(
   new URL("../app/clubs/[slug]/page.tsx", import.meta.url),
   "utf8",
 );
+const adminWorkspace = readFileSync(
+  new URL("../components/ClubAdminWorkspace.tsx", import.meta.url),
+  "utf8",
+);
+const managePage = readFileSync(
+  new URL("../app/clubs/[slug]/manage/page.tsx", import.meta.url),
+  "utf8",
+);
 const communityMigration = readFileSync(
   new URL("../supabase/migrations/20260831221136_add_club_calendar_and_practice_board.sql", import.meta.url),
   "utf8",
@@ -43,15 +51,37 @@ test("the Club Command Center exposes the complete friendly club menu", () => {
   for (const label of ["Home", "Events", "Rankings", "Members", "Clubhouse"]) {
     assert.match(commandCenter, new RegExp(`label: \"${label}\"`));
   }
-  assert.match(commandCenter, /Organizer launchpad/);
+  assert.match(commandCenter, /Manage club →/);
   assert.match(commandCenter, /ClubAnnouncementBoard/);
-  assert.match(commandCenter, /TableManager clubId=\{club\.id\}/);
+  assert.doesNotMatch(commandCenter, /TableManager/);
   assert.match(commandCenter, /Invite players in one tap/);
   assert.match(clubPage, /club_announcements/);
   assert.match(clubPage, /club_player_rankings/);
   assert.match(commandCenter, /ClubCalendarBoard/);
   assert.match(commandCenter, /ClubPracticeBoard/);
   assert.match(commandCenter, /Club activity/);
+});
+
+test("club administration has a dedicated server-protected workspace", () => {
+  for (const label of ["Overview", "People", "Content", "Operations"]) {
+    assert.match(adminWorkspace, new RegExp(`label: "${label}"`));
+  }
+  assert.match(adminWorkspace, /Private organizer workspace/);
+  assert.match(adminWorkspace, /TableManager clubId=\{props\.club\.id\}/);
+  assert.match(adminWorkspace, /managementOnly/);
+  assert.match(adminWorkspace, /isAdmin/);
+  assert.match(managePage, /supabase\.auth\.getUser\(\)/);
+  assert.match(managePage, /role !== "owner" && role !== "admin"/);
+  assert.match(managePage, /redirect\(`\/clubs\/\$\{club\.slug\}`\)/);
+  assert.match(managePage, /robots: \{ index: false, follow: false \}/);
+});
+
+test("the member club page never exposes organizer controls inline", () => {
+  assert.match(commandCenter, /isAdmin=\{false\}/);
+  assert.match(commandCenter, /pendingRequests=\{\[\]\}/);
+  assert.doesNotMatch(commandCenter, /Organizer launchpad/);
+  assert.doesNotMatch(commandCenter, /Create the next event/);
+  assert.doesNotMatch(commandCenter, /\+ Create tournament/);
 });
 
 test("calendar events and practice challenges are validated before storage", () => {

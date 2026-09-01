@@ -39,6 +39,8 @@ test("every organizer route is locked after sign-out while spectator routes stay
     "/leagues",
     "/tables",
     "/clubs/new",
+    "/clubs/example/manage",
+    "/clubs/example/manage/people",
   ]) {
     assert.equal(isProtectedOrganizerPath(path), true, path);
   }

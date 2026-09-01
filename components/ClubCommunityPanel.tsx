@@ -34,6 +34,7 @@ interface Props {
   members: ClubMemberView[];
   defaultRequestName: string;
   isAdmin: boolean;
+  managementOnly?: boolean;
 }
 
 export function ClubCommunityPanel({
@@ -46,6 +47,7 @@ export function ClubCommunityPanel({
   members,
   defaultRequestName,
   isAdmin,
+  managementOnly = false,
 }: Props) {
   const router = useRouter();
   const [following, setFollowing] = useState(isFollowing);
@@ -89,13 +91,13 @@ export function ClubCommunityPanel({
     event.preventDefault();
     void run("details", async () => {
       const updated = await updateClub(club.id, { name, slug, location, description });
-      if (updated.slug !== club.slug) router.push(`/clubs/${updated.slug}`);
+      if (updated.slug !== club.slug) router.push(managementOnly ? `/clubs/${updated.slug}/manage` : `/clubs/${updated.slug}`);
     });
   }
 
   return (
     <div className="space-y-5">
-      <section className="rounded-[1.75rem] border border-white/10 bg-slate-900/70 p-5 sm:p-6">
+      {!managementOnly ? <section className="rounded-[1.75rem] border border-white/10 bg-slate-900/70 p-5 sm:p-6">
         <div className="flex flex-col gap-3 sm:flex-row">
           {userId ? (
             <button type="button" onClick={() => void toggleFollow()} disabled={Boolean(busy)} className={`min-h-12 flex-1 rounded-2xl px-5 py-3 font-black ${following ? "border border-cyan-400/25 bg-cyan-400/10 text-cyan-200" : "bg-cyan-400 text-slate-950"}`}>
@@ -133,8 +135,9 @@ export function ClubCommunityPanel({
           <p className="mt-4 border-t border-white/10 pt-4 text-sm leading-6 text-slate-500">Following keeps you connected to public events. Membership is optional and approved by the club organizer.</p>
         )}
 
-        {message ? <p role="alert" className="mt-4 rounded-2xl border border-rose-300/20 bg-rose-300/10 px-4 py-3 text-sm font-bold text-rose-100">{message}</p> : null}
-      </section>
+      </section> : null}
+
+      {message ? <p role="alert" className="rounded-2xl border border-rose-300/20 bg-rose-300/10 px-4 py-3 text-sm font-bold text-rose-100">{message}</p> : null}
 
       {isAdmin ? (
         <section className="rounded-[1.75rem] border border-cyan-400/20 bg-cyan-400/[0.045] p-5 sm:p-6">

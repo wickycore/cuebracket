@@ -12,6 +12,7 @@ const ORGANIZER_ROUTE_PREFIXES = [
 
 export function isProtectedOrganizerPath(pathname: string) {
   if (pathname.startsWith("/cloud/live/")) return false;
+  if (/^\/clubs\/[^/]+\/manage(?:\/|$)/.test(pathname)) return true;
   return ORGANIZER_ROUTE_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );

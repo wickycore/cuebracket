@@ -57,16 +57,14 @@ export default async function ClubPage({ params, searchParams }: Props) {
   const currentTime = currentDate.toISOString();
   const calendarFloor = new Date(currentDate.getTime() - 30 * 86_400_000).toISOString();
 
-  const [profilesResult, ownRequestResult, pendingResult, settingsResult, tournamentsResult, leaguesResult, rankingsResult, announcementsResult, tablesResult, calendarResult, challengesResult, achievementsResult] = await Promise.all([
+  const [profilesResult, ownRequestResult, settingsResult, tournamentsResult, leaguesResult, rankingsResult, announcementsResult, calendarResult, challengesResult, achievementsResult] = await Promise.all([
     memberIds.length ? supabase.from("profiles").select("id, display_name, username, tournament_name, is_public").in("id", memberIds) : Promise.resolve({ data: [] }),
     user ? supabase.from("club_membership_requests").select("*").eq("club_id", club.id).eq("user_id", user.id).eq("status", "pending").maybeSingle() : Promise.resolve({ data: null }),
-    isAdmin ? supabase.from("club_membership_requests").select("*").eq("club_id", club.id).eq("status", "pending").order("created_at") : Promise.resolve({ data: [] }),
     supabase.from("event_registration_settings").select("*").eq("club_id", club.id).order("scheduled_at", { ascending: true, nullsFirst: false }).limit(100),
     supabase.from("cloud_tournaments").select("id, name, venue, format, race_to, bracket_size, status, is_public, created_at, updated_at").eq("club_id", club.id).order("updated_at", { ascending: false }).limit(100),
     supabase.from("cloud_leagues").select("id, name, season, payload, is_public, updated_at").eq("club_id", club.id).order("updated_at", { ascending: false }).limit(50),
     supabase.from("club_player_rankings").select("*").eq("club_id", club.id).order("club_rank").limit(100),
     supabase.from("club_announcements").select("*").eq("club_id", club.id).order("is_pinned", { ascending: false }).order("published_at", { ascending: false }).limit(50),
-    isAdmin ? supabase.from("venue_tables").select("status").eq("club_id", club.id) : Promise.resolve({ data: [] }),
     supabase.from("club_calendar_events").select("*").eq("club_id", club.id).gte("starts_at", calendarFloor).order("starts_at", { ascending: true }).limit(100),
     supabase.from("club_challenges").select("*").eq("club_id", club.id).neq("status", "closed").gte("expires_at", currentTime).order("updated_at", { ascending: false }).limit(100),
     supabase.from("club_achievements").select("*").eq("club_id", club.id).order("is_featured", { ascending: false }).order("awarded_on", { ascending: false }).order("created_at", { ascending: false }).limit(100),
@@ -101,11 +99,6 @@ export default async function ClubPage({ params, searchParams }: Props) {
     else current.confirmed += 1;
     counts.set(row.tournament_id, current);
   }
-  const tableCounts = { available: 0, playing: 0, reserved: 0 };
-  for (const table of (tablesResult.data ?? []) as Array<{ status: keyof typeof tableCounts }>) {
-    if (table.status === "available" || table.status === "playing" || table.status === "reserved") tableCounts[table.status] += 1;
-  }
-
   return (
     <main className="min-h-dvh bg-[#020617] text-white">
       <AppHeader />
@@ -119,7 +112,6 @@ export default async function ClubPage({ params, searchParams }: Props) {
         followerCount={followerIds.length}
         ownRole={ownMembership?.role ?? null}
         ownRequest={ownRequestResult.data as ClubMembershipRequestRow | null}
-        pendingRequests={(pendingResult.data ?? []) as ClubMembershipRequestRow[]}
         members={members}
         defaultRequestName={ownProfile?.tournament_name || ownProfile?.display_name || ""}
         tournaments={(tournamentsResult.data ?? []) as ClubTournamentSummary[]}
@@ -132,7 +124,6 @@ export default async function ClubPage({ params, searchParams }: Props) {
         calendarRsvps={(ownRsvpsResult.data ?? []) as ClubCalendarRsvpRow[]}
         challenges={(challengesResult.data ?? []) as ClubChallengeRow[]}
         achievements={(achievementsResult.data ?? []) as ClubAchievementRow[]}
-        tableCounts={tableCounts}
       />
     </main>
   );

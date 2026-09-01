@@ -11,7 +11,6 @@ import { ClubGuide } from "@/components/ClubGuide";
 import { ClubPracticeBoard } from "@/components/ClubPracticeBoard";
 import { LiveMatchFeed } from "@/components/LiveMatchFeed";
 import { FollowPlayerButton, PlayerFollowingProvider } from "@/components/PlayerFollowing";
-import { TableManager } from "@/components/TableManager";
 import type { ClubMembershipRequestRow, ClubRole, ClubRow } from "@/lib/clubs";
 import {
   clubAnnouncementLabel,
@@ -42,7 +41,6 @@ interface Props {
   followerCount: number;
   ownRole: ClubRole | null;
   ownRequest: ClubMembershipRequestRow | null;
-  pendingRequests: ClubMembershipRequestRow[];
   members: ClubMemberView[];
   defaultRequestName: string;
   tournaments: ClubTournamentSummary[];
@@ -55,7 +53,6 @@ interface Props {
   calendarRsvps: ClubCalendarRsvpRow[];
   challenges: ClubChallengeRow[];
   achievements: ClubAchievementRow[];
-  tableCounts: { available: number; playing: number; reserved: number };
 }
 
 const tabs: Array<{ id: ClubTab; label: string }> = [
@@ -89,10 +86,10 @@ function StatCard({ value, label, detail, tone = "cyan" }: { value: number | str
 
 export function ClubCommandCenter(props: Props) {
   const {
-    club, userId, isAdmin, isFollowing, ownRole, ownRequest, pendingRequests,
+    club, userId, isAdmin, isFollowing, ownRole, ownRequest,
     members, defaultRequestName, tournaments, registrationSettings,
     registrationCounts, leagues, rankings, announcements, calendarEvents,
-    calendarRsvps, challenges, achievements, tableCounts,
+    calendarRsvps, challenges, achievements,
   } = props;
   const [activeTab, setActiveTab] = useState<ClubTab>(() => tabs.find((tab) => tab.id === props.initialTab)?.id ?? "home");
   const [eventFilter, setEventFilter] = useState<EventFilter>("all");
@@ -167,13 +164,14 @@ export function ClubCommandCenter(props: Props) {
               <div className="min-w-0 pt-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="cb-kicker">Club Command Center</p>
-                  {isAdmin ? <span className="rounded-full border border-amber-300/20 bg-amber-300/10 px-2.5 py-1 text-[0.6rem] font-black uppercase tracking-wider text-amber-200">Organizer view</span> : null}
+                  {isAdmin ? <span className="rounded-full border border-amber-300/20 bg-amber-300/10 px-2.5 py-1 text-[0.6rem] font-black uppercase tracking-wider text-amber-200">Member page preview</span> : null}
                 </div>
                 <h1 className="mt-2 break-words text-4xl font-black tracking-[-0.05em] sm:text-6xl">{club.name}</h1>
                 <p className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm font-bold text-slate-400"><span>{club.location ? `📍 ${club.location}` : "CueBracket pool club"}</span><span className="text-slate-600">/clubs/{club.slug}</span></p>
               </div>
             </div>
             <div className="flex flex-wrap gap-2 sm:gap-3">
+              {isAdmin ? <Link href={`/clubs/${club.slug}/manage`} className="inline-flex min-h-12 items-center rounded-2xl border border-amber-300/25 bg-amber-300/10 px-5 py-3 text-sm font-black text-amber-100 hover:bg-amber-300/15">Manage club →</Link> : null}
               <button type="button" onClick={() => void shareClub()} className="min-h-12 rounded-2xl border border-white/10 bg-white/[0.055] px-5 py-3 text-sm font-black text-white hover:bg-white/[0.09]">{shareMessage || "Share club"}</button>
               <button type="button" onClick={() => chooseTab("members")} className="min-h-12 rounded-2xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950 hover:bg-cyan-300">{ownRole ? "Open member area" : isFollowing ? "Following · Join club" : "Follow or join"}</button>
             </div>
@@ -198,22 +196,20 @@ export function ClubCommandCenter(props: Props) {
               <StatCard value={openEvents.length} label="Open events" detail="Accepting registrations" tone="cyan" />
               <StatCard value={liveTournaments.length + liveLeagues.length} label="Live now" detail="Tournaments and leagues" tone="emerald" />
               <StatCard value={members.length} label="Members" detail={`${rankings.length} ranked players`} tone="violet" />
-              <StatCard value={isAdmin ? tableCounts.available : totalTitles} label={isAdmin ? "Free tables" : "Club titles"} detail={isAdmin ? `${tableCounts.playing} currently playing` : "Verified CueBracket titles"} tone="amber" />
+              <StatCard value={totalTitles} label="Club titles" detail="Verified CueBracket titles" tone="amber" />
             </section>
 
             <div className="grid gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(19rem,.65fr)]">
               <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_90%_0%,rgba(34,211,238,.12),transparent_22rem),linear-gradient(145deg,rgba(15,30,51,.9),rgba(3,9,21,.94))] p-5 sm:p-7">
                 <div className="flex flex-wrap items-start justify-between gap-4"><div><p className="cb-kicker">Next at the club</p><h2 className="mt-2 text-2xl font-black sm:text-3xl">{nextEvent?.event_name ?? (liveTournaments[0]?.name || "The next match is yours")}</h2></div>{nextEvent ? <span className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1.5 text-xs font-black text-emerald-200">Registration open</span> : null}</div>
-                {nextEvent ? <><div className="mt-6 grid gap-3 sm:grid-cols-3"><div className="rounded-2xl border border-white/10 bg-slate-950/45 p-4"><p className="text-[0.62rem] font-black uppercase tracking-wider text-slate-600">Date & time</p><p className="mt-2 text-sm font-black text-white">{clubDateLabel(nextEvent.scheduled_at)}</p></div><div className="rounded-2xl border border-white/10 bg-slate-950/45 p-4"><p className="text-[0.62rem] font-black uppercase tracking-wider text-slate-600">Venue</p><p className="mt-2 text-sm font-black text-white">{nextEvent.venue || club.location || "To be announced"}</p></div><div className="rounded-2xl border border-white/10 bg-slate-950/45 p-4"><p className="text-[0.62rem] font-black uppercase tracking-wider text-slate-600">Format</p><p className="mt-2 text-sm font-black capitalize text-white">{cleanLabel(nextEvent.format)} · Race to {nextEvent.race_to}</p></div></div><div className="mt-5 flex flex-wrap gap-3"><Link href={`/register/${nextEvent.tournament_id}`} className="rounded-xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950">Register now →</Link><button type="button" onClick={() => chooseTab("events")} className="rounded-xl border border-white/10 px-5 py-3 text-sm font-black text-slate-300">All club events</button></div></> : <div className="mt-5 rounded-2xl border border-dashed border-white/10 p-7"><p className="text-sm leading-6 text-slate-500">No registration is open right now. Follow the club and watch the noticeboard for the next announcement.</p>{isAdmin ? <Link href="/tournaments/new" className="mt-4 inline-flex rounded-xl bg-cyan-400 px-4 py-2.5 text-sm font-black text-slate-950">Create the next event</Link> : null}</div>}
+                {nextEvent ? <><div className="mt-6 grid gap-3 sm:grid-cols-3"><div className="rounded-2xl border border-white/10 bg-slate-950/45 p-4"><p className="text-[0.62rem] font-black uppercase tracking-wider text-slate-600">Date & time</p><p className="mt-2 text-sm font-black text-white">{clubDateLabel(nextEvent.scheduled_at)}</p></div><div className="rounded-2xl border border-white/10 bg-slate-950/45 p-4"><p className="text-[0.62rem] font-black uppercase tracking-wider text-slate-600">Venue</p><p className="mt-2 text-sm font-black text-white">{nextEvent.venue || club.location || "To be announced"}</p></div><div className="rounded-2xl border border-white/10 bg-slate-950/45 p-4"><p className="text-[0.62rem] font-black uppercase tracking-wider text-slate-600">Format</p><p className="mt-2 text-sm font-black capitalize text-white">{cleanLabel(nextEvent.format)} · Race to {nextEvent.race_to}</p></div></div><div className="mt-5 flex flex-wrap gap-3"><Link href={`/register/${nextEvent.tournament_id}`} className="rounded-xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950">Register now →</Link><button type="button" onClick={() => chooseTab("events")} className="rounded-xl border border-white/10 px-5 py-3 text-sm font-black text-slate-300">All club events</button></div></> : <div className="mt-5 rounded-2xl border border-dashed border-white/10 p-7"><p className="text-sm leading-6 text-slate-500">No registration is open right now. Follow the club and watch the noticeboard for the next announcement.</p></div>}
               </section>
 
               <section className="rounded-[2rem] border border-white/10 bg-slate-900/65 p-5 sm:p-6">
                 <div className="flex items-center justify-between gap-3"><div><p className="cb-kicker">Club pulse</p><h2 className="mt-2 text-xl font-black">Right now</h2></div><span className="cb-live-dot" /></div>
-                <div className="mt-5 space-y-3">{[[liveTournaments.length, "Live tournaments", "text-emerald-300"], [liveLeagues.length, "Live league seasons", "text-violet-300"], [openEvents.length, "Open entries", "text-cyan-300"], [isAdmin ? pendingRequests.length : announcements.length, isAdmin ? "Membership requests" : "Club announcements", "text-amber-300"]].map(([value, label, color]) => <div key={String(label)} className="flex items-center justify-between rounded-xl border border-white/8 bg-slate-950/40 px-4 py-3"><span className="text-sm font-bold text-slate-400">{label}</span><span className={`text-lg font-black ${color}`}>{value}</span></div>)}</div>
+                <div className="mt-5 space-y-3">{[[liveTournaments.length, "Live tournaments", "text-emerald-300"], [liveLeagues.length, "Live league seasons", "text-violet-300"], [openEvents.length, "Open entries", "text-cyan-300"], [announcements.length, "Club announcements", "text-amber-300"]].map(([value, label, color]) => <div key={String(label)} className="flex items-center justify-between rounded-xl border border-white/8 bg-slate-950/40 px-4 py-3"><span className="text-sm font-bold text-slate-400">{label}</span><span className={`text-lg font-black ${color}`}>{value}</span></div>)}</div>
               </section>
             </div>
-
-            {isAdmin ? <AdminQuickActions chooseTab={chooseTab} /> : null}
 
             {spotlight ? <button type="button" onClick={() => chooseTab("rankings")} className="group w-full overflow-hidden rounded-[2rem] border border-amber-300/20 bg-[radial-gradient(circle_at_90%_0%,rgba(251,191,36,.16),transparent_22rem),linear-gradient(135deg,rgba(120,53,15,.22),rgba(15,23,42,.78))] p-5 text-left sm:p-7"><div className="flex flex-col gap-5 sm:flex-row sm:items-center"><span className="grid h-16 w-16 shrink-0 place-items-center rounded-[1.35rem] border border-amber-300/25 bg-amber-300/10 text-3xl">🏆</span><span className="min-w-0 flex-1"><span className="text-[0.62rem] font-black uppercase tracking-[0.2em] text-amber-300">Member spotlight · {spotlightMember?.name ?? "Club member"}</span><span className="mt-2 block text-2xl font-black text-white group-hover:text-amber-100">{spotlight.title}</span><span className="mt-2 block line-clamp-2 text-sm leading-6 text-slate-400">{spotlight.description}</span></span><span className="shrink-0 text-sm font-black text-amber-300">Club honours →</span></div></button> : null}
 
@@ -230,18 +226,18 @@ export function ClubCommandCenter(props: Props) {
 
         {activeTab === "events" ? (
           <section>
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="cb-kicker">Club calendar</p><h2 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">Tournaments & events</h2><p className="mt-2 text-sm text-slate-500">Registration, live brackets and completed club history in one place.</p></div>{isAdmin ? <Link href="/tournaments/new" className="inline-flex min-h-12 items-center justify-center rounded-xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950">+ Create tournament</Link> : null}</div>
-            <div className="mt-6"><ClubCalendarBoard clubId={club.id} clubSlug={club.slug} isAdmin={isAdmin} isMember={Boolean(ownRole)} userId={userId} initialEvents={calendarEvents} initialRsvps={calendarRsvps} /></div>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="cb-kicker">Club calendar</p><h2 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">Tournaments & events</h2><p className="mt-2 text-sm text-slate-500">Registration, live brackets and completed club history in one place.</p></div></div>
+            <div className="mt-6"><ClubCalendarBoard clubId={club.id} clubSlug={club.slug} isAdmin={false} isMember={Boolean(ownRole)} userId={userId} initialEvents={calendarEvents} initialRsvps={calendarRsvps} /></div>
             <div className="mt-6 flex overflow-x-auto rounded-2xl border border-white/10 bg-slate-900/65 p-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">{(["all", "open", "live", "finished"] as EventFilter[]).map((filter) => <button key={filter} type="button" onClick={() => setEventFilter(filter)} className={`min-h-11 shrink-0 rounded-xl px-4 text-xs font-black capitalize ${eventFilter === filter ? "bg-cyan-400 text-slate-950" : "text-slate-400 hover:text-white"}`}>{filter} {filter === "all" ? tournaments.length : filter === "open" ? openEvents.length : filter === "live" ? liveTournaments.length : completedTournaments.length}</button>)}</div>
             {visibleTournaments.length ? <div className="mt-5 grid gap-4 lg:grid-cols-2">{visibleTournaments.map((item) => <TournamentCard key={item.id} item={item} settings={settingsById.get(item.id)} counts={countsById.get(item.id)} />)}</div> : <div className="mt-5 rounded-[2rem] border border-dashed border-white/10 py-14 text-center"><p className="text-xl font-black text-slate-300">No events in this view</p><p className="mt-2 text-sm text-slate-600">Choose another filter or create the club’s next tournament.</p></div>}
-            <div className="mt-9 flex items-end justify-between gap-3"><div><p className="cb-kicker">League calendar</p><h2 className="mt-2 text-2xl font-black">Seasons & playoffs</h2></div>{isAdmin ? <Link href="/leagues/new" className="text-sm font-black text-violet-300">Create season →</Link> : null}</div><div className="mt-4 grid gap-4 lg:grid-cols-2"><LeagueList leagues={leagues} cards /></div>
+            <div className="mt-9 flex items-end justify-between gap-3"><div><p className="cb-kicker">League calendar</p><h2 className="mt-2 text-2xl font-black">Seasons & playoffs</h2></div></div><div className="mt-4 grid gap-4 lg:grid-cols-2"><LeagueList leagues={leagues} cards /></div>
           </section>
         ) : null}
 
         {activeTab === "rankings" ? (
           <section>
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="cb-kicker">Verified club rankings</p><h2 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">The club table</h2><p className="mt-2 max-w-2xl text-sm text-slate-500">Match wins, podiums and titles from cloud-synced CueBracket tournaments.</p></div><label className="relative sm:w-72"><span className="sr-only">Search rankings</span><input value={rankingQuery} onChange={(event) => setRankingQuery(event.target.value)} placeholder="Search a player" className="min-h-12 w-full rounded-xl border border-white/10 bg-slate-900/75 px-4 text-sm font-bold text-white outline-none focus:border-cyan-300/40" /></label></div>
-            <div className="mt-7"><ClubAchievementWall key={achievements.map((item) => item.updated_at).join("|")} clubId={club.id} clubSlug={club.slug} isAdmin={isAdmin} members={members} initialAchievements={achievements} /></div>
+            <div className="mt-7"><ClubAchievementWall key={achievements.map((item) => item.updated_at).join("|")} clubId={club.id} clubSlug={club.slug} isAdmin={false} members={members} initialAchievements={achievements} /></div>
             {rankings.length >= 3 && !rankingQuery ? <div className="mt-7 grid gap-3 sm:grid-cols-3">{rankings.slice(0, 3).map((player, index) => <PodiumCard key={player.profile_id} player={player} index={index} />)}</div> : null}
             <div className="mt-6 overflow-hidden rounded-[2rem] border border-white/10 bg-slate-900/60"><div className="hidden grid-cols-[4rem_minmax(0,1fr)_repeat(5,5rem)] gap-3 border-b border-white/10 px-5 py-3 text-[0.62rem] font-black uppercase tracking-wider text-slate-600 md:grid"><span>Rank</span><span>Player</span><span>Played</span><span>Won</span><span>Diff</span><span>Titles</span><span>Points</span></div><RankingList rankings={visibleRankings} detailed /></div>
           </section>
@@ -251,34 +247,24 @@ export function ClubCommandCenter(props: Props) {
           <section>
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="cb-kicker">Club people</p><h2 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">Members & invitations</h2><p className="mt-2 text-sm text-slate-500">Find players, join the roster and manage trusted club roles.</p></div><input value={memberQuery} onChange={(event) => setMemberQuery(event.target.value)} placeholder="Search members" aria-label="Search club members" className="min-h-12 rounded-xl border border-white/10 bg-slate-900/75 px-4 text-sm font-bold text-white outline-none focus:border-cyan-300/40 sm:w-72" /></div>
             <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(20rem,.65fr)] lg:items-start"><div><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{visibleMembers.map((member) => <MemberCard key={member.userId} member={member} achievementCount={achievementCounts[member.userId] ?? 0} />)}</div>{!visibleMembers.length ? <div className="rounded-2xl border border-dashed border-white/10 py-12 text-center text-slate-500">No members match that search.</div> : null}</div><InviteCard club={club} chooseTab={chooseTab} /></div>
-            <div className="mt-7"><ClubCommunityPanel club={club} userId={userId} isFollowing={isFollowing} ownRole={ownRole} ownRequest={ownRequest} pendingRequests={pendingRequests} members={members} defaultRequestName={defaultRequestName} isAdmin={isAdmin} /></div>
+            <div className="mt-7"><ClubCommunityPanel club={club} userId={userId} isFollowing={isFollowing} ownRole={ownRole} ownRequest={ownRequest} pendingRequests={[]} members={members} defaultRequestName={defaultRequestName} isAdmin={false} /></div>
           </section>
         ) : null}
 
         {activeTab === "clubhouse" ? (
           <div className="space-y-6">
             <div><p className="cb-kicker">Inside the clubhouse</p><h2 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">Practice, news & venue</h2><p className="mt-2 text-sm text-slate-500">Everything that keeps the club moving between tournament days.</p></div>
-            <ClubGuide clubId={club.id} isAdmin={isAdmin} location={club.location} />
-            <ClubPracticeBoard clubId={club.id} clubSlug={club.slug} userId={userId} isMember={Boolean(ownRole)} isAdmin={isAdmin} memberNames={memberNames} initialChallenges={challenges} />
-            <ClubAnnouncementBoard key={announcements.map((item) => item.updated_at).join("|")} clubId={club.id} initialAnnouncements={announcements} isAdmin={isAdmin} />
-            <section className="rounded-[2rem] border border-violet-300/15 bg-slate-900/60 p-5 sm:p-7"><div className="flex items-end justify-between gap-4"><div><p className="cb-kicker !text-violet-300">League room</p><h2 className="mt-2 text-2xl font-black">Club seasons</h2></div>{isAdmin ? <Link href="/leagues/new" className="text-sm font-black text-violet-300">+ New season</Link> : null}</div><div className="mt-5 grid gap-4 lg:grid-cols-2"><LeagueList leagues={leagues} cards /></div></section>
-            {isAdmin ? <TableManager clubId={club.id} /> : <section className="rounded-[2rem] border border-white/10 bg-slate-900/60 p-6"><p className="cb-kicker">Venue operations</p><div className="mt-3 flex items-center justify-between gap-4"><div><h2 className="text-2xl font-black">The live table floor</h2><p className="mt-2 text-sm leading-6 text-slate-500">Club organizers use this area to assign tables and keep matches moving in realtime.</p></div><span className="hidden rounded-2xl border border-white/10 bg-slate-950/50 px-5 py-4 text-center sm:block"><span className="block text-2xl font-black text-cyan-300">Live</span><span className="text-[0.6rem] font-black uppercase text-slate-600">Organizer managed</span></span></div></section>}
+            <ClubGuide clubId={club.id} isAdmin={false} location={club.location} />
+            <ClubPracticeBoard clubId={club.id} clubSlug={club.slug} userId={userId} isMember={Boolean(ownRole)} isAdmin={false} memberNames={memberNames} initialChallenges={challenges} />
+            <ClubAnnouncementBoard key={announcements.map((item) => item.updated_at).join("|")} clubId={club.id} initialAnnouncements={announcements} isAdmin={false} />
+            <section className="rounded-[2rem] border border-violet-300/15 bg-slate-900/60 p-5 sm:p-7"><div className="flex items-end justify-between gap-4"><div><p className="cb-kicker !text-violet-300">League room</p><h2 className="mt-2 text-2xl font-black">Club seasons</h2></div></div><div className="mt-5 grid gap-4 lg:grid-cols-2"><LeagueList leagues={leagues} cards /></div></section>
+            <section className="rounded-[2rem] border border-white/10 bg-slate-900/60 p-6"><p className="cb-kicker">Venue operations</p><div className="mt-3 flex items-center justify-between gap-4"><div><h2 className="text-2xl font-black">The live table floor</h2><p className="mt-2 text-sm leading-6 text-slate-500">Club organizers use this area to assign tables and keep matches moving in realtime.</p></div><span className="hidden rounded-2xl border border-white/10 bg-slate-950/50 px-5 py-4 text-center sm:block"><span className="block text-2xl font-black text-cyan-300">Live</span><span className="text-[0.6rem] font-black uppercase text-slate-600">Organizer managed</span></span></div></section>
             <section className="grid grid-cols-2 gap-3 lg:grid-cols-4"><StatCard value={completedTournaments.length} label="Events played" detail="Completed club tournaments" /><StatCard value={totalTitles} label="Titles won" detail="Verified club champions" tone="amber" /><StatCard value={leagues.length} label="League seasons" detail="Current and previous seasons" tone="violet" /><StatCard value={announcements.length} label="Club updates" detail="Published announcements" tone="emerald" /></section>
-            {isAdmin ? <AdminQuickActions chooseTab={chooseTab} /> : null}
           </div>
         ) : null}
       </div>
     </div></PlayerFollowingProvider>
   );
-}
-
-function AdminQuickActions({ chooseTab }: { chooseTab: (tab: ClubTab) => void }) {
-  const actions = [
-    ["Create tournament", "/tournaments/new", "New bracket and registration"],
-    ["Create league", "/leagues/new", "Season, fixtures and playoffs"],
-    ["Manage tables", "/tables", "Venue floor and assignments"],
-  ];
-  return <section className="rounded-[2rem] border border-cyan-300/15 bg-[linear-gradient(135deg,rgba(8,47,73,.38),rgba(15,23,42,.7))] p-5 sm:p-7"><div className="flex items-end justify-between"><div><p className="cb-kicker">Organizer launchpad</p><h2 className="mt-2 text-2xl font-black">Quick actions</h2></div><span className="rounded-full bg-cyan-300/10 px-3 py-1.5 text-[0.62rem] font-black uppercase tracking-wider text-cyan-200">Manage club</span></div><div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">{actions.map(([label, href, detail]) => <Link key={label} href={href} className="rounded-2xl border border-white/10 bg-slate-950/45 p-4 transition hover:border-cyan-300/25"><span className="font-black text-white">{label}</span><span className="mt-1 block text-xs leading-5 text-slate-600">{detail}</span></Link>)}<button type="button" onClick={() => chooseTab("members")} className="rounded-2xl border border-white/10 bg-slate-950/45 p-4 text-left transition hover:border-cyan-300/25"><span className="font-black">Invite members</span><span className="mt-1 block text-xs leading-5 text-slate-600">Share link and approve requests</span></button><button type="button" onClick={() => chooseTab("clubhouse")} className="rounded-2xl border border-white/10 bg-slate-950/45 p-4 text-left transition hover:border-cyan-300/25"><span className="font-black">Post update</span><span className="mt-1 block text-xs leading-5 text-slate-600">Publish to the noticeboard</span></button></div></section>;
 }
 
 function ActivityFeed({ items, chooseTab }: { items: ClubActivityItem[]; chooseTab: (tab: ClubTab) => void }) {
