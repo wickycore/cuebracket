@@ -24,6 +24,7 @@ export interface ClubTournamentSummary {
   id: string;
   name: string;
   venue: string;
+  poster_url: string | null;
   format: string;
   race_to: number;
   bracket_size: number;
@@ -115,6 +116,7 @@ export interface ClubAchievementRow {
   kind: ClubAchievementKind;
   title: string;
   description: string;
+  image_url: string | null;
   awarded_on: string;
   is_featured: boolean;
   created_at: string;

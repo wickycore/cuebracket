@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+/* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -39,9 +40,12 @@ export default async function TournamentRegistrationPage({ params }: Props) {
   const settings = settingsData as RegistrationSettingsRow | null;
   if (!settings) notFound();
 
-  const { data: club } = settings.club_id
-    ? await supabase.from("clubs").select("name, slug").eq("id", settings.club_id).maybeSingle()
-    : { data: null };
+  const [{ data: club }, { data: tournamentMedia }] = await Promise.all([
+    settings.club_id
+      ? supabase.from("clubs").select("name, slug").eq("id", settings.club_id).maybeSingle()
+      : Promise.resolve({ data: null }),
+    supabase.from("cloud_tournaments").select("poster_url").eq("id", tournamentId).maybeSingle(),
+  ]);
 
   const { data: { user } } = await supabase.auth.getUser();
   const [{ data: profile }, { data: registrationRows }, ownRegistrationResult] = await Promise.all([
@@ -82,6 +86,7 @@ export default async function TournamentRegistrationPage({ params }: Props) {
       </header>
 
       <div className="relative mx-auto max-w-6xl px-5 py-8 sm:px-8 sm:py-12">
+        {tournamentMedia?.poster_url ? <div className="mb-7 h-52 overflow-hidden rounded-[2rem] border border-white/10 shadow-2xl shadow-black/30 sm:h-80"><img src={tournamentMedia.poster_url} alt={`${settings.event_name} poster`} className="h-full w-full object-cover" /></div> : null}
         <section className="mb-7 overflow-hidden rounded-[2rem] border border-cyan-400/20 bg-[linear-gradient(135deg,rgba(15,23,42,0.96),rgba(3,20,33,0.96))] p-6 shadow-2xl shadow-black/30 sm:p-9">
           <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
             <div>

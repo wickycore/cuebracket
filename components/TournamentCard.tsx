@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element */
+
 import Link from "next/link";
 import {
   Tournament,
@@ -75,6 +77,7 @@ export function TournamentCard({
       <div className="pointer-events-none absolute -right-20 -top-20 h-44 w-44 rounded-full bg-cyan-400/[0.04] blur-3xl transition group-hover:bg-cyan-400/[0.08]" />
 
       <div className="relative">
+        {tournament.posterUrl ? <div className="-mx-5 -mt-5 mb-5 h-40 overflow-hidden border-b border-white/10 sm:-mx-6 sm:-mt-6"><img src={tournament.posterUrl} alt={`${tournament.name} poster`} className="h-full w-full object-cover" /></div> : null}
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <div className="mb-3 flex flex-wrap items-center gap-2">

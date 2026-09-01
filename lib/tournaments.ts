@@ -224,6 +224,7 @@ export interface Tournament {
   clubId?: string | null;
   name: string;
   venue: string;
+  posterUrl?: string | null;
   type: TournamentType;
   format: TournamentFormat;
   raceTo: number;
@@ -422,6 +423,7 @@ function normalizeTournament(tournament: Tournament): Tournament {
   return {
     ...tournament,
     clubId: tournament.clubId ?? null,
+    posterUrl: tournament.posterUrl ?? null,
     type: tournament.type ?? "single_stage",
     options: { ...DEFAULT_TOURNAMENT_OPTIONS, ...(tournament.options ?? {}) },
     bracketSize: Number(tournament.bracketSize) || 8,

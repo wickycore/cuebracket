@@ -1,9 +1,12 @@
 "use client";
 
-import { type FormEvent, useMemo, useState } from "react";
+/* eslint-disable @next/next/no-img-element */
+
+import { type FormEvent, useEffect, useMemo, useState } from "react";
 
 import { normalizeUsername, validatePlayerProfile } from "@/lib/playerProfile";
 import { createClient } from "@/lib/supabase/client";
+import { removePublicImage, uploadPublicImage, validateImageFile } from "@/lib/cloud/media";
 
 interface PlayerProfileEditorProps {
   userId: string;
@@ -13,6 +16,7 @@ interface PlayerProfileEditorProps {
     tournamentName: string;
     bio: string;
     isPublic: boolean;
+    avatarUrl: string | null;
   };
 }
 
@@ -23,10 +27,17 @@ export function PlayerProfileEditor({ userId, initialProfile }: PlayerProfileEdi
   const [tournamentName, setTournamentName] = useState(initialProfile.tournamentName);
   const [bio, setBio] = useState(initialProfile.bio);
   const [isPublic, setIsPublic] = useState(initialProfile.isPublic);
+  const [avatarUrl, setAvatarUrl] = useState(initialProfile.avatarUrl ?? "");
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState(initialProfile.avatarUrl ?? "");
   const [savedUsername, setSavedUsername] = useState(initialProfile.username);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [success, setSuccess] = useState(false);
+
+  useEffect(() => () => {
+    if (avatarPreview.startsWith("blob:")) URL.revokeObjectURL(avatarPreview);
+  }, [avatarPreview]);
 
   async function saveProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -44,6 +55,14 @@ export function PlayerProfileEditor({ userId, initialProfile }: PlayerProfileEdi
     setSuccess(false);
 
     const clean = validation.value;
+    let uploaded: { path: string; url: string } | null = null;
+    try {
+      if (avatarFile) uploaded = await uploadPublicImage(`profiles/${userId}/avatar`, avatarFile);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "The profile photo could not be uploaded.");
+      setBusy(false);
+      return;
+    }
     const { error } = await supabase
       .from("profiles")
       .update({
@@ -51,12 +70,14 @@ export function PlayerProfileEditor({ userId, initialProfile }: PlayerProfileEdi
         username: clean.username,
         tournament_name: clean.tournamentName,
         bio: clean.bio,
+        avatar_url: (uploaded?.url ?? avatarUrl) || null,
         is_public: isPublic,
         updated_at: new Date().toISOString(),
       })
       .eq("id", userId);
 
     if (error) {
+      if (uploaded) void removePublicImage(uploaded.url).catch(() => undefined);
       setSuccess(false);
       setMessage(
         error.code === "23505"
@@ -68,6 +89,14 @@ export function PlayerProfileEditor({ userId, initialProfile }: PlayerProfileEdi
     }
 
     await supabase.auth.updateUser({ data: { display_name: clean.displayName } });
+
+    if (uploaded) {
+      const previousAvatar = avatarUrl;
+      setAvatarUrl(uploaded.url);
+      setAvatarFile(null);
+      setAvatarPreview(uploaded.url);
+      if (previousAvatar && previousAvatar !== uploaded.url) void removePublicImage(previousAvatar).catch(() => undefined);
+    }
 
     setDisplayName(clean.displayName);
     setUsername(clean.username);
@@ -106,6 +135,13 @@ export function PlayerProfileEditor({ userId, initialProfile }: PlayerProfileEdi
       </div>
 
       <form onSubmit={saveProfile} className="mt-7 grid gap-5 sm:grid-cols-2">
+        <label className="block text-sm font-bold text-slate-300 sm:col-span-2">
+          Profile picture <span className="font-normal text-slate-600">(optional)</span>
+          <span className="mt-2 flex items-center gap-4 rounded-2xl border border-white/10 bg-slate-950/55 p-4">
+            {avatarPreview ? <span className="h-20 w-20 shrink-0 overflow-hidden rounded-[1.4rem] border border-white/10"><img src={avatarPreview} alt="Profile preview" className="h-full w-full object-cover" /></span> : <span className="grid h-20 w-20 shrink-0 place-items-center rounded-[1.4rem] border border-cyan-300/20 bg-cyan-400/10 text-3xl font-black text-cyan-200">{displayName.trim().charAt(0).toUpperCase() || "C"}</span>}
+            <span className="min-w-0 flex-1"><input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => { const file = event.target.files?.[0] ?? null; const problem = file ? validateImageFile(file) : null; if (problem) { setSuccess(false); setMessage(problem); event.target.value = ""; return; } setAvatarFile(file); setAvatarPreview(file ? URL.createObjectURL(file) : avatarUrl); setMessage(""); }} className="block w-full text-xs text-slate-400 file:mr-3 file:rounded-lg file:border-0 file:bg-cyan-400 file:px-3 file:py-2 file:font-black file:text-slate-950" /><span className="mt-2 block text-xs font-normal text-slate-600">JPG, PNG or WebP · maximum 5 MB</span></span>
+          </span>
+        </label>
         <label className="block text-sm font-bold text-slate-300">
           Profile name
           <input

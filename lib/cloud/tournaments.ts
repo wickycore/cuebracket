@@ -26,6 +26,7 @@ export interface CloudTournamentRow {
   club_id: string | null;
   name: string;
   venue: string;
+  poster_url: string | null;
   stage_type?: "single_stage" | "two_stage";
   format: Tournament["format"];
   race_to: number;
@@ -47,6 +48,7 @@ export function rowToTournament(row: CloudTournamentRow): Tournament {
     clubId: row.club_id,
     name: row.name,
     venue: row.venue,
+    posterUrl: row.poster_url ?? null,
     type: row.stage_type ?? "single_stage",
     format: row.format,
     raceTo: row.race_to,
@@ -66,6 +68,7 @@ function tournamentPayload(tournament: Tournament) {
     club_id: tournament.clubId ?? null,
     name: tournament.name,
     venue: tournament.venue,
+    poster_url: tournament.posterUrl ?? null,
     stage_type: tournament.type,
     format: tournament.format,
     race_to: tournament.raceTo,

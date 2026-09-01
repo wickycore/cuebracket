@@ -1,18 +1,23 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element */
+
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
 import { getManagedClubs } from "@/lib/cloud/clubs";
+import { removePublicImage, uploadTournamentPoster, validateImageFile } from "@/lib/cloud/media";
 import type { ClubRow } from "@/lib/clubs";
 import {
   createTournament,
   DEFAULT_TOURNAMENT_OPTIONS,
+  deleteTournament,
   FinalStageFormat,
   TournamentFormat,
   TournamentOptions,
   TournamentType,
+  updateTournament,
 } from "@/lib/tournaments";
 
 const formats: Array<{
@@ -44,6 +49,9 @@ export default function NewTournamentPage() {
   const [raceTo, setRaceTo] = useState(5);
   const [bracketSize, setBracketSize] = useState(8);
   const [options, setOptions] = useState<TournamentOptions>(DEFAULT_TOURNAMENT_OPTIONS);
+  const [posterFile, setPosterFile] = useState<File | null>(null);
+  const [posterPreview, setPosterPreview] = useState("");
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
   const selectedFormat = formats.find((item) => item.value === format)!;
@@ -61,6 +69,10 @@ export default function NewTournamentPage() {
       .catch(() => { if (active) setManagedClubs([]); });
     return () => { active = false; };
   }, []);
+
+  useEffect(() => () => {
+    if (posterPreview.startsWith("blob:")) URL.revokeObjectURL(posterPreview);
+  }, [posterPreview]);
 
   function updateOption<K extends keyof TournamentOptions>(key: K, value: TournamentOptions[K]) {
     setOptions((current) => ({ ...current, [key]: value }));
@@ -86,7 +98,7 @@ export default function NewTournamentPage() {
     }
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
 
@@ -122,6 +134,7 @@ export default function NewTournamentPage() {
       }
     }
 
+    setBusy(true);
     const tournament = createTournament({
       clubId,
       name,
@@ -133,7 +146,21 @@ export default function NewTournamentPage() {
       options,
     });
 
-    router.push(`/tournaments/${tournament.id}`);
+    let uploaded: { path: string; url: string } | null = null;
+    try {
+      if (posterFile) {
+        uploaded = await uploadTournamentPoster(tournament.id, posterFile);
+        if (!updateTournament(tournament.id, { posterUrl: uploaded.url })) {
+          throw new Error("The tournament poster could not be attached.");
+        }
+      }
+      router.push(`/tournaments/${tournament.id}`);
+    } catch (uploadError) {
+      deleteTournament(tournament.id);
+      if (uploaded) void removePublicImage(uploaded.url).catch(() => undefined);
+      setError(uploadError instanceof Error ? uploadError.message : "The tournament poster could not be uploaded.");
+      setBusy(false);
+    }
   }
 
   return (
@@ -178,6 +205,13 @@ export default function NewTournamentPage() {
                 </select>
                 <span className="mt-2 block text-xs leading-5 text-slate-500">
                   Linked events appear on the club page when registration is opened. {managedClubs.length ? "" : <><Link href="/clubs/new" className="font-black text-cyan-300">Create a club</Link> if this event has a host.</>}
+                </span>
+              </label>
+              <label className="sm:col-span-2">
+                <span className="mb-2 block text-sm font-bold text-slate-300">Tournament poster <span className="font-normal text-slate-600">(optional)</span></span>
+                <span className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-slate-950/50 p-4 sm:flex-row sm:items-center">
+                  {posterPreview ? <span className="h-36 w-full shrink-0 overflow-hidden rounded-2xl border border-white/10 sm:w-56"><img src={posterPreview} alt="Tournament poster preview" className="h-full w-full object-cover" /></span> : <span className="grid h-36 w-full shrink-0 place-items-center rounded-2xl border border-dashed border-cyan-300/20 bg-cyan-400/[0.04] text-center text-sm font-black text-cyan-200 sm:w-56">Add event poster</span>}
+                  <span className="min-w-0 flex-1"><input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => { const file = event.target.files?.[0] ?? null; const problem = file ? validateImageFile(file) : null; if (problem) { setError(problem); event.target.value = ""; return; } setPosterFile(file); setPosterPreview(file ? URL.createObjectURL(file) : ""); setError(""); }} className="block w-full text-xs text-slate-400 file:mr-3 file:rounded-xl file:border-0 file:bg-cyan-400 file:px-4 file:py-2.5 file:font-black file:text-slate-950" /><span className="mt-2 block text-xs leading-5 text-slate-500">Shown on tournament cards and club events. JPG, PNG or WebP · maximum 5 MB.</span></span>
                 </span>
               </label>
             </div>
@@ -347,7 +381,7 @@ export default function NewTournamentPage() {
             </div>
             <div className="flex flex-col-reverse gap-3 sm:flex-row">
               <button type="button" onClick={() => router.back()} className="rounded-xl border border-white/10 px-5 py-3 font-bold text-slate-300 hover:bg-white/5">Cancel</button>
-              <button type="submit" className="rounded-xl bg-cyan-400 px-6 py-3 font-black text-slate-950 hover:bg-cyan-300">Create tournament →</button>
+              <button type="submit" disabled={busy} className="rounded-xl bg-cyan-400 px-6 py-3 font-black text-slate-950 hover:bg-cyan-300 disabled:cursor-wait disabled:opacity-60">{busy ? "Creating tournament…" : "Create tournament →"}</button>
             </div>
           </div>
         </form>

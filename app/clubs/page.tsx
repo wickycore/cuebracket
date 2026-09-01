@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+/* eslint-disable @next/next/no-img-element */
+
 import { AppHeader } from "@/components/AppHeader";
 import type { ClubRow } from "@/lib/clubs";
 import { createClient } from "@/lib/supabase/server";
@@ -64,8 +66,8 @@ export default async function ClubsPage() {
               {clubs.map((club) => (
                 <Link key={club.id} href={`/clubs/${club.slug}`} className="group rounded-[1.75rem] border border-white/10 bg-slate-900/65 p-6 transition hover:-translate-y-0.5 hover:border-cyan-400/30 hover:bg-slate-900">
                   <div className="flex items-start gap-4">
-                    <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl border border-cyan-300/20 bg-cyan-400/10 text-2xl font-black text-cyan-200">
-                      {club.name.charAt(0).toUpperCase()}
+                    <div className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-2xl border border-cyan-300/20 bg-cyan-400/10 text-2xl font-black text-cyan-200">
+                      {club.logo_url ? <img src={club.logo_url} alt="" className="h-full w-full object-cover" /> : club.name.charAt(0).toUpperCase()}
                     </div>
                     <div className="min-w-0">
                       <h3 className="truncate text-xl font-black group-hover:text-cyan-200">{club.name}</h3>

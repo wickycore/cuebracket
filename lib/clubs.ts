@@ -64,6 +64,16 @@ export interface ClubMembershipRequestRow {
   user_id: string;
   request_name: string;
   status: MembershipRequestStatus;
+  accepted_guide_revision: number | null;
+  guide_accepted_at: string | null;
   created_at: string;
+  updated_at: string;
+}
+
+export interface ClubGuideRow {
+  club_id: string;
+  opening_hours: string;
+  rules: string;
+  revision: number;
   updated_at: string;
 }

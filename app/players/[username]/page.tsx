@@ -41,9 +41,10 @@ export default async function PlayerProfilePage({ params }: PlayerProfilePagePro
   if (!profile) notFound();
 
   const supabase = await createClient();
-  const [{ data: statisticsData }, { data: historyData }] = await Promise.all([
+  const [{ data: statisticsData }, { data: historyData }, { data: followerCountData }] = await Promise.all([
     supabase.from("player_statistics").select("*").eq("profile_id", profile.id).maybeSingle(),
     supabase.from("player_tournament_history").select("*").eq("profile_id", profile.id).order("played_at", { ascending: false }).limit(20),
+    supabase.from("player_follower_counts").select("follower_count").eq("player_id", profile.id).maybeSingle(),
   ]);
   const statistics = statisticsData as PlayerStatisticsRow | null;
   const history = (historyData ?? []) as PlayerTournamentHistoryRow[];
@@ -75,6 +76,7 @@ export default async function PlayerProfilePage({ params }: PlayerProfilePagePro
                 <p className="text-xs font-black uppercase tracking-[0.24em] text-cyan-300">CueBracket player</p>
                 <h1 className="mt-2 break-words text-4xl font-black sm:text-5xl">{profile.display_name}</h1>
                 <p className="mt-2 text-base font-black text-slate-400">@{profile.username}</p>
+                <p className="mt-3 inline-flex rounded-full border border-cyan-300/15 bg-cyan-300/10 px-3 py-1.5 text-xs font-black text-cyan-200">{followerCountData?.follower_count ?? 0} follower{followerCountData?.follower_count === 1 ? "" : "s"}</p>
               </div>
             </div>
 

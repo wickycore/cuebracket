@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element */
+
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -57,6 +59,7 @@ export default function PublicLivePage() {
         </div>
       </header>
       <div className="mx-auto max-w-7xl px-5 py-10 sm:px-8">
+        {tournament.posterUrl ? <div className="mb-8 h-52 overflow-hidden rounded-[2rem] border border-white/10 sm:h-80"><img src={tournament.posterUrl} alt={`${tournament.name} poster`} className="h-full w-full object-cover" /></div> : null}
         <div className="text-center">
           <p className="text-sm font-black uppercase tracking-[0.25em] text-cyan-400">Public spectator view</p>
           <h1 className="mt-3 text-4xl font-black sm:text-6xl">{tournament.name}</h1>

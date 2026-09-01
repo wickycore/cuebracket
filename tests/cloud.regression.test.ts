@@ -12,6 +12,7 @@ test("cloud tournament rows preserve all modern engine payloads", () => {
     club_id: "00000000-0000-0000-0000-000000000099",
     name: "Cloud Swiss",
     venue: "KPC",
+    poster_url: null,
     stage_type: "single_stage",
     format: "swiss",
     race_to: 5,

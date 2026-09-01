@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
 import { ClubAdminWorkspace } from "@/components/ClubAdminWorkspace";
 import type { ClubMemberView } from "@/components/ClubCommunityPanel";
-import type { ClubMemberRow, ClubMembershipRequestRow, ClubRole, ClubRow } from "@/lib/clubs";
+import type { ClubGuideRow, ClubMemberRow, ClubMembershipRequestRow, ClubRole, ClubRow } from "@/lib/clubs";
 import type {
   ClubAchievementRow,
   ClubAnnouncementRow,
@@ -45,10 +45,11 @@ export default async function ManageClubPage({ params, searchParams }: Props) {
   const now = new Date();
   const currentTime = now.toISOString();
   const calendarFloor = new Date(now.getTime() - 30 * 86_400_000).toISOString();
-  const [membersResult, pendingResult, followersResult, announcementsResult, calendarResult, challengesResult, achievementsResult, broadcastsResult, liveEventsResult] = await Promise.all([
+  const [membersResult, pendingResult, followersResult, guideResult, announcementsResult, calendarResult, challengesResult, achievementsResult, broadcastsResult, liveEventsResult] = await Promise.all([
     supabase.from("club_members").select("*").eq("club_id", club.id).order("created_at"),
     supabase.from("club_membership_requests").select("*").eq("club_id", club.id).eq("status", "pending").order("created_at"),
     supabase.from("club_followers").select("user_id").eq("club_id", club.id),
+    supabase.from("club_guides").select("club_id,opening_hours,rules,revision,updated_at").eq("club_id", club.id).maybeSingle(),
     supabase.from("club_announcements").select("*").eq("club_id", club.id).order("is_pinned", { ascending: false }).order("published_at", { ascending: false }).limit(50),
     supabase.from("club_calendar_events").select("*").eq("club_id", club.id).gte("starts_at", calendarFloor).order("starts_at", { ascending: true }).limit(100),
     supabase.from("club_challenges").select("*").eq("club_id", club.id).neq("status", "closed").gte("expires_at", currentTime).order("updated_at", { ascending: false }).limit(100),
@@ -59,10 +60,14 @@ export default async function ManageClubPage({ params, searchParams }: Props) {
 
   const memberships = (membersResult.data ?? []) as ClubMemberRow[];
   const memberIds = memberships.map((membership) => membership.user_id);
-  const profilesResult = memberIds.length
-    ? await supabase.from("profiles").select("id, display_name, username, tournament_name, is_public").in("id", memberIds)
-    : { data: [] };
+  const [profilesResult, followerCountsResult] = memberIds.length
+    ? await Promise.all([
+      supabase.from("profiles").select("id, display_name, username, tournament_name, avatar_url, is_public").in("id", memberIds),
+      supabase.from("player_follower_counts").select("player_id,follower_count").in("player_id", memberIds),
+    ])
+    : [{ data: [] }, { data: [] }];
   const profileMap = new Map((profilesResult.data ?? []).map((profile) => [profile.id, profile]));
+  const followerCountMap = new Map((followerCountsResult.data ?? []).map((row) => [row.player_id, row.follower_count]));
   const members: ClubMemberView[] = memberships.map((membership) => {
     const profile = profileMap.get(membership.user_id);
     return {
@@ -71,6 +76,8 @@ export default async function ManageClubPage({ params, searchParams }: Props) {
       name: profile?.tournament_name || profile?.display_name || "Club member",
       username: profile?.username ?? null,
       isPublic: profile?.is_public ?? false,
+      avatarUrl: profile?.avatar_url ?? null,
+      followerCount: followerCountMap.get(membership.user_id) ?? 0,
     };
   });
   const calendarEvents = (calendarResult.data ?? []) as ClubCalendarEventRow[];
@@ -87,6 +94,7 @@ export default async function ManageClubPage({ params, searchParams }: Props) {
       club={club}
       userId={user.id}
       role={role}
+      guide={guideResult.data as ClubGuideRow | null}
       members={members}
       pendingRequests={(pendingResult.data ?? []) as ClubMembershipRequestRow[]}
       announcements={(announcementsResult.data ?? []) as ClubAnnouncementRow[]}

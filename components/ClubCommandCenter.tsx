@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element */
+
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
@@ -11,7 +13,7 @@ import { ClubGuide } from "@/components/ClubGuide";
 import { ClubPracticeBoard } from "@/components/ClubPracticeBoard";
 import { LiveMatchFeed } from "@/components/LiveMatchFeed";
 import { FollowPlayerButton, PlayerFollowingProvider } from "@/components/PlayerFollowing";
-import type { ClubMembershipRequestRow, ClubRole, ClubRow } from "@/lib/clubs";
+import type { ClubGuideRow, ClubMembershipRequestRow, ClubRole, ClubRow } from "@/lib/clubs";
 import {
   clubAnnouncementLabel,
   buildClubActivityFeed,
@@ -53,6 +55,7 @@ interface Props {
   calendarRsvps: ClubCalendarRsvpRow[];
   challenges: ClubChallengeRow[];
   achievements: ClubAchievementRow[];
+  guide: ClubGuideRow | null;
 }
 
 const tabs: Array<{ id: ClubTab; label: string }> = [
@@ -89,7 +92,7 @@ export function ClubCommandCenter(props: Props) {
     club, userId, isAdmin, isFollowing, ownRole, ownRequest,
     members, defaultRequestName, tournaments, registrationSettings,
     registrationCounts, leagues, rankings, announcements, calendarEvents,
-    calendarRsvps, challenges, achievements,
+    calendarRsvps, challenges, achievements, guide,
   } = props;
   const [activeTab, setActiveTab] = useState<ClubTab>(() => tabs.find((tab) => tab.id === props.initialTab)?.id ?? "home");
   const [eventFilter, setEventFilter] = useState<EventFilter>("all");
@@ -247,7 +250,7 @@ export function ClubCommandCenter(props: Props) {
           <section>
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="cb-kicker">Club people</p><h2 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">Members & invitations</h2><p className="mt-2 text-sm text-slate-500">Find players, join the roster and manage trusted club roles.</p></div><input value={memberQuery} onChange={(event) => setMemberQuery(event.target.value)} placeholder="Search members" aria-label="Search club members" className="min-h-12 rounded-xl border border-white/10 bg-slate-900/75 px-4 text-sm font-bold text-white outline-none focus:border-cyan-300/40 sm:w-72" /></div>
             <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(20rem,.65fr)] lg:items-start"><div><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{visibleMembers.map((member) => <MemberCard key={member.userId} member={member} achievementCount={achievementCounts[member.userId] ?? 0} />)}</div>{!visibleMembers.length ? <div className="rounded-2xl border border-dashed border-white/10 py-12 text-center text-slate-500">No members match that search.</div> : null}</div><InviteCard club={club} chooseTab={chooseTab} /></div>
-            <div className="mt-7"><ClubCommunityPanel club={club} userId={userId} isFollowing={isFollowing} ownRole={ownRole} ownRequest={ownRequest} pendingRequests={[]} members={members} defaultRequestName={defaultRequestName} isAdmin={false} /></div>
+            <div className="mt-7"><ClubCommunityPanel club={club} userId={userId} isFollowing={isFollowing} ownRole={ownRole} ownRequest={ownRequest} pendingRequests={[]} members={members} guide={guide} defaultRequestName={defaultRequestName} isAdmin={false} /></div>
           </section>
         ) : null}
 
@@ -282,7 +285,7 @@ function TournamentCard({ item, settings, counts }: { item: ClubTournamentSummar
   const capacity = settings?.capacity ?? item.bracket_size;
   const spaces = Math.max(0, capacity - confirmed);
   const href = settings?.registration_open ? `/register/${item.id}` : `/live/${item.id}`;
-  return <article className="overflow-hidden rounded-[1.75rem] border border-white/10 bg-[linear-gradient(145deg,rgba(15,30,51,.88),rgba(3,9,21,.95))]"><div className={`h-1 ${item.status === "live" ? "bg-emerald-400" : item.status === "completed" ? "bg-blue-400" : "bg-cyan-400"}`} /><div className="p-5"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><span className={`inline-flex rounded-full border px-2.5 py-1 text-[0.6rem] font-black uppercase tracking-wider ${statusStyle[item.status]}`}>{item.status === "live" ? "● Live" : item.status}</span><h3 className="mt-3 text-xl font-black text-white">{item.name}</h3><p className="mt-1 text-sm font-bold text-slate-500">{item.venue || "Venue TBA"}</p></div><div className="shrink-0 rounded-xl border border-white/10 bg-slate-950/50 px-3 py-2 text-center"><p className="font-black text-white">R{item.race_to}</p><p className="text-[0.55rem] font-black uppercase text-slate-600">Race</p></div></div><div className="mt-5 grid grid-cols-2 gap-3"><div className="rounded-xl border border-white/8 bg-white/[0.025] p-3"><p className="text-[0.6rem] font-black uppercase text-slate-600">Date</p><p className="mt-1 text-sm font-black text-slate-300">{clubDateLabel(settings?.scheduled_at)}</p></div><div className="rounded-xl border border-white/8 bg-white/[0.025] p-3"><p className="text-[0.6rem] font-black uppercase text-slate-600">Format</p><p className="mt-1 text-sm font-black capitalize text-slate-300">{cleanLabel(item.format)}</p></div></div>{settings?.registration_open ? <div className="mt-4"><div className="flex justify-between text-xs font-bold"><span className="text-slate-500">{confirmed}/{capacity} confirmed</span><span className={spaces ? "text-emerald-300" : "text-amber-300"}>{spaces ? `${spaces} spaces left` : "Waitlist"}</span></div><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-950"><div className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-emerald-400" style={{ width: `${Math.min(100, capacity ? confirmed / capacity * 100 : 0)}%` }} /></div></div> : null}<div className="mt-5 flex items-center justify-between gap-3"><p className="text-xs font-bold text-slate-600">{settings?.entry_fee || `${item.bracket_size} player bracket`}</p><Link href={href} className={`rounded-xl px-4 py-2.5 text-sm font-black ${settings?.registration_open ? "bg-cyan-400 text-slate-950" : "border border-white/10 text-slate-200"}`}>{settings?.registration_open ? "Register →" : "View →"}</Link></div></div></article>;
+  return <article className="overflow-hidden rounded-[1.75rem] border border-white/10 bg-[linear-gradient(145deg,rgba(15,30,51,.88),rgba(3,9,21,.95))]">{item.poster_url ? <div className="h-40 overflow-hidden border-b border-white/10"><img src={item.poster_url} alt={`${item.name} poster`} className="h-full w-full object-cover" /></div> : null}<div className={`h-1 ${item.status === "live" ? "bg-emerald-400" : item.status === "completed" ? "bg-blue-400" : "bg-cyan-400"}`} /><div className="p-5"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><span className={`inline-flex rounded-full border px-2.5 py-1 text-[0.6rem] font-black uppercase tracking-wider ${statusStyle[item.status]}`}>{item.status === "live" ? "● Live" : item.status}</span><h3 className="mt-3 text-xl font-black text-white">{item.name}</h3><p className="mt-1 text-sm font-bold text-slate-500">{item.venue || "Venue TBA"}</p></div><div className="shrink-0 rounded-xl border border-white/10 bg-slate-950/50 px-3 py-2 text-center"><p className="font-black text-white">R{item.race_to}</p><p className="text-[0.55rem] font-black uppercase text-slate-600">Race</p></div></div><div className="mt-5 grid grid-cols-2 gap-3"><div className="rounded-xl border border-white/8 bg-white/[0.025] p-3"><p className="text-[0.6rem] font-black uppercase text-slate-600">Date</p><p className="mt-1 text-sm font-black text-slate-300">{clubDateLabel(settings?.scheduled_at)}</p></div><div className="rounded-xl border border-white/8 bg-white/[0.025] p-3"><p className="text-[0.6rem] font-black uppercase text-slate-600">Format</p><p className="mt-1 text-sm font-black capitalize text-slate-300">{cleanLabel(item.format)}</p></div></div>{settings?.registration_open ? <div className="mt-4"><div className="flex justify-between text-xs font-bold"><span className="text-slate-500">{confirmed}/{capacity} confirmed</span><span className={spaces ? "text-emerald-300" : "text-amber-300"}>{spaces ? `${spaces} spaces left` : "Waitlist"}</span></div><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-950"><div className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-emerald-400" style={{ width: `${Math.min(100, capacity ? confirmed / capacity * 100 : 0)}%` }} /></div></div> : null}<div className="mt-5 flex items-center justify-between gap-3"><p className="text-xs font-bold text-slate-600">{settings?.entry_fee || `${item.bracket_size} player bracket`}</p><Link href={href} className={`rounded-xl px-4 py-2.5 text-sm font-black ${settings?.registration_open ? "bg-cyan-400 text-slate-950" : "border border-white/10 text-slate-200"}`}>{settings?.registration_open ? "Register →" : "View →"}</Link></div></div></article>;
 }
 
 function RankingList({ rankings, detailed = false }: { rankings: ClubPlayerRankingRow[]; detailed?: boolean }) {
@@ -308,8 +311,8 @@ function LeagueList({ leagues, cards = false }: { leagues: ClubLeagueSummary[]; 
 }
 
 function MemberCard({ member, achievementCount }: { member: ClubMemberView; achievementCount: number }) {
-  const content = <><span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-white/10 bg-gradient-to-br from-cyan-300/15 to-blue-500/10 text-lg font-black text-cyan-100">{member.name.charAt(0).toUpperCase()}</span><span className="min-w-0 flex-1"><span className="block truncate font-black text-white">{member.name}</span><span className="mt-1 block truncate text-xs font-bold text-slate-600">{member.username ? `@${member.username}` : "CueBracket member"}</span></span><span className="space-y-1 text-right"><span className="block rounded-full border border-white/10 px-2.5 py-1 text-[0.58rem] font-black uppercase tracking-wider text-slate-400">{member.role}</span>{achievementCount ? <span className="block text-[0.6rem] font-black text-amber-300">🏆 {achievementCount}</span> : null}</span></>;
-  return <article className="space-y-4 rounded-2xl border border-white/10 bg-slate-900/60 p-4">{member.username ? <Link href={`/players/${member.username}`} className="flex items-center gap-3">{content}</Link> : <div className="flex items-center gap-3">{content}</div>}{member.isPublic && member.username ? <FollowPlayerButton playerId={member.userId} profile={{ id: member.userId, username: member.username, display_name: member.name, tournament_name: member.name, is_public: true }} /> : <p className="text-xs text-slate-500">A public player profile is needed to follow.</p>}</article>;
+  const content = <>{member.avatarUrl ? <span className="h-12 w-12 shrink-0 overflow-hidden rounded-2xl border border-white/10"><img src={member.avatarUrl} alt="" className="h-full w-full object-cover" /></span> : <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-white/10 bg-gradient-to-br from-cyan-300/15 to-blue-500/10 text-lg font-black text-cyan-100">{member.name.charAt(0).toUpperCase()}</span>}<span className="min-w-0 flex-1"><span className="block truncate font-black text-white">{member.name}</span><span className="mt-1 block truncate text-xs font-bold text-slate-600">{member.username ? `@${member.username}` : "CueBracket member"}</span><span className="mt-1 block text-[0.65rem] font-black text-cyan-300">{member.followerCount ?? 0} follower{member.followerCount === 1 ? "" : "s"}</span></span><span className="space-y-1 text-right"><span className="block rounded-full border border-white/10 px-2.5 py-1 text-[0.58rem] font-black uppercase tracking-wider text-slate-400">{member.role}</span>{achievementCount ? <span className="block text-[0.6rem] font-black text-amber-300">🏆 {achievementCount}</span> : null}</span></>;
+  return <article className="space-y-4 rounded-2xl border border-white/10 bg-slate-900/60 p-4">{member.username ? <Link href={`/players/${member.username}`} className="flex items-center gap-3">{content}</Link> : <div className="flex items-center gap-3">{content}</div>}{member.isPublic && member.username ? <FollowPlayerButton playerId={member.userId} profile={{ id: member.userId, username: member.username, display_name: member.name, tournament_name: member.name, avatar_url: member.avatarUrl, is_public: true }} /> : <p className="text-xs text-slate-500">A public player profile is needed to follow.</p>}</article>;
 }
 
 function InviteCard({ club, chooseTab }: { club: ClubRow; chooseTab: (tab: ClubTab) => void }) {

@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element */
+
 import { useEffect, useState } from "react";
 import type {
   RealtimePostgresChangesPayload,
@@ -98,6 +100,7 @@ export function RealtimeCloudTournament({ id }: { id: string }) {
 
   return (
     <>
+      {tournament.posterUrl ? <div className="mb-5 h-48 overflow-hidden rounded-[1.75rem] border border-[#2a5680] bg-[#10305a] sm:mb-8 sm:h-72"><img src={tournament.posterUrl} alt={`${tournament.name} poster`} className="h-full w-full object-cover" /></div> : null}
       <div className="mb-5 flex items-end justify-between gap-3 sm:mb-8">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">

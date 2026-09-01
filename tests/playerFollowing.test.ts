@@ -21,8 +21,8 @@ test("watch links use public routes and encode identifiers", () => {
   assert.equal(isProtectedOrganizerPath("/players/player_a"), false);
 });
 
-test("club guide validation accepts empty unpublished content and enforces limits", () => {
-  assert.equal(validateClubGuide("", ""), null);
+test("club guide validation requires joining rules and enforces limits", () => {
+  assert.ok(validateClubGuide("", ""));
   assert.equal(validateClubGuide("Open daily", "Respect players."), null);
   assert.ok(validateClubGuide("x".repeat(501), ""));
   assert.ok(validateClubGuide("", "x".repeat(3001)));

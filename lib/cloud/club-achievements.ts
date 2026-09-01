@@ -25,6 +25,7 @@ export async function createClubAchievement(input: {
   description: string;
   awardedOn: string;
   isFeatured: boolean;
+  imageUrl?: string | null;
 }) {
   const validation = validateClubAchievement(input);
   if (!validation.ok) throw new Error(validation.message);
@@ -38,6 +39,7 @@ export async function createClubAchievement(input: {
     description: value.description,
     awarded_on: value.awardedOn,
     is_featured: value.isFeatured,
+    image_url: input.imageUrl ?? null,
   }).select("*").single();
   if (error) throw error;
   return data as ClubAchievementRow;

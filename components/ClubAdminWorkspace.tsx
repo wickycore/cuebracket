@@ -11,7 +11,7 @@ import { ClubCommunicationCenter } from "@/components/ClubCommunicationCenter";
 import { ClubGuide } from "@/components/ClubGuide";
 import { ClubPracticeBoard } from "@/components/ClubPracticeBoard";
 import { TableManager } from "@/components/TableManager";
-import type { ClubMembershipRequestRow, ClubRole, ClubRow } from "@/lib/clubs";
+import type { ClubGuideRow, ClubMembershipRequestRow, ClubRole, ClubRow } from "@/lib/clubs";
 import type {
   ClubAchievementRow,
   ClubAnnouncementRow,
@@ -28,6 +28,7 @@ interface Props {
   club: ClubRow;
   userId: string;
   role: Extract<ClubRole, "owner" | "admin">;
+  guide: ClubGuideRow | null;
   members: ClubMemberView[];
   pendingRequests: ClubMembershipRequestRow[];
   announcements: ClubAnnouncementRow[];
@@ -97,7 +98,7 @@ export function ClubAdminWorkspace(props: Props) {
         <section className="grid gap-4 md:grid-cols-3"><article className="rounded-2xl border border-white/10 bg-slate-900/55 p-5"><p className="text-xs font-black uppercase tracking-wider text-slate-500">Published</p><p className="mt-2 text-2xl font-black">{props.announcements.length} updates</p><p className="mt-2 text-sm text-slate-500">Visible on the member page.</p></article><article className="rounded-2xl border border-white/10 bg-slate-900/55 p-5"><p className="text-xs font-black uppercase tracking-wider text-slate-500">Community</p><p className="mt-2 text-2xl font-black">{props.members.length} members</p><p className="mt-2 text-sm text-slate-500">With {props.followerCount} followers.</p></article><article className="rounded-2xl border border-white/10 bg-slate-900/55 p-5"><p className="text-xs font-black uppercase tracking-wider text-slate-500">Live control</p><p className="mt-2 text-2xl font-black">{props.liveEventCount} events</p><p className="mt-2 text-sm text-slate-500">Currently running competitions.</p></article></section>
       </div> : null}
 
-      {activeSection === "people" ? <div className="space-y-6"><div><p className="cb-kicker">People & identity</p><h2 className="mt-2 text-3xl font-black">Membership and club settings</h2><p className="mt-2 text-sm text-slate-500">Approve requests, assign trusted admins and keep the public club details accurate.</p></div><ClubCommunityPanel club={props.club} userId={props.userId} isFollowing={false} ownRole={props.role} ownRequest={null} pendingRequests={props.pendingRequests} members={props.members} defaultRequestName="" isAdmin managementOnly /></div> : null}
+      {activeSection === "people" ? <div className="space-y-6"><div><p className="cb-kicker">People & identity</p><h2 className="mt-2 text-3xl font-black">Membership and club settings</h2><p className="mt-2 text-sm text-slate-500">Approve requests, assign trusted admins and keep the public club details accurate.</p></div><ClubCommunityPanel club={props.club} userId={props.userId} isFollowing={false} ownRole={props.role} ownRequest={null} pendingRequests={props.pendingRequests} members={props.members} defaultRequestName="" guide={props.guide} isAdmin managementOnly /></div> : null}
 
       {activeSection === "content" ? <div className="space-y-6"><div><p className="cb-kicker">Publishing studio</p><h2 className="mt-2 text-3xl font-black">Messages, calendar, news & honours</h2><p className="mt-2 text-sm text-slate-500">Everything published here reaches the organized member experience.</p></div><ClubCommunicationCenter clubId={props.club.id} clubName={props.club.name} initialBroadcasts={props.broadcasts} /><ClubCalendarBoard clubId={props.club.id} clubSlug={props.club.slug} isAdmin isMember userId={props.userId} initialEvents={props.calendarEvents} initialRsvps={props.calendarRsvps} /><ClubAnnouncementBoard key={props.announcements.map((item) => item.updated_at).join("|")} clubId={props.club.id} initialAnnouncements={props.announcements} isAdmin /><ClubAchievementWall key={props.achievements.map((item) => item.updated_at).join("|")} clubId={props.club.id} clubSlug={props.club.slug} isAdmin members={props.members} initialAchievements={props.achievements} /></div> : null}
 

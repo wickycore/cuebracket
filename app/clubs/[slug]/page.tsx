@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
 import { ClubCommandCenter } from "@/components/ClubCommandCenter";
 import type { ClubMemberView } from "@/components/ClubCommunityPanel";
-import type { ClubMembershipRequestRow, ClubMemberRow, ClubRow } from "@/lib/clubs";
+import type { ClubGuideRow, ClubMembershipRequestRow, ClubMemberRow, ClubRow } from "@/lib/clubs";
 import type {
   ClubAnnouncementRow,
   ClubAchievementRow,
@@ -57,11 +57,13 @@ export default async function ClubPage({ params, searchParams }: Props) {
   const currentTime = currentDate.toISOString();
   const calendarFloor = new Date(currentDate.getTime() - 30 * 86_400_000).toISOString();
 
-  const [profilesResult, ownRequestResult, settingsResult, tournamentsResult, leaguesResult, rankingsResult, announcementsResult, calendarResult, challengesResult, achievementsResult] = await Promise.all([
-    memberIds.length ? supabase.from("profiles").select("id, display_name, username, tournament_name, is_public").in("id", memberIds) : Promise.resolve({ data: [] }),
+  const [profilesResult, followerCountsResult, guideResult, ownRequestResult, settingsResult, tournamentsResult, leaguesResult, rankingsResult, announcementsResult, calendarResult, challengesResult, achievementsResult] = await Promise.all([
+    memberIds.length ? supabase.from("profiles").select("id, display_name, username, tournament_name, avatar_url, is_public").in("id", memberIds) : Promise.resolve({ data: [] }),
+    memberIds.length ? supabase.from("player_follower_counts").select("player_id,follower_count").in("player_id", memberIds) : Promise.resolve({ data: [] }),
+    supabase.from("club_guides").select("club_id,opening_hours,rules,revision,updated_at").eq("club_id", club.id).maybeSingle(),
     user ? supabase.from("club_membership_requests").select("*").eq("club_id", club.id).eq("user_id", user.id).eq("status", "pending").maybeSingle() : Promise.resolve({ data: null }),
     supabase.from("event_registration_settings").select("*").eq("club_id", club.id).order("scheduled_at", { ascending: true, nullsFirst: false }).limit(100),
-    supabase.from("cloud_tournaments").select("id, name, venue, format, race_to, bracket_size, status, is_public, created_at, updated_at").eq("club_id", club.id).order("updated_at", { ascending: false }).limit(100),
+    supabase.from("cloud_tournaments").select("id, name, venue, poster_url, format, race_to, bracket_size, status, is_public, created_at, updated_at").eq("club_id", club.id).order("updated_at", { ascending: false }).limit(100),
     supabase.from("cloud_leagues").select("id, name, season, payload, is_public, updated_at").eq("club_id", club.id).order("updated_at", { ascending: false }).limit(50),
     supabase.from("club_player_rankings").select("*").eq("club_id", club.id).order("club_rank").limit(100),
     supabase.from("club_announcements").select("*").eq("club_id", club.id).order("is_pinned", { ascending: false }).order("published_at", { ascending: false }).limit(50),
@@ -71,6 +73,7 @@ export default async function ClubPage({ params, searchParams }: Props) {
   ]);
 
   const profileMap = new Map((profilesResult.data ?? []).map((profile) => [profile.id, profile]));
+  const followerCountMap = new Map((followerCountsResult.data ?? []).map((row) => [row.player_id, row.follower_count]));
   const members: ClubMemberView[] = memberships.map((membership) => {
     const profile = profileMap.get(membership.user_id);
     return {
@@ -79,6 +82,8 @@ export default async function ClubPage({ params, searchParams }: Props) {
       name: profile?.tournament_name || profile?.display_name || "Club member",
       username: profile?.username ?? null,
       isPublic: profile?.is_public ?? false,
+      avatarUrl: profile?.avatar_url ?? null,
+      followerCount: followerCountMap.get(membership.user_id) ?? 0,
     };
   });
   const ownProfile = user ? profileMap.get(user.id) : null;
@@ -124,6 +129,7 @@ export default async function ClubPage({ params, searchParams }: Props) {
         calendarRsvps={(ownRsvpsResult.data ?? []) as ClubCalendarRsvpRow[]}
         challenges={(challengesResult.data ?? []) as ClubChallengeRow[]}
         achievements={(achievementsResult.data ?? []) as ClubAchievementRow[]}
+        guide={guideResult.data as ClubGuideRow | null}
       />
     </main>
   );

@@ -1,9 +1,12 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+/* eslint-disable @next/next/no-img-element */
+
+import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
-import { createClub } from "@/lib/cloud/clubs";
+import { createClub, updateClub } from "@/lib/cloud/clubs";
+import { removePublicImage, uploadPublicImage, validateImageFile } from "@/lib/cloud/media";
 import { normalizeClubSlug } from "@/lib/clubs";
 
 export function ClubCreateForm() {
@@ -12,9 +15,15 @@ export function ClubCreateForm() {
   const [slug, setSlug] = useState("");
   const [location, setLocation] = useState("");
   const [description, setDescription] = useState("");
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState("");
   const [slugEdited, setSlugEdited] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+
+  useEffect(() => () => {
+    if (logoPreview.startsWith("blob:")) URL.revokeObjectURL(logoPreview);
+  }, [logoPreview]);
 
   function changeName(value: string) {
     setName(value);
@@ -27,7 +36,17 @@ export function ClubCreateForm() {
     setBusy(true);
     setMessage("");
     try {
-      const club = await createClub({ name, slug, location, description });
+      let club = await createClub({ name, slug, location, description });
+      if (logoFile) {
+        let uploaded: { url: string } | null = null;
+        try {
+          uploaded = await uploadPublicImage(`clubs/${club.id}/logo`, logoFile);
+          club = await updateClub(club.id, { name, slug, location, description, logoUrl: uploaded.url });
+        } catch {
+          if (uploaded) void removePublicImage(uploaded.url).catch(() => undefined);
+          // The optional logo must never block creation; organizers can retry from Manage club.
+        }
+      }
       router.push(`/clubs/${club.slug}`);
       router.refresh();
     } catch (error) {
@@ -61,6 +80,13 @@ export function ClubCreateForm() {
           Short description
           <textarea value={description} onChange={(event) => setDescription(event.target.value)} maxLength={500} rows={4} placeholder="Tell players what makes this club special." className={`${inputClass} resize-none`} />
           <span className="mt-2 block text-right text-xs text-slate-600">{description.length}/500</span>
+        </label>
+        <label className="text-sm font-bold text-slate-300 sm:col-span-2">
+          Club logo or image <span className="font-normal text-slate-600">(optional)</span>
+          <span className="mt-2 flex items-center gap-4 rounded-2xl border border-white/10 bg-slate-950/70 p-4">
+            {logoPreview ? <span className="h-20 w-20 shrink-0 overflow-hidden rounded-2xl border border-white/10"><img src={logoPreview} alt="Club logo preview" className="h-full w-full object-cover" /></span> : <span className="grid h-20 w-20 shrink-0 place-items-center rounded-2xl border border-cyan-300/15 bg-cyan-400/10 text-3xl font-black text-cyan-200">{name.charAt(0).toUpperCase() || "C"}</span>}
+            <span className="min-w-0 flex-1"><input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => { const file = event.target.files?.[0] ?? null; const problem = file ? validateImageFile(file) : null; if (problem) { setMessage(problem); event.target.value = ""; return; } setLogoFile(file); setLogoPreview(file ? URL.createObjectURL(file) : ""); setMessage(""); }} className="block w-full text-xs text-slate-400 file:mr-3 file:rounded-xl file:border-0 file:bg-cyan-400 file:px-4 file:py-2.5 file:font-black file:text-slate-950" /><span className="mt-2 block text-xs font-normal text-slate-600">JPG, PNG or WebP · maximum 5 MB</span></span>
+          </span>
         </label>
       </div>
       {message ? <p role="alert" className="rounded-2xl border border-rose-300/20 bg-rose-300/10 px-4 py-3 text-sm font-bold text-rose-100">{message}</p> : null}

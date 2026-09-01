@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element */
+
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
@@ -17,6 +19,7 @@ import {
   setClubAchievementFeatured,
   subscribeToClubAchievements,
 } from "@/lib/cloud/club-achievements";
+import { removePublicImage, uploadPublicImage, validateImageFile } from "@/lib/cloud/media";
 
 type WallFilter = "all" | "featured" | "competitive" | "community";
 
@@ -61,8 +64,13 @@ export function ClubAchievementWall({ clubId, clubSlug, isAdmin, members, initia
   const [description, setDescription] = useState("");
   const [awardedOn, setAwardedOn] = useState(todayValue);
   const [isFeatured, setIsFeatured] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState("");
 
   useEffect(() => subscribeToClubAchievements(clubId, () => router.refresh()), [clubId, router]);
+  useEffect(() => () => {
+    if (imagePreview.startsWith("blob:")) URL.revokeObjectURL(imagePreview);
+  }, [imagePreview]);
 
   const memberById = useMemo(() => new Map(members.map((member) => [member.userId, member])), [members]);
   const visible = achievements.filter((item) => {
@@ -77,16 +85,21 @@ export function ClubAchievementWall({ clubId, clubSlug, isAdmin, members, initia
     if (busy) return;
     setBusy("create");
     setMessage("");
+    let uploaded: { path: string; url: string } | null = null;
     try {
-      const created = await createClubAchievement({ clubId, recipientId, kind, title, description, awardedOn, isFeatured });
+      if (imageFile) uploaded = await uploadPublicImage(`clubs/${clubId}/achievements`, imageFile);
+      const created = await createClubAchievement({ clubId, recipientId, kind, title, description, awardedOn, isFeatured, imageUrl: uploaded?.url ?? null });
       setAchievements((current) => [created, ...current]);
       setTitle("");
       setDescription("");
       setIsFeatured(false);
+      setImageFile(null);
+      setImagePreview("");
       setFilter("all");
       setMessage("Recognition added to the wall.");
       router.refresh();
     } catch (error) {
+      if (uploaded) void removePublicImage(uploaded.url).catch(() => undefined);
       setMessage(error instanceof Error ? error.message : "That recognition could not be saved.");
     } finally {
       setBusy("");
@@ -115,6 +128,7 @@ export function ClubAchievementWall({ clubId, clubSlug, isAdmin, members, initia
     try {
       await deleteClubAchievement(item.id);
       setAchievements((current) => current.filter((entry) => entry.id !== item.id));
+      if (item.image_url) void removePublicImage(item.image_url).catch(() => undefined);
       router.refresh();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "That recognition could not be removed.");
@@ -145,7 +159,7 @@ export function ClubAchievementWall({ clubId, clubSlug, isAdmin, members, initia
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {visible.map((item) => {
               const member = memberById.get(item.recipient_id);
-              const card = <><div className="flex items-start justify-between gap-3"><span className="grid h-12 w-12 place-items-center rounded-2xl border border-amber-300/20 bg-amber-300/10 text-2xl">{clubAchievementIcon(item.kind)}</span>{item.is_featured ? <span className="rounded-full border border-amber-300/20 bg-amber-300/10 px-2.5 py-1 text-[0.58rem] font-black uppercase tracking-wider text-amber-200">Featured</span> : null}</div><p className="mt-4 text-[0.62rem] font-black uppercase tracking-[0.16em] text-amber-300">{clubAchievementLabel(item.kind)}</p><h3 className="mt-1 text-xl font-black text-white">{item.title}</h3><p className="mt-2 line-clamp-3 text-sm leading-6 text-slate-400">{item.description}</p><div className="mt-5 flex items-end justify-between gap-3 border-t border-white/8 pt-4"><span className="min-w-0"><span className="block truncate text-sm font-black text-white">{member?.name ?? "Former club member"}</span><span className="mt-0.5 block text-xs font-bold text-slate-600">{achievementDate(item.awarded_on)}</span></span>{member?.username ? <span className="shrink-0 text-xs font-black text-cyan-300">View player →</span> : null}</div></>;
+              const card = <>{item.image_url ? <div className="-mx-5 -mt-5 mb-5 h-40 overflow-hidden border-b border-white/10"><img src={item.image_url} alt={`${item.title} achievement`} className="h-full w-full object-cover" /></div> : null}<div className="flex items-start justify-between gap-3"><span className="grid h-12 w-12 place-items-center rounded-2xl border border-amber-300/20 bg-amber-300/10 text-2xl">{clubAchievementIcon(item.kind)}</span>{item.is_featured ? <span className="rounded-full border border-amber-300/20 bg-amber-300/10 px-2.5 py-1 text-[0.58rem] font-black uppercase tracking-wider text-amber-200">Featured</span> : null}</div><p className="mt-4 text-[0.62rem] font-black uppercase tracking-[0.16em] text-amber-300">{clubAchievementLabel(item.kind)}</p><h3 className="mt-1 text-xl font-black text-white">{item.title}</h3><p className="mt-2 line-clamp-3 text-sm leading-6 text-slate-400">{item.description}</p><div className="mt-5 flex items-end justify-between gap-3 border-t border-white/8 pt-4"><span className="min-w-0"><span className="block truncate text-sm font-black text-white">{member?.name ?? "Former club member"}</span><span className="mt-0.5 block text-xs font-bold text-slate-600">{achievementDate(item.awarded_on)}</span></span>{member?.username ? <span className="shrink-0 text-xs font-black text-cyan-300">View player →</span> : null}</div></>;
               return <article key={item.id} className={`rounded-[1.6rem] border p-5 ${item.is_featured ? "border-amber-300/25 bg-[linear-gradient(145deg,rgba(120,53,15,.24),rgba(2,6,23,.68))]" : "border-white/10 bg-slate-950/40"}`}>{member?.username ? <Link href={`/players/${member.username}`} className="block">{card}</Link> : card}{isAdmin ? <div className="mt-4 flex gap-2 border-t border-white/8 pt-4"><button type="button" onClick={() => void toggleFeatured(item)} disabled={Boolean(busy)} className="min-h-10 flex-1 rounded-xl border border-amber-300/20 px-3 text-xs font-black text-amber-200">{busy === `feature:${item.id}` ? "Saving…" : item.is_featured ? "Remove spotlight" : "Feature on Home"}</button><button type="button" onClick={() => void remove(item)} disabled={Boolean(busy)} className="min-h-10 rounded-xl border border-rose-300/20 px-3 text-xs font-black text-rose-200">{busy === `delete:${item.id}` ? "Removing…" : "Remove"}</button></div> : null}</article>;
             })}
           </div>
@@ -164,6 +178,7 @@ export function ClubAchievementWall({ clubId, clubSlug, isAdmin, members, initia
               <label className="text-sm font-bold text-slate-300">Recognition type<select value={kind} onChange={(event) => setKind(event.target.value as ClubAchievementKind)} className="mt-2 min-h-12 w-full rounded-xl border border-white/10 bg-slate-950 px-3 text-white outline-none">{kinds.map((item) => <option key={item} value={item}>{clubAchievementIcon(item)} {clubAchievementLabel(item)}</option>)}</select></label>
               <label className="text-sm font-bold text-slate-300 sm:col-span-2">Achievement title<input value={title} onChange={(event) => setTitle(event.target.value)} minLength={3} maxLength={80} required placeholder="e.g. Nairobi Open Champion" className="mt-2 min-h-12 w-full rounded-xl border border-white/10 bg-slate-950 px-4 text-white outline-none focus:border-amber-300/40" /></label>
               <label className="text-sm font-bold text-slate-300 sm:col-span-2">Why they are being recognised<textarea value={description} onChange={(event) => setDescription(event.target.value)} maxLength={300} required rows={3} placeholder="Add the result, milestone or contribution." className="mt-2 w-full resize-none rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none focus:border-amber-300/40" /></label>
+              <label className="text-sm font-bold text-slate-300 sm:col-span-2">Achievement photo <span className="font-normal text-slate-600">(optional)</span><span className="mt-2 flex items-center gap-4 rounded-xl border border-white/10 bg-slate-950 p-3">{imagePreview ? <span className="h-20 w-28 shrink-0 overflow-hidden rounded-xl border border-white/10"><img src={imagePreview} alt="Achievement preview" className="h-full w-full object-cover" /></span> : <span className="grid h-20 w-28 shrink-0 place-items-center rounded-xl border border-amber-300/15 bg-amber-300/10 text-3xl">🏆</span>}<span className="min-w-0 flex-1"><input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => { const file = event.target.files?.[0] ?? null; const problem = file ? validateImageFile(file) : null; if (problem) { setMessage(problem); event.target.value = ""; return; } setImageFile(file); setImagePreview(file ? URL.createObjectURL(file) : ""); setMessage(""); }} className="block w-full text-xs text-slate-400 file:mr-3 file:rounded-lg file:border-0 file:bg-amber-300 file:px-3 file:py-2 file:font-black file:text-slate-950" /><span className="mt-2 block text-xs font-normal text-slate-600">Trophy, team photo or event moment · maximum 5 MB</span></span></span></label>
               <label className="text-sm font-bold text-slate-300">Achievement date<input type="date" value={awardedOn} onChange={(event) => setAwardedOn(event.target.value)} max={todayValue()} required className="mt-2 min-h-12 w-full rounded-xl border border-white/10 bg-slate-950 px-3 text-white outline-none" /></label>
               <label className="flex min-h-12 items-center gap-3 self-end rounded-xl border border-white/10 bg-slate-950/65 px-4 text-sm font-bold text-slate-300"><input type="checkbox" checked={isFeatured} onChange={(event) => setIsFeatured(event.target.checked)} className="h-4 w-4 accent-amber-300" />Feature on the club Home page</label>
               <button type="submit" disabled={Boolean(busy) || !members.length} className="min-h-12 rounded-xl bg-amber-300 px-5 font-black text-slate-950 disabled:opacity-50 sm:col-span-2">{busy === "create" ? "Adding recognition…" : "Add to achievement wall"}</button>

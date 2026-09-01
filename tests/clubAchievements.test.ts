@@ -66,7 +66,7 @@ test("club achievements join the activity feed and route to rankings", () => {
     achievements: [{
       id: "honour-1", club_id: "club-1", recipient_id: "user-1", awarded_by: "admin-1",
       kind: "milestone", title: "Fifty match wins", description: "A verified club milestone.",
-      awarded_on: "2026-08-31", is_featured: true,
+      awarded_on: "2026-08-31", is_featured: true, image_url: null,
       created_at: "2026-09-01T09:00:00Z", updated_at: "2026-09-01T09:00:00Z",
     }],
   });

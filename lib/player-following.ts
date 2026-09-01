@@ -3,6 +3,7 @@ export interface FollowedProfile {
   username: string | null;
   display_name: string;
   tournament_name: string | null;
+  avatar_url?: string | null;
   is_public: boolean;
 }
 
@@ -45,6 +46,7 @@ export function liveMatchHref(match: PlayerLiveMatch) {
 
 export function validateClubGuide(hours: string, rules: string) {
   if (hours.trim().length > 500) return "Opening hours must be 500 characters or fewer.";
+  if (!rules.trim()) return "Add the club rules and joining guide before publishing.";
   if (rules.trim().length > 3000) return "Club rules must be 3,000 characters or fewer.";
   return null;
 }

@@ -56,6 +56,7 @@ export default async function AccountPage() {
             tournamentName: profile?.tournament_name ?? fallbackName,
             bio: profile?.bio ?? "",
             isPublic: profile?.is_public ?? true,
+            avatarUrl: profile?.avatar_url ?? null,
           }}
         />
       </div>
