@@ -23,8 +23,8 @@ test("push endpoints allow real providers but reject SSRF and invalid subscripti
 });
 
 test("delivery honors every preference and removes only expired endpoints", () => {
-  const off = { club_events: false, registration_updates: false, match_alerts: false, followed_player_alerts: false };
-  for (const type of ["club_event", "registration_status", "membership_status", "match_live", "table_assignment", "followed_player_live"]) {
+  const off = { club_events: false, registration_updates: false, match_alerts: false, followed_player_alerts: false, club_messages: false };
+  for (const type of ["club_event", "registration_status", "membership_status", "match_live", "table_assignment", "followed_player_live", "club_message", "club_reminder"]) {
     assert.equal(pushAllowed(type, off), false);
     assert.equal(pushAllowed(type, null), true);
   }
@@ -80,6 +80,10 @@ test("push previews cannot leak supplied private data or navigate off-site", asy
   assert.equal(shown[0].title, "Your table is ready");
   assert.equal(shown[0].options.data.href, "/notifications");
   assert.doesNotMatch(JSON.stringify(shown), /Private player|Secret event|evil\.test/);
+  handlers.push({ data: { json: () => ({ id: "n2", type: "club_message", title: "Private club message" }) }, waitUntil: (promise: Promise<unknown>) => { work = promise; } });
+  await work;
+  assert.equal(shown[1].title, "New club update");
+  assert.doesNotMatch(JSON.stringify(shown[1]), /Private club message/);
 });
 
 test("push server routes verify identity and use secret-backed dispatch authentication", () => {

@@ -15,11 +15,12 @@ export function validSubscription(value: unknown): value is DeviceSubscription {
   } catch { return false; }
 }
 
-export function pushAllowed(type: string, preferences: { club_events?: boolean; registration_updates?: boolean; match_alerts?: boolean; followed_player_alerts?: boolean } | null) {
+export function pushAllowed(type: string, preferences: { club_events?: boolean; registration_updates?: boolean; match_alerts?: boolean; followed_player_alerts?: boolean; club_messages?: boolean } | null) {
   if (type === "club_event") return preferences?.club_events !== false;
   if (type === "registration_status" || type === "membership_status") return preferences?.registration_updates !== false;
   if (type === "match_live" || type === "table_assignment") return preferences?.match_alerts !== false;
   if (type === "followed_player_live") return preferences?.followed_player_alerts !== false;
+  if (type === "club_message" || type === "club_reminder") return preferences?.club_messages !== false;
   if (type === "delivery_test") return true;
   return false;
 }

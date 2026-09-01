@@ -20,6 +20,7 @@ export function NotificationInbox({ initialNotifications, initialPreferences }: 
       registration_updates: initialPreferences.registration_updates,
       match_alerts: initialPreferences.match_alerts,
       followed_player_alerts: initialPreferences.followed_player_alerts ?? true,
+      club_messages: initialPreferences.club_messages ?? true,
     } : {}),
   });
   const [busy, setBusy] = useState("");
@@ -93,6 +94,7 @@ export function NotificationInbox({ initialNotifications, initialPreferences }: 
             ["registration_updates", "Registration updates", "Approval, waitlist, check-in and membership decisions."],
             ["match_alerts", "Match & table alerts", "A notice when your match starts or a table is assigned."],
             ["followed_player_alerts", "Players you follow", "Match-start alerts for players whose Match alerts switch you turn on."],
+            ["club_messages", "Club messages & reminders", "Organizer announcements and reminders for events you marked Going or Maybe."],
           ] as const).map(([key, title, description]) => (
             <label key={key} className="flex cursor-pointer items-start gap-3 rounded-2xl border border-white/10 bg-slate-950/45 p-4">
               <input type="checkbox" checked={preferences[key]} disabled={busy.startsWith("preference-")} onChange={(event) => void changePreference(key, event.target.checked)} className="mt-1 h-5 w-5 accent-cyan-400" />

@@ -18,9 +18,11 @@ test("notification types keep useful defaults and distinct inbox icons", () => {
     registration_updates: true,
     match_alerts: true,
     followed_player_alerts: true,
+    club_messages: true,
   });
   assert.notEqual(notificationIcon("club_event"), notificationIcon("match_live"));
   assert.notEqual(notificationIcon("registration_status"), notificationIcon("membership_status"));
+  assert.notEqual(notificationIcon("club_message"), notificationIcon("club_reminder"));
 });
 
 test("notification data is private, least-privileged and realtime", () => {

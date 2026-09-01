@@ -7,6 +7,7 @@ import { ClubAchievementWall } from "@/components/ClubAchievementWall";
 import { ClubAnnouncementBoard } from "@/components/ClubAnnouncementBoard";
 import { ClubCalendarBoard } from "@/components/ClubCalendarBoard";
 import { ClubCommunityPanel, type ClubMemberView } from "@/components/ClubCommunityPanel";
+import { ClubCommunicationCenter } from "@/components/ClubCommunicationCenter";
 import { ClubGuide } from "@/components/ClubGuide";
 import { ClubPracticeBoard } from "@/components/ClubPracticeBoard";
 import { TableManager } from "@/components/TableManager";
@@ -18,6 +19,7 @@ import type {
   ClubCalendarRsvpRow,
   ClubChallengeRow,
 } from "@/lib/club-command-center";
+import type { ClubBroadcastRow } from "@/lib/club-communications";
 
 type AdminSection = "overview" | "people" | "content" | "operations";
 
@@ -33,6 +35,7 @@ interface Props {
   calendarRsvps: ClubCalendarRsvpRow[];
   challenges: ClubChallengeRow[];
   achievements: ClubAchievementRow[];
+  broadcasts: ClubBroadcastRow[];
   followerCount: number;
   liveEventCount: number;
 }
@@ -96,7 +99,7 @@ export function ClubAdminWorkspace(props: Props) {
 
       {activeSection === "people" ? <div className="space-y-6"><div><p className="cb-kicker">People & identity</p><h2 className="mt-2 text-3xl font-black">Membership and club settings</h2><p className="mt-2 text-sm text-slate-500">Approve requests, assign trusted admins and keep the public club details accurate.</p></div><ClubCommunityPanel club={props.club} userId={props.userId} isFollowing={false} ownRole={props.role} ownRequest={null} pendingRequests={props.pendingRequests} members={props.members} defaultRequestName="" isAdmin managementOnly /></div> : null}
 
-      {activeSection === "content" ? <div className="space-y-6"><div><p className="cb-kicker">Publishing studio</p><h2 className="mt-2 text-3xl font-black">Calendar, news & honours</h2><p className="mt-2 text-sm text-slate-500">Everything published here appears in the organized member experience.</p></div><ClubCalendarBoard clubId={props.club.id} clubSlug={props.club.slug} isAdmin isMember userId={props.userId} initialEvents={props.calendarEvents} initialRsvps={props.calendarRsvps} /><ClubAnnouncementBoard key={props.announcements.map((item) => item.updated_at).join("|")} clubId={props.club.id} initialAnnouncements={props.announcements} isAdmin /><ClubAchievementWall key={props.achievements.map((item) => item.updated_at).join("|")} clubId={props.club.id} clubSlug={props.club.slug} isAdmin members={props.members} initialAchievements={props.achievements} /></div> : null}
+      {activeSection === "content" ? <div className="space-y-6"><div><p className="cb-kicker">Publishing studio</p><h2 className="mt-2 text-3xl font-black">Messages, calendar, news & honours</h2><p className="mt-2 text-sm text-slate-500">Everything published here reaches the organized member experience.</p></div><ClubCommunicationCenter clubId={props.club.id} clubName={props.club.name} initialBroadcasts={props.broadcasts} /><ClubCalendarBoard clubId={props.club.id} clubSlug={props.club.slug} isAdmin isMember userId={props.userId} initialEvents={props.calendarEvents} initialRsvps={props.calendarRsvps} /><ClubAnnouncementBoard key={props.announcements.map((item) => item.updated_at).join("|")} clubId={props.club.id} initialAnnouncements={props.announcements} isAdmin /><ClubAchievementWall key={props.achievements.map((item) => item.updated_at).join("|")} clubId={props.club.id} clubSlug={props.club.slug} isAdmin members={props.members} initialAchievements={props.achievements} /></div> : null}
 
       {activeSection === "operations" ? <div className="space-y-6"><div><p className="cb-kicker">Club operations</p><h2 className="mt-2 text-3xl font-black">Venue and practice control</h2><p className="mt-2 text-sm text-slate-500">Keep house rules clear, practice active and the table floor moving.</p></div><ClubGuide clubId={props.club.id} isAdmin location={props.club.location} /><ClubPracticeBoard clubId={props.club.id} clubSlug={props.club.slug} userId={props.userId} isMember isAdmin memberNames={memberNames} initialChallenges={props.challenges} /><TableManager clubId={props.club.id} /></div> : null}
     </div>
