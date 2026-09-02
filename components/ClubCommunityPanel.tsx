@@ -71,6 +71,7 @@ export function ClubCommunityPanel({
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState(club.logo_url ?? "");
   const guideReady = Boolean(club.location.trim() && guide?.rules.trim());
+  const isOwner = ownRole === "owner" && club.owner_id === userId;
 
   useEffect(() => () => {
     if (logoPreview.startsWith("blob:")) URL.revokeObjectURL(logoPreview);
@@ -225,6 +226,11 @@ export function ClubCommunityPanel({
 
           <details className="mt-3 rounded-2xl border border-white/10 bg-slate-950/45 p-4">
             <summary className="cursor-pointer font-black">Manage members ({members.length})</summary>
+            <p className="mt-3 text-xs font-bold text-slate-400">
+              {isOwner
+                ? "Only you, as club owner, can grant or remove admin access."
+                : "Admins can manage ordinary members. Only the club owner can grant, remove or manage admin access."}
+            </p>
             <div className="mt-4 space-y-2">
               {members.map((member) => (
                 <div key={member.userId} className="flex flex-col gap-3 rounded-xl border border-white/10 p-3 sm:flex-row sm:items-center">
@@ -234,10 +240,12 @@ export function ClubCommunityPanel({
                   </div>
                   {member.role !== "owner" && member.userId !== userId ? (
                     <div className="flex gap-2">
-                      <select value={member.role} onChange={(event) => void run(`role-${member.userId}`, async () => { await updateClubMemberRole(club.id, member.userId, event.target.value as "admin" | "member"); })} disabled={Boolean(busy)} className="min-h-10 rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-bold">
-                        <option value="member">Member</option><option value="admin">Admin</option>
-                      </select>
-                      <button type="button" onClick={() => void run(`remove-${member.userId}`, async () => { await removeClubMember(club.id, member.userId); })} disabled={Boolean(busy)} className="rounded-xl border border-rose-300/20 px-3 text-sm font-black text-rose-200">Remove</button>
+                      {isOwner ? (
+                        <select aria-label={`Role for ${member.name}`} value={member.role} onChange={(event) => void run(`role-${member.userId}`, async () => { await updateClubMemberRole(club.id, member.userId, event.target.value as "admin" | "member"); })} disabled={Boolean(busy)} className="min-h-10 rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-bold">
+                          <option value="member">Member</option><option value="admin">Admin</option>
+                        </select>
+                      ) : null}
+                      {isOwner || member.role === "member" ? <button type="button" onClick={() => void run(`remove-${member.userId}`, async () => { await removeClubMember(club.id, member.userId); })} disabled={Boolean(busy)} className="rounded-xl border border-rose-300/20 px-3 text-sm font-black text-rose-200">Remove</button> : null}
                     </div>
                   ) : null}
                 </div>

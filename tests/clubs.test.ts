@@ -27,3 +27,26 @@ test("club membership migration keeps follows lightweight and stores request nam
   assert.match(requestTable, /request_name text not null/);
   assert.match(source, /protect_club_owner_membership/);
 });
+
+test("only club owners can grant, demote or remove admin access", () => {
+  const migration = readFileSync(
+    new URL("../supabase/migrations/20260902092753_owner_only_club_admin_roles.sql", import.meta.url),
+    "utf8",
+  );
+  const panel = readFileSync(
+    new URL("../components/ClubCommunityPanel.tsx", import.meta.url),
+    "utf8",
+  );
+  const client = readFileSync(
+    new URL("../lib/cloud/clubs.ts", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(migration, /private\.is_club_owner\(club_id\)/);
+  assert.match(migration, /create policy "Club owners assign member roles"/);
+  assert.match(migration, /private\.is_club_admin\(club_id\) and role = 'member'/);
+  assert.match(migration, /revoke all on function private\.is_club_owner\(uuid\) from public/);
+  assert.match(panel, /const isOwner = ownRole === "owner" && club\.owner_id === userId/);
+  assert.match(panel, /isOwner \|\| member\.role === "member"/);
+  assert.match(client, /Only the club owner can assign or remove admin access/);
+});

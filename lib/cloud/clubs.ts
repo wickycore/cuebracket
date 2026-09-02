@@ -170,7 +170,16 @@ export async function updateClubMemberRole(
   userId: string,
   role: Extract<ClubRole, "admin" | "member">,
 ) {
-  const { supabase } = await requireUser();
+  const { supabase, user } = await requireUser();
+  const { data: club, error: clubError } = await supabase
+    .from("clubs")
+    .select("owner_id")
+    .eq("id", clubId)
+    .single();
+  if (clubError) throw clubError;
+  if (club.owner_id !== user.id) {
+    throw new Error("Only the club owner can assign or remove admin access.");
+  }
   const { data, error } = await supabase
     .from("club_members")
     .update({ role })
@@ -184,10 +193,13 @@ export async function updateClubMemberRole(
 
 export async function removeClubMember(clubId: string, userId: string) {
   const { supabase } = await requireUser();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("club_members")
     .delete()
     .eq("club_id", clubId)
-    .eq("user_id", userId);
+    .eq("user_id", userId)
+    .select("user_id")
+    .maybeSingle();
   if (error) throw error;
+  if (!data) throw new Error("Only the club owner can remove an admin.");
 }
