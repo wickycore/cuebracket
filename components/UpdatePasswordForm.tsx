@@ -69,7 +69,7 @@ export function UpdatePasswordForm() {
   }
 
   const inputClass =
-    "mt-2 min-h-12 w-full rounded-2xl border border-white/10 bg-slate-950/75 px-4 py-3 text-base text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-400/60 focus:ring-4 focus:ring-cyan-400/10";
+    "mt-2 min-h-12 w-full rounded-2xl border border-white/10 bg-slate-950/75 px-4 py-3 text-base text-white outline-none transition placeholder:text-slate-400 focus:border-cyan-400/60 focus:ring-4 focus:ring-cyan-400/10";
 
   return (
     <form
@@ -87,7 +87,7 @@ export function UpdatePasswordForm() {
           autoComplete="new-password"
           className={inputClass}
         />
-        <span className="mt-2 block text-xs leading-5 text-slate-500">
+        <span className="mt-2 block text-xs leading-5 text-slate-400">
           Use at least 10 characters.
         </span>
       </label>

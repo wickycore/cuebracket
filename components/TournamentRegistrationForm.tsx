@@ -34,10 +34,23 @@ export function TournamentRegistrationForm({
   const [registration, setRegistration] = useState(initialRegistration);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [visibilityAccepted, setVisibilityAccepted] = useState(false);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy) return;
+    const formData = new FormData(event.currentTarget);
+    if (formData.get("website")) return;
+    if (!visibilityAccepted) {
+      setMessage("Confirm that your tournament name may appear on the public player list.");
+      return;
+    }
+    const cooldownKey = `cuebracket:registration-cooldown:${settings.tournament_id}`;
+    const lastAttempt = Number(window.localStorage.getItem(cooldownKey) || 0);
+    if (Date.now() - lastAttempt < 15_000) {
+      setMessage("Please wait a few seconds before sending another registration request.");
+      return;
+    }
     const validation = validateRegistrationName(name);
     if (!validation.ok) {
       setMessage(validation.message);
@@ -56,6 +69,7 @@ export function TournamentRegistrationForm({
         source: "self",
       });
       if (error) throw error;
+      window.localStorage.setItem(cooldownKey, String(Date.now()));
       setRegistration({ id: "submitted", display_name: validation.value, status: "pending" });
       setName(validation.value);
     } catch (error) {
@@ -118,6 +132,7 @@ export function TournamentRegistrationForm({
               Choose the name you want shown in the draw. The organizer will approve your place.
             </p>
             <form onSubmit={submit} className="mt-6">
+              <label className="sr-only" aria-hidden="true">Leave this website field empty<input name="website" type="text" tabIndex={-1} autoComplete="off" className="hidden" /></label>
               <label className="block text-sm font-bold text-slate-300">
                 Tournament name
                 <input
@@ -126,15 +141,19 @@ export function TournamentRegistrationForm({
                   maxLength={40}
                   autoComplete="nickname"
                   placeholder="e.g. The Breaker"
-                  className="mt-2 min-h-13 w-full rounded-2xl border border-white/10 bg-slate-950/75 px-4 py-3.5 text-base text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/60 focus:ring-4 focus:ring-cyan-400/10"
+                  className="mt-2 min-h-13 w-full rounded-2xl border border-white/10 bg-slate-950/75 px-4 py-3.5 text-base text-white outline-none placeholder:text-slate-400 focus:border-cyan-400/60 focus:ring-4 focus:ring-cyan-400/10"
                 />
+              </label>
+              <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-2xl border border-white/10 bg-slate-950/45 p-4 text-sm leading-6 text-slate-300">
+                <input type="checkbox" checked={visibilityAccepted} onChange={(event) => setVisibilityAccepted(event.target.checked)} className="mt-1 h-4 w-4 shrink-0 accent-cyan-400" />
+                <span>I understand that this tournament name will appear publicly if my entry is approved, checked in or waitlisted.</span>
               </label>
               {message ? <p role="alert" className="mt-4 rounded-2xl border border-rose-300/20 bg-rose-300/10 px-4 py-3 text-sm font-bold text-rose-100">{message}</p> : null}
               <button type="submit" disabled={busy} className="mt-5 min-h-13 w-full rounded-2xl bg-cyan-400 px-5 py-3.5 font-black text-slate-950 shadow-lg shadow-cyan-500/15 hover:bg-cyan-300 disabled:cursor-wait disabled:opacity-50">
                 {busy ? "Sending…" : "Request my place"}
               </button>
             </form>
-            <div className="mt-5 rounded-2xl border border-white/10 bg-slate-950/45 px-4 py-3 text-xs leading-5 text-slate-500">
+            <div className="mt-5 rounded-2xl border border-white/10 bg-slate-950/45 px-4 py-3 text-xs leading-5 text-slate-400">
               No account required. {profileId ? "Your CueBracket tournament name has been filled in for you." : <><a href={`/auth/login?next=${encodeURIComponent(nextPath)}`} className="font-black text-cyan-300">Sign in</a> or <a href={`/auth/signup?next=${encodeURIComponent(nextPath)}`} className="font-black text-cyan-300">create a profile</a> to reuse your player name and track future tournament benefits.</>}
             </div>
           </>
@@ -150,7 +169,7 @@ export function TournamentRegistrationForm({
       <aside className="rounded-[2rem] border border-white/10 bg-white/[0.035] p-5 sm:p-7">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">Player list</p>
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Player list</p>
             <h2 className="mt-2 text-xl font-black">{confirmed.length} of {settings.capacity} confirmed</h2>
           </div>
           <span className="rounded-full bg-cyan-300/10 px-3 py-1.5 text-sm font-black text-cyan-200 ring-1 ring-cyan-300/20">{Math.max(0, settings.capacity - confirmed.length)} left</span>
@@ -166,12 +185,12 @@ export function TournamentRegistrationForm({
               {item.status === "checked_in" ? <span className="text-xs font-black text-emerald-300">Checked in</span> : null}
             </div>
           ))}
-          {!confirmed.length ? <p className="rounded-2xl border border-dashed border-white/10 px-4 py-8 text-center text-sm text-slate-600">Confirmed players will appear here.</p> : null}
+          {!confirmed.length ? <p className="rounded-2xl border border-dashed border-white/10 px-4 py-8 text-center text-sm text-slate-400">Confirmed players will appear here.</p> : null}
         </div>
         {waitlisted.length ? (
           <div className="mt-6 border-t border-white/10 pt-5">
             <p className="text-xs font-black uppercase tracking-[0.18em] text-violet-300">Waitlist · {waitlisted.length}</p>
-            <p className="mt-2 text-sm text-slate-500">{waitlisted.map((item) => item.display_name).join(" · ")}</p>
+            <p className="mt-2 text-sm text-slate-400">{waitlisted.map((item) => item.display_name).join(" · ")}</p>
           </div>
         ) : null}
       </aside>

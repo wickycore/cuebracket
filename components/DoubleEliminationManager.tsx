@@ -139,7 +139,7 @@ export function DoubleEliminationManager({
 
       <details className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5">
         <summary className="cursor-pointer list-none font-black text-slate-200">
-          <span className="flex items-center justify-between gap-3"><span>Tournament tools</span><span className="text-sm font-bold text-slate-500">Names · Late entry · Reset</span></span>
+          <span className="flex items-center justify-between gap-3"><span>Tournament tools</span><span className="text-sm font-bold text-slate-400">Names · Late entry · Reset</span></span>
         </summary>
         <div className="mt-5 grid gap-4 border-t border-white/10 pt-5">
           <div className="text-sm text-slate-400">{completed} played match{completed === 1 ? "" : "es"}{automaticByes ? ` · ${automaticByes} automatic BYE${automaticByes === 1 ? "" : "s"}` : ""}</div>

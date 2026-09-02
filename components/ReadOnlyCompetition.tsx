@@ -28,7 +28,7 @@ function MatchTimer({ startedAt, endedAt }: { startedAt?: string | null; endedAt
   }, [startedAt, endedAt]);
   if (!startedAt) return null;
   const endTime = endedAt ? new Date(endedAt).getTime() : now;
-  return <span className="text-[11px] font-bold tabular-nums text-slate-500">{formatDuration(endTime - new Date(startedAt).getTime())}</span>;
+  return <span className="text-[11px] font-bold tabular-nums text-slate-400">{formatDuration(endTime - new Date(startedAt).getTime())}</span>;
 }
 
 function ReadOnlyRounds({ rounds, raceTo, byePoints }: { rounds: BracketRound[]; raceTo: number; byePoints?: number }) {
@@ -49,8 +49,8 @@ function ReadOnlyRounds({ rounds, raceTo, byePoints }: { rounds: BracketRound[];
               {playableMatches.map((match, index) => (
                 <article key={match.id} className={`overflow-hidden rounded-2xl border bg-slate-950/65 ${match.completed ? "border-emerald-400/25" : "border-white/10"}`}>
                   <div className="flex items-center justify-between border-b border-white/10 px-4 py-2.5">
-                    <span className="text-[0.64rem] font-black uppercase tracking-wider text-slate-500">{match.tableNumber ? `Table ${match.tableNumber}` : `Match ${index + 1}`}</span>
-                    <span className={`rounded-full px-2 py-0.5 text-[0.6rem] font-black uppercase ${match.completed ? "bg-emerald-400/10 text-emerald-300" : match.status === "live" ? "bg-rose-400/15 text-rose-300" : "bg-cyan-400/10 text-cyan-300"}`}>
+                    <span className="text-[0.64rem] font-black uppercase tracking-wider text-slate-400">{match.tableNumber ? `Table ${match.tableNumber}` : `Match ${index + 1}`}</span>
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-black uppercase ${match.completed ? "bg-emerald-400/10 text-emerald-300" : match.status === "live" ? "bg-rose-400/15 text-rose-300" : "bg-cyan-400/10 text-cyan-300"}`}>
                       {match.completed ? "Finished" : match.status === "live" ? "● Live" : `Race to ${raceTo}`}
                     </span>
                   </div>
@@ -63,7 +63,7 @@ function ReadOnlyRounds({ rounds, raceTo, byePoints }: { rounds: BracketRound[];
                       </div>
                     );
                   })}
-                  {match.startedAt ? <div className="flex items-center justify-between px-4 py-2 text-xs text-slate-500"><span>Race to {raceTo}</span><MatchTimer startedAt={match.startedAt} endedAt={match.endedAt} /></div> : null}
+                  {match.startedAt ? <div className="flex items-center justify-between px-4 py-2 text-xs text-slate-400"><span>Race to {raceTo}</span><MatchTimer startedAt={match.startedAt} endedAt={match.endedAt} /></div> : null}
                 </article>
               ))}
               {byeMatches.map((match) => {
@@ -154,16 +154,16 @@ export function ReadOnlyCompetition({ tournament, showChampion = true }: { tourn
               <article key={heat.id} className={`overflow-hidden rounded-2xl border bg-slate-950/65 ${heat.completed ? "border-emerald-400/25" : "border-white/10"}`}>
                 <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
                   <p className="font-black">{heat.name}</p>
-                  <span className={`rounded-full px-2 py-0.5 text-[0.62rem] font-black uppercase ${heat.completed ? "bg-emerald-400/10 text-emerald-300" : "bg-white/5 text-slate-500"}`}>{heat.completed ? "Finished" : "Waiting"}</span>
+                  <span className={`rounded-full px-2 py-0.5 text-xs font-black uppercase ${heat.completed ? "bg-emerald-400/10 text-emerald-300" : "bg-white/5 text-slate-400"}`}>{heat.completed ? "Finished" : "Waiting"}</span>
                 </div>
                 {heat.entries
                   .slice()
                   .sort((a, b) => (a.placement ?? 999) - (b.placement ?? 999) || (b.score ?? 0) - (a.score ?? 0))
                   .map((entry) => (
                     <div key={entry.player} className="flex items-center gap-3 border-b border-white/10 px-4 py-3 last:border-b-0">
-                      <span className="w-8 text-sm font-black text-slate-500">{entry.placement ? `#${entry.placement}` : "—"}</span>
+                      <span className="w-8 text-sm font-black text-slate-400">{entry.placement ? `#${entry.placement}` : "—"}</span>
                       <span className="min-w-0 flex-1 truncate font-black text-white">{entry.player}</span>
-                      {heat.completed ? <span className="text-xs font-bold text-slate-500">{formatPoints(entry.points)} pts</span> : null}
+                      {heat.completed ? <span className="text-xs font-bold text-slate-400">{formatPoints(entry.points)} pts</span> : null}
                       <span className="font-black text-cyan-300">{entry.score ?? "—"}</span>
                     </div>
                   ))}

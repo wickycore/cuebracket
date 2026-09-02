@@ -365,7 +365,7 @@ export function ReadOnlyBracket({
       <section className="rounded-2xl border border-[#2a5680] bg-[#0d2a50] p-2.5 sm:rounded-[1.5rem] sm:p-4">
         <div className="flex items-center gap-2 sm:justify-between">
           <div className="hidden px-1 sm:block">
-            <p className="text-[0.68rem] font-black uppercase tracking-[0.18em] text-[#dce8f4]">Tournament view</p>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#dce8f4]">Tournament view</p>
             <p className="mt-1 text-sm font-bold text-[#d2dfec]">Choose the view that is easiest to follow.</p>
           </div>
           <div className="flex min-w-0 flex-1 items-center gap-2 sm:flex-none">

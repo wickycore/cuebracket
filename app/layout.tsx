@@ -18,6 +18,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://cuebracket-doaa.vercel.app"),
   title: {
     default: "CueBracket Pro",
     template: "%s · CueBracket Pro",
@@ -25,6 +26,17 @@ export const metadata: Metadata = {
   description:
     "Run pool tournaments, live scores, brackets, tables, leagues and cloud spectator views.",
   applicationName: "CueBracket Pro",
+  openGraph: {
+    type: "website",
+    siteName: "CueBracket Pro",
+    title: "CueBracket Pro",
+    description: "Run pool tournaments, live scores, brackets, tables, leagues and cloud spectator views.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "CueBracket Pro",
+    description: "Run pool tournaments, live scores, brackets, tables, leagues and cloud spectator views.",
+  },
   appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "CueBracket" },
   icons: { apple: "/pwa-icon/180" },
 };

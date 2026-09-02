@@ -149,7 +149,7 @@ function MatchRow({
       <article className="relative h-[7.5rem] overflow-hidden rounded-xl border border-[#3b3b61] bg-[linear-gradient(110deg,#17263f_0%,#18233b_52%,#151d34_100%)] shadow-[0_10px_30px_rgba(0,0,0,0.14)] sm:h-auto">
         <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-1.5 ${rowAccentStyles[state]}`} />
         <div className="flex h-7 items-center justify-between gap-3 px-3 sm:h-auto sm:px-7 sm:pt-4">
-          <span className="text-[0.68rem] font-black uppercase tracking-[0.08em] text-[#c1d0e2] sm:text-xs">
+          <span className="text-xs font-black uppercase tracking-[0.08em] text-[#c1d0e2] sm:text-xs">
             {match.tableNumber ? `Table ${match.tableNumber} · ` : ""}Match {displayMatchNumber}
           </span>
           <span className={`rounded-full px-2.5 py-1 text-[0.66rem] font-black uppercase tracking-[0.06em] ring-1 sm:text-xs ${statusStyles[state]}`}>
@@ -167,13 +167,13 @@ function MatchRow({
 
           <span className="text-center text-lg font-black text-[#b9b5ca] sm:text-2xl">VS.</span>
 
-          <div className="flex min-h-10 min-w-0 items-center justify-center gap-1 rounded-xl border border-dashed border-[#a873ee] bg-[#281d42]/45 px-1.5 py-1 text-center text-[0.62rem] font-bold leading-3.5 text-[#d9cfee] sm:min-h-16 sm:gap-2 sm:px-3 sm:py-2 sm:text-sm sm:leading-4" aria-label="Bye — no opponent">
+          <div className="flex min-h-10 min-w-0 items-center justify-center gap-1 rounded-xl border border-dashed border-[#a873ee] bg-[#281d42]/45 px-1.5 py-1 text-center text-xs font-bold leading-3.5 text-[#d9cfee] sm:min-h-16 sm:gap-2 sm:px-3 sm:py-2 sm:text-sm sm:leading-4" aria-label="Bye — no opponent">
             <span className="text-[#b17aff]"><UserPlusIcon /></span>
             <span><strong className="text-[#c798ff]">BYE</strong> — No opponent</span>
           </div>
         </div>
 
-        <p className="flex h-7 items-center justify-center border-t border-[#3b3b61] px-3 text-center text-[0.68rem] font-bold text-[#d8b8ff] sm:block sm:h-auto sm:px-7 sm:py-2.5 sm:text-sm">
+        <p className="flex h-7 items-center justify-center border-t border-[#3b3b61] px-3 text-center text-xs font-bold text-[#d8b8ff] sm:block sm:h-auto sm:px-7 sm:py-2.5 sm:text-sm">
           <span className="whitespace-nowrap"><strong className="text-[#bd8cff]">Automatic advance</strong> · no match played</span>
         </p>
       </article>
@@ -184,7 +184,7 @@ function MatchRow({
     <article className="relative h-[6.875rem] overflow-hidden rounded-xl border border-[#2c425a] bg-[linear-gradient(110deg,#172a43_0%,#152940_52%,#11243a_100%)] shadow-[0_10px_30px_rgba(0,0,0,0.14)] transition hover:border-[#3c5875] hover:bg-[linear-gradient(110deg,#1b314d_0%,#193049_52%,#152b44_100%)] sm:h-auto">
       <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-1.5 ${rowAccentStyles[state]}`} />
       <div className="grid h-7 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 px-3 sm:h-auto sm:px-7 sm:pt-4">
-        <span className="text-[0.68rem] font-black uppercase tracking-[0.08em] text-[#c1d0e2] sm:text-xs">
+        <span className="text-xs font-black uppercase tracking-[0.08em] text-[#c1d0e2] sm:text-xs">
           {match.tableNumber ? `Table ${match.tableNumber} · ` : ""}Match {displayMatchNumber}
         </span>
         <span className="flex items-center justify-center gap-1 text-xs font-black tabular-nums text-[#c4d2e3] sm:text-sm">
@@ -335,7 +335,7 @@ export function BracketMatchList({ rounds, raceTo }: { rounds: BracketRound[]; r
         {query.trim() ? <p className="mt-2 text-xs font-bold text-[#52d3ee]">{visibleMatchCount} {visibleMatchCount === 1 ? "match" : "matches"} found</p> : null}
 
         <div className="mt-3">
-          <p className="text-[0.65rem] font-black uppercase tracking-[0.16em] text-[#dce8f4]">Jump to round</p>
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-[#dce8f4]">Jump to round</p>
           <div className="mt-1.5 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {rounds.map((round) => (
               <button

@@ -23,7 +23,8 @@ interface Props { params: Promise<{ slug: string }>; searchParams: Promise<{ tab
 
 async function getClub(slug: string) {
   const supabase = await createClient();
-  const { data } = await supabase.from("clubs").select("*").eq("slug", slug.toLowerCase()).maybeSingle();
+  const { data, error } = await supabase.from("clubs").select("*").eq("slug", slug.toLowerCase()).maybeSingle();
+  if (error) throw new Error("The club could not be loaded.");
   return data as ClubRow | null;
 }
 
@@ -31,7 +32,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const club = await getClub(slug);
   return club
-    ? { title: `${club.name} Club Command Center · CueBracket`, description: club.description || `Follow ${club.name}, explore events, rankings, leagues and club updates.` }
+    ? {
+        title: `${club.name} Club Command Center · CueBracket`,
+        description: club.description || `Follow ${club.name}, explore events, rankings, leagues and club updates.`,
+        alternates: { canonical: `/clubs/${club.slug}` },
+      }
     : { title: "Club not found" };
 }
 
@@ -39,7 +44,8 @@ export default async function ClubPage({ params, searchParams }: Props) {
   const { slug } = await params;
   const { tab } = await searchParams;
   const supabase = await createClient();
-  const { data: clubData } = await supabase.from("clubs").select("*").eq("slug", slug.toLowerCase()).maybeSingle();
+  const { data: clubData, error: clubError } = await supabase.from("clubs").select("*").eq("slug", slug.toLowerCase()).maybeSingle();
+  if (clubError) throw new Error("The club could not be loaded.");
   const club = clubData as ClubRow | null;
   if (!club) notFound();
 
@@ -48,6 +54,7 @@ export default async function ClubPage({ params, searchParams }: Props) {
     supabase.from("club_members").select("*").eq("club_id", club.id).order("created_at"),
     supabase.from("club_followers").select("club_id, user_id").eq("club_id", club.id),
   ]);
+  if (membersResult.error || followersResult.error) throw new Error("The club membership could not be loaded.");
   const memberships = (membersResult.data ?? []) as ClubMemberRow[];
   const followerIds = (followersResult.data ?? []).map((item) => item.user_id);
   const ownMembership = user ? memberships.find((item) => item.user_id === user.id) ?? null : null;
@@ -72,6 +79,10 @@ export default async function ClubPage({ params, searchParams }: Props) {
     supabase.from("club_achievements").select("*").eq("club_id", club.id).order("is_featured", { ascending: false }).order("awarded_on", { ascending: false }).order("created_at", { ascending: false }).limit(100),
   ]);
 
+  const sectionError = [profilesResult, followerCountsResult, guideResult, ownRequestResult, settingsResult, tournamentsResult, leaguesResult, rankingsResult, announcementsResult, calendarResult, challengesResult, achievementsResult]
+    .find((result) => "error" in result && result.error);
+  if (sectionError) throw new Error("Some club information could not be loaded.");
+
   const profileMap = new Map((profilesResult.data ?? []).map((profile) => [profile.id, profile]));
   const followerCountMap = new Map((followerCountsResult.data ?? []).map((row) => [row.player_id, row.follower_count]));
   const members: ClubMemberView[] = memberships.map((membership) => {
@@ -93,10 +104,12 @@ export default async function ClubPage({ params, searchParams }: Props) {
   const ownRsvpsResult = user && calendarEventIds.length
     ? await supabase.from("club_calendar_rsvps").select("*").eq("user_id", user.id).in("event_id", calendarEventIds)
     : { data: [] };
+  if ("error" in ownRsvpsResult && ownRsvpsResult.error) throw new Error("Club responses could not be loaded.");
   const tournamentIds = settings.map((item) => item.tournament_id);
   const registrationsResult = tournamentIds.length
     ? await supabase.from("event_registrations").select("tournament_id, status").in("tournament_id", tournamentIds).in("status", ["approved", "checked_in", "waitlisted"]).limit(10000)
     : { data: [] };
+  if ("error" in registrationsResult && registrationsResult.error) throw new Error("Club registration totals could not be loaded.");
   const counts = new Map<string, ClubRegistrationCount>();
   for (const row of (registrationsResult.data ?? []) as Pick<EventRegistrationRow, "tournament_id" | "status">[]) {
     const current = counts.get(row.tournament_id) ?? { tournamentId: row.tournament_id, confirmed: 0, waitlisted: 0 };

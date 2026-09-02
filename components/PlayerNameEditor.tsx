@@ -66,7 +66,7 @@ export function PlayerNameEditor({
       <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">Correct player name</p>
       <p className="mt-2 text-sm leading-6 text-slate-400">Fix a spelling mistake after the draw. Match positions, results and progression stay unchanged.</p>
       <form onSubmit={submit} className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
-        <label className="grid gap-2 text-xs font-bold text-slate-500">
+        <label className="grid gap-2 text-xs font-bold text-slate-400">
           PLAYER
           <select
             value={activePlayer}
@@ -76,7 +76,7 @@ export function PlayerNameEditor({
             {tournament.players.map((player) => <option key={player} value={player}>{player}</option>)}
           </select>
         </label>
-        <label className="grid gap-2 text-xs font-bold text-slate-500">
+        <label className="grid gap-2 text-xs font-bold text-slate-400">
           CORRECTED NAME
           <input
             value={activeName}

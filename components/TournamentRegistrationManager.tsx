@@ -226,16 +226,16 @@ export function TournamentRegistrationManager({ tournament, onTournamentChange }
         ) : (
           <div className="mt-6 grid gap-4 md:grid-cols-3">
             <label className="text-sm font-bold text-slate-300">
-              Event date and time <span className="text-slate-600">(optional)</span>
+              Event date and time <span className="text-slate-400">(optional)</span>
               <input type="datetime-local" value={scheduledAt} onChange={(event) => setScheduledAt(event.target.value)} className="mt-2 min-h-12 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-white outline-none focus:border-cyan-400/50" />
             </label>
             <label className="text-sm font-bold text-slate-300">
-              Entry fee <span className="text-slate-600">(optional)</span>
-              <input value={entryFee} maxLength={60} onChange={(event) => setEntryFee(event.target.value)} placeholder="e.g. KSh 500" className="mt-2 min-h-12 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/50" />
+              Entry fee <span className="text-slate-400">(optional)</span>
+              <input value={entryFee} maxLength={60} onChange={(event) => setEntryFee(event.target.value)} placeholder="e.g. KSh 500" className="mt-2 min-h-12 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-white outline-none placeholder:text-slate-400 focus:border-cyan-400/50" />
             </label>
             <label className="text-sm font-bold text-slate-300 md:col-span-1">
-              Player note <span className="text-slate-600">(optional)</span>
-              <input value={notes} maxLength={500} onChange={(event) => setNotes(event.target.value)} placeholder="Arrival time, dress code…" className="mt-2 min-h-12 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/50" />
+              Player note <span className="text-slate-400">(optional)</span>
+              <input value={notes} maxLength={500} onChange={(event) => setNotes(event.target.value)} placeholder="Arrival time, dress code…" className="mt-2 min-h-12 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-white outline-none placeholder:text-slate-400 focus:border-cyan-400/50" />
             </label>
           </div>
         )}
@@ -259,7 +259,7 @@ export function TournamentRegistrationManager({ tournament, onTournamentChange }
       {settings && registrationUrl ? (
         <div className="grid gap-6 border-b border-white/10 p-6 sm:p-8 lg:grid-cols-[1fr_auto] lg:items-center">
           <div className="min-w-0">
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">Registration link</p>
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Registration link</p>
             <div className="mt-3 flex flex-col gap-2 sm:flex-row">
               <input readOnly value={registrationUrl} className="min-h-12 min-w-0 flex-1 rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-slate-300" />
               <button type="button" onClick={() => void copyLink()} className="rounded-2xl bg-cyan-400 px-5 py-3 font-black text-slate-950">{copied ? "Copied!" : "Copy link"}</button>
@@ -283,7 +283,7 @@ export function TournamentRegistrationManager({ tournament, onTournamentChange }
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {[["Pending", counts.pending], ["Confirmed", counts.confirmed], ["Checked in", counts.checkedIn], ["Waitlist", counts.waitlisted]].map(([label, value]) => (
               <div key={label} className="rounded-2xl border border-white/10 bg-slate-950/45 p-4">
-                <p className="text-xs font-black uppercase tracking-wider text-slate-500">{label}</p>
+                <p className="text-xs font-black uppercase tracking-wider text-slate-400">{label}</p>
                 <p className="mt-2 text-2xl font-black text-white">{value}</p>
               </div>
             ))}
@@ -292,7 +292,7 @@ export function TournamentRegistrationManager({ tournament, onTournamentChange }
           <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h3 className="text-xl font-black">Registration desk</h3>
-              <p className="mt-1 text-sm text-slate-500">Approve first, then check in players when they arrive.</p>
+              <p className="mt-1 text-sm text-slate-400">Approve first, then check in players when they arrive.</p>
             </div>
             <button type="button" disabled={counts.checkedIn === 0} onClick={useCheckedInPlayers} className="rounded-2xl bg-emerald-300 px-5 py-3 text-sm font-black text-slate-950 disabled:cursor-not-allowed disabled:opacity-35">
               Use {counts.checkedIn} checked-in player{counts.checkedIn === 1 ? "" : "s"}
@@ -305,10 +305,10 @@ export function TournamentRegistrationManager({ tournament, onTournamentChange }
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="truncate font-black text-white">{item.display_name}</p>
-                    <span className={`rounded-full px-2.5 py-1 text-[0.65rem] font-black uppercase tracking-wider ring-1 ${statusStyles[item.status]}`}>{item.status.replace("_", " ")}</span>
-                    {item.profile_id ? <span className="text-xs font-bold text-cyan-300">CueBracket player</span> : <span className="text-xs text-slate-600">Guest</span>}
+                    <span className={`rounded-full px-2.5 py-1 text-xs font-black uppercase tracking-wider ring-1 ${statusStyles[item.status]}`}>{item.status.replace("_", " ")}</span>
+                    {item.profile_id ? <span className="text-xs font-bold text-cyan-300">CueBracket player</span> : <span className="text-xs text-slate-400">Guest</span>}
                   </div>
-                  <p className="mt-1 text-xs text-slate-600">Registered {new Date(item.created_at).toLocaleDateString()}</p>
+                  <p className="mt-1 text-xs text-slate-400">Registered {new Date(item.created_at).toLocaleDateString()}</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {item.status === "pending" ? <>
@@ -322,11 +322,11 @@ export function TournamentRegistrationManager({ tournament, onTournamentChange }
                   </> : null}
                   {item.status === "waitlisted" ? <button disabled={busyId === item.id} onClick={() => void changeStatus(item, "approved")} className="rounded-xl bg-cyan-400 px-3 py-2 text-xs font-black text-slate-950">Approve if space</button> : null}
                   {item.status === "checked_in" ? <button disabled={busyId === item.id} onClick={() => void changeStatus(item, "approved")} className="rounded-xl bg-white/5 px-3 py-2 text-xs font-bold text-slate-200 ring-1 ring-white/10">Undo check-in</button> : null}
-                  <button disabled={busyId === item.id} onClick={() => void remove(item)} aria-label={`Remove ${item.display_name}`} className="rounded-xl px-3 py-2 text-xs font-bold text-slate-500 hover:bg-rose-300/10 hover:text-rose-200">Remove</button>
+                  <button disabled={busyId === item.id} onClick={() => void remove(item)} aria-label={`Remove ${item.display_name}`} className="rounded-xl px-3 py-2 text-xs font-bold text-slate-400 hover:bg-rose-300/10 hover:text-rose-200">Remove</button>
                 </div>
               </div>
             )) : (
-              <div className="rounded-2xl border border-dashed border-white/10 px-5 py-10 text-center text-sm text-slate-500">No online registrations yet. Share the link or add walk-ins manually below.</div>
+              <div className="rounded-2xl border border-dashed border-white/10 px-5 py-10 text-center text-sm text-slate-400">No online registrations yet. Share the link or add walk-ins manually below.</div>
             )}
           </div>
         </div>

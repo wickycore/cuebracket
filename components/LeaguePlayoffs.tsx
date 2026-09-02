@@ -48,7 +48,7 @@ export function LeaguePlayoffs({ league, admin = false, onChange }: { league: Le
       const updated = generateLeaguePlayoff(league.id);
       if (updated) onChange?.(updated);
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : "Unable to generate the playoff.");
+      setTableMessage(error instanceof Error ? error.message : "Unable to generate the playoff.");
     }
   }
 
@@ -97,7 +97,10 @@ function PlayoffMatchRow({ league, match, admin, onChange, tables, tableScope, o
 
   async function save() {
     const validation = validateLeagueResult(league.raceTo, score1, score2);
-    if (validation) return window.alert(validation);
+    if (validation) {
+      onTableError(validation);
+      return;
+    }
     if (match.tableId) {
       try {
         await releaseVenueTable({ tableId: match.tableId, scope: tableScope, matchId: match.id });
@@ -142,7 +145,7 @@ function PlayoffMatchRow({ league, match, admin, onChange, tables, tableScope, o
       {admin && ready ? (
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <input type="number" min={0} max={league.raceTo} value={score1} onChange={(event) => setScore1(Number(event.target.value))} className="w-14 rounded-lg border border-white/10 bg-slate-900 px-2 py-2 text-center font-black" />
-          <span className="text-slate-500">–</span>
+          <span className="text-slate-400">–</span>
           <input type="number" min={0} max={league.raceTo} value={score2} onChange={(event) => setScore2(Number(event.target.value))} className="w-14 rounded-lg border border-white/10 bg-slate-900 px-2 py-2 text-center font-black" />
           <button onClick={() => void save()} className="rounded-lg bg-violet-300 px-3 py-2 text-xs font-black text-slate-950">Save</button>
           {match.completed ? <button onClick={reset} className="rounded-lg border border-white/10 px-3 py-2 text-xs font-bold text-slate-300">Reset</button> : null}

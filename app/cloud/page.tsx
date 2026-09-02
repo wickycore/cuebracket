@@ -1,7 +1,10 @@
+import type { Metadata } from "next";
 import { AppHeader } from "@/components/AppHeader";
 import { CollaborationInbox } from "@/components/CollaborationInbox";
 import { CloudSyncPanel } from "@/components/CloudSyncPanel";
 import { createClient } from "@/lib/supabase/server";
+
+export const metadata: Metadata = { title: "Cloud control center", description: "Manage CueBracket cloud backups, collaboration and live synchronization." };
 
 export default async function CloudPage() {
   const supabase = await createClient();
@@ -14,7 +17,7 @@ export default async function CloudPage() {
       <AppHeader />
       <div className="mx-auto max-w-5xl px-5 py-10">
         <p className="text-sm font-black uppercase tracking-[0.28em] text-cyan-300">
-          Phase 6B cloud center
+          Cloud control center
         </p>
         <h1 className="mt-3 text-4xl font-black sm:text-5xl">
           Score once. Update everywhere.

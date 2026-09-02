@@ -137,7 +137,7 @@ function FixtureRow({
   async function save() {
     const validation = validateLeagueResult(league.raceTo, homeScore, awayScore);
     if (validation) {
-      window.alert(validation);
+      onTableError(validation);
       return;
     }
     if (fixture.tableId) {
@@ -175,7 +175,7 @@ function FixtureRow({
   return (
     <div className="rounded-2xl border border-white/10 bg-slate-950/55 p-4">
       <div className="mb-3 flex items-center justify-between">
-        <span className="text-xs font-black uppercase tracking-wider text-slate-500">Round {fixture.round}</span>
+        <span className="text-xs font-black uppercase tracking-wider text-slate-400">Round {fixture.round}</span>
         <span className={`rounded-full px-3 py-1 text-xs font-black ${fixture.completed ? "bg-emerald-400/10 text-emerald-300" : "bg-amber-400/10 text-amber-300"}`}>
           {fixture.completed ? "Played" : "Pending"}
         </span>
@@ -193,7 +193,7 @@ function FixtureRow({
               onChange={(event) => setHomeScore(Number(event.target.value))}
               className="w-16 rounded-lg border border-white/10 bg-slate-900 px-2 py-2 text-center font-black text-white"
             />
-            <span className="text-slate-500">–</span>
+            <span className="text-slate-400">–</span>
             <input
               type="number"
               min={0}
@@ -212,7 +212,7 @@ function FixtureRow({
       </div>
 
       {admin ? (
-        <label className="mx-auto mt-3 block max-w-xs text-xs font-bold uppercase tracking-wider text-slate-500">
+        <label className="mx-auto mt-3 block max-w-xs text-xs font-bold uppercase tracking-wider text-slate-400">
           Venue table
           <select value={fixture.tableId ?? ""} onChange={(event) => void assignTable(event.target.value ? Number(event.target.value) : null)} disabled={fixture.completed} className="mt-1.5 w-full rounded-lg border border-white/10 bg-slate-900 px-3 py-2 text-sm font-bold normal-case tracking-normal text-white disabled:opacity-60">
             <option value="">{tables.length ? "No table" : "Add tables in Floor Control"}</option>

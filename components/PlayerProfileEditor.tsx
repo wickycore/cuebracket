@@ -109,7 +109,7 @@ export function PlayerProfileEditor({ userId, initialProfile }: PlayerProfileEdi
   }
 
   const inputClass =
-    "mt-2 min-h-12 w-full rounded-2xl border border-white/10 bg-slate-950/75 px-4 py-3 text-base text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-400/60 focus:ring-4 focus:ring-cyan-400/10";
+    "mt-2 min-h-12 w-full rounded-2xl border border-white/10 bg-slate-950/75 px-4 py-3 text-base text-white outline-none transition placeholder:text-slate-400 focus:border-cyan-400/60 focus:ring-4 focus:ring-cyan-400/10";
 
   return (
     <section className="mt-8 rounded-[1.75rem] border border-cyan-400/15 bg-slate-900/75 p-5 shadow-2xl shadow-black/30 sm:p-7">
@@ -136,10 +136,10 @@ export function PlayerProfileEditor({ userId, initialProfile }: PlayerProfileEdi
 
       <form onSubmit={saveProfile} className="mt-7 grid gap-5 sm:grid-cols-2">
         <label className="block text-sm font-bold text-slate-300 sm:col-span-2">
-          Profile picture <span className="font-normal text-slate-600">(optional)</span>
+          Profile picture <span className="font-normal text-slate-400">(optional)</span>
           <span className="mt-2 flex items-center gap-4 rounded-2xl border border-white/10 bg-slate-950/55 p-4">
             {avatarPreview ? <span className="h-20 w-20 shrink-0 overflow-hidden rounded-[1.4rem] border border-white/10"><img src={avatarPreview} alt="Profile preview" className="h-full w-full object-cover" /></span> : <span className="grid h-20 w-20 shrink-0 place-items-center rounded-[1.4rem] border border-cyan-300/20 bg-cyan-400/10 text-3xl font-black text-cyan-200">{displayName.trim().charAt(0).toUpperCase() || "C"}</span>}
-            <span className="min-w-0 flex-1"><input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => { const file = event.target.files?.[0] ?? null; const problem = file ? validateImageFile(file) : null; if (problem) { setSuccess(false); setMessage(problem); event.target.value = ""; return; } setAvatarFile(file); setAvatarPreview(file ? URL.createObjectURL(file) : avatarUrl); setMessage(""); }} className="block w-full text-xs text-slate-400 file:mr-3 file:rounded-lg file:border-0 file:bg-cyan-400 file:px-3 file:py-2 file:font-black file:text-slate-950" /><span className="mt-2 block text-xs font-normal text-slate-600">JPG, PNG or WebP · maximum 5 MB</span></span>
+            <span className="min-w-0 flex-1"><input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => { const file = event.target.files?.[0] ?? null; const problem = file ? validateImageFile(file) : null; if (problem) { setSuccess(false); setMessage(problem); event.target.value = ""; return; } setAvatarFile(file); setAvatarPreview(file ? URL.createObjectURL(file) : avatarUrl); setMessage(""); }} className="block w-full text-xs text-slate-400 file:mr-3 file:rounded-lg file:border-0 file:bg-cyan-400 file:px-3 file:py-2 file:font-black file:text-slate-950" /><span className="mt-2 block text-xs font-normal text-slate-400">JPG, PNG or WebP · maximum 5 MB</span></span>
           </span>
         </label>
         <label className="block text-sm font-bold text-slate-300">
@@ -153,7 +153,7 @@ export function PlayerProfileEditor({ userId, initialProfile }: PlayerProfileEdi
             autoComplete="name"
             className={inputClass}
           />
-          <span className="mt-2 block text-xs font-normal leading-5 text-slate-500">
+          <span className="mt-2 block text-xs font-normal leading-5 text-slate-400">
             The name shown at the top of your profile.
           </span>
         </label>
@@ -173,7 +173,7 @@ export function PlayerProfileEditor({ userId, initialProfile }: PlayerProfileEdi
               className={`${inputClass} pl-9`}
             />
           </div>
-          <span className="mt-2 block text-xs font-normal leading-5 text-slate-500">
+          <span className="mt-2 block text-xs font-normal leading-5 text-slate-400">
             Unique. Use lowercase letters, numbers and underscores.
           </span>
         </label>
@@ -189,13 +189,13 @@ export function PlayerProfileEditor({ userId, initialProfile }: PlayerProfileEdi
             placeholder="The Shark"
             className={inputClass}
           />
-          <span className="mt-2 block text-xs font-normal leading-5 text-slate-500">
+          <span className="mt-2 block text-xs font-normal leading-5 text-slate-400">
             This will be offered automatically when you register for an event. You can still choose a different name for a particular tournament.
           </span>
         </label>
 
         <label className="block text-sm font-bold text-slate-300 sm:col-span-2">
-          Short player bio <span className="font-normal text-slate-600">(optional)</span>
+          Short player bio <span className="font-normal text-slate-400">(optional)</span>
           <textarea
             value={bio}
             onChange={(event) => setBio(event.target.value)}
@@ -204,7 +204,7 @@ export function PlayerProfileEditor({ userId, initialProfile }: PlayerProfileEdi
             placeholder="Pool player, home club or favourite discipline."
             className={`${inputClass} resize-none`}
           />
-          <span className="mt-2 flex justify-between text-xs font-normal leading-5 text-slate-500">
+          <span className="mt-2 flex justify-between text-xs font-normal leading-5 text-slate-400">
             <span>Visible only when your profile is public.</span>
             <span>{bio.length}/160</span>
           </span>
@@ -219,7 +219,7 @@ export function PlayerProfileEditor({ userId, initialProfile }: PlayerProfileEdi
           />
           <span>
             <span className="block text-sm font-black text-white">Public player profile</span>
-            <span className="mt-1 block text-xs leading-5 text-slate-500">
+            <span className="mt-1 block text-xs leading-5 text-slate-400">
               Allow players and organizers to open your CueBracket profile. Your email is never displayed.
             </span>
           </span>

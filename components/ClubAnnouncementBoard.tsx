@@ -136,19 +136,19 @@ export function ClubAnnouncementBoard({
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className={`rounded-full border px-2.5 py-1 text-[0.62rem] font-black uppercase tracking-wider ${kindStyle[item.kind]}`}>{clubAnnouncementLabel(item.kind)}</span>
-                    {item.is_pinned ? <span className="text-[0.62rem] font-black uppercase tracking-wider text-cyan-300">Pinned</span> : null}
+                    <span className={`rounded-full border px-2.5 py-1 text-xs font-black uppercase tracking-wider ${kindStyle[item.kind]}`}>{clubAnnouncementLabel(item.kind)}</span>
+                    {item.is_pinned ? <span className="text-xs font-black uppercase tracking-wider text-cyan-300">Pinned</span> : null}
                   </div>
                   <h3 className="mt-3 text-lg font-black text-white">{item.title}</h3>
                   <p className="mt-2 whitespace-pre-line text-sm leading-6 text-slate-300">{item.body}</p>
-                  <p className="mt-3 text-xs font-bold text-slate-600">{clubDateLabel(item.published_at)}</p>
+                  <p className="mt-3 text-xs font-bold text-slate-400">{clubDateLabel(item.published_at)}</p>
                 </div>
                 {isAdmin ? <div className="flex gap-2"><button type="button" onClick={() => void togglePin(item)} disabled={Boolean(busy)} className="rounded-xl border border-white/10 px-3 py-2 text-xs font-black text-slate-300">{item.is_pinned ? "Unpin" : "Pin"}</button><button type="button" onClick={() => void remove(item)} disabled={Boolean(busy)} className="rounded-xl border border-rose-300/20 px-3 py-2 text-xs font-black text-rose-200">Remove</button></div> : null}
               </div>
             </article>
           ))}
         </div>
-      ) : <div className="mt-5 rounded-2xl border border-dashed border-white/10 px-5 py-10 text-center"><p className="font-black text-slate-300">The noticeboard is ready.</p><p className="mt-2 text-sm text-slate-600">Club updates, venue notices and results will appear here.</p></div>}
+      ) : <div className="mt-5 rounded-2xl border border-dashed border-white/10 px-5 py-10 text-center"><p className="font-black text-slate-300">The noticeboard is ready.</p><p className="mt-2 text-sm text-slate-400">Club updates, venue notices and results will appear here.</p></div>}
     </section>
   );
 }

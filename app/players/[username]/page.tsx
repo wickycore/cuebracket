@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { FollowPlayerButton, PlayerFollowingProvider } from "@/components/PlayerFollowing";
 import { LiveMatchFeed } from "@/components/LiveMatchFeed";
+import { RemoteMedia } from "@/components/RemoteMedia";
 import { AppHeader } from "@/components/AppHeader";
 import { placementLabel, type PlayerStatisticsRow, type PlayerTournamentHistoryRow } from "@/lib/rankings";
 import { createClient } from "@/lib/supabase/server";
@@ -31,6 +32,7 @@ export async function generateMetadata({ params }: PlayerProfilePageProps): Prom
   return {
     title: `${profile.display_name} (@${profile.username})`,
     description: profile.bio || `${profile.display_name}'s CueBracket player profile.`,
+    alternates: { canonical: `/players/${profile.username}` },
   };
 }
 
@@ -60,10 +62,13 @@ export default async function PlayerProfilePage({ params }: PlayerProfilePagePro
           <div className="p-6 sm:p-9">
             <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
               {profile.avatar_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
+                <RemoteMedia
                   src={profile.avatar_url}
-                  alt=""
+                  alt={`${profile.tournament_name || profile.display_name} profile picture`}
+                  width={192}
+                  height={192}
+                  sizes="96px"
+                  priority
                   className="h-24 w-24 rounded-[1.75rem] border border-white/15 object-cover shadow-xl shadow-black/30"
                 />
               ) : (
@@ -84,15 +89,15 @@ export default async function PlayerProfilePage({ params }: PlayerProfilePagePro
               <p className="mt-7 max-w-2xl text-base leading-7 text-slate-300">{profile.bio}</p>
             ) : null}
 
-            <div className="mt-6 space-y-3"><PlayerFollowingProvider><FollowPlayerButton playerId={profile.id} profile={profile} /></PlayerFollowingProvider><p className="text-xs leading-5 text-slate-500">Follow first, then turn on match alerts. Enable phone delivery in Notifications.</p></div>
+            <div className="mt-6 space-y-3"><PlayerFollowingProvider><FollowPlayerButton playerId={profile.id} profile={profile} /></PlayerFollowingProvider><p className="text-xs leading-5 text-slate-400">Follow first, then turn on match alerts. Enable phone delivery in Notifications.</p></div>
 
             <div className="mt-8 grid gap-4 sm:grid-cols-2">
               <div className="rounded-2xl border border-white/10 bg-slate-950/55 p-5">
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Tournament name</p>
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Tournament name</p>
                 <p className="mt-2 text-xl font-black text-white">{profile.tournament_name || profile.display_name}</p>
               </div>
               <div className="rounded-2xl border border-white/10 bg-slate-950/55 p-5">
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">CueBracket member since</p>
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">CueBracket member since</p>
                 <p className="mt-2 text-xl font-black text-white">
                   {new Date(profile.created_at).toLocaleDateString("en", {
                     month: "long",
@@ -124,7 +129,7 @@ export default async function PlayerProfilePage({ params }: PlayerProfilePagePro
               ["Podiums", statistics?.podiums ?? 0],
             ].map(([label, value]) => (
               <div key={label} className="rounded-2xl border border-white/10 bg-slate-950/55 p-4">
-                <p className="text-[0.66rem] font-black uppercase tracking-[0.15em] text-slate-600">{label}</p>
+                <p className="text-[0.66rem] font-black uppercase tracking-[0.15em] text-slate-400">{label}</p>
                 <p className="mt-2 text-2xl font-black text-white">{value}</p>
               </div>
             ))}
@@ -141,7 +146,7 @@ export default async function PlayerProfilePage({ params }: PlayerProfilePagePro
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <p className="font-black text-white">{event.tournament_name}</p>
-                      <p className="mt-1 text-xs font-bold text-slate-500">{event.club_name || event.venue || "Independent event"} · {new Date(event.played_at).toLocaleDateString("en", { dateStyle: "medium" })}</p>
+                      <p className="mt-1 text-xs font-bold text-slate-400">{event.club_name || event.venue || "Independent event"} · {new Date(event.played_at).toLocaleDateString("en", { dateStyle: "medium" })}</p>
                     </div>
                     <span className={`rounded-full px-3 py-1 text-xs font-black ${event.placement === 1 ? "bg-amber-300/15 text-amber-200" : "bg-cyan-300/10 text-cyan-200"}`}>{placementLabel(event.placement)}</span>
                   </div>
@@ -150,7 +155,7 @@ export default async function PlayerProfilePage({ params }: PlayerProfilePagePro
               ))}
             </div>
           ) : (
-            <p className="mt-5 rounded-2xl border border-dashed border-white/10 px-5 py-7 text-center text-sm leading-6 text-slate-500">No verified results yet. Results appear when this profile registers for and plays in a cloud-synced tournament.</p>
+            <p className="mt-5 rounded-2xl border border-dashed border-white/10 px-5 py-7 text-center text-sm leading-6 text-slate-400">No verified results yet. Results appear when this profile registers for and plays in a cloud-synced tournament.</p>
           )}
         </section>
       </div>

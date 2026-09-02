@@ -23,9 +23,10 @@ test("organizer header keeps native navigation inside active tournaments", () =>
     assert.ok(source.includes(`{ href: "${href}"`));
   }
 
-  const nativeAnchors =
-    source.match(/<a data-cb-hard-navigation="true"/g) ?? [];
-  assert.ok(nativeAnchors.length >= 6);
+  assert.match(source, /function NavigationLink/);
+  assert.match(source, /data-cb-hard-navigation="true"/);
+  assert.match(source, /publicNavigation\.map/);
+  assert.match(source, /organizerNavigation\.map/);
 });
 
 test("every organizer route is locked after sign-out while spectator routes stay public", () => {

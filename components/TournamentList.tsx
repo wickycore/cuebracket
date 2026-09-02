@@ -98,8 +98,8 @@ export function TournamentList({
                 >
                   {value}
                   <span
-                    className={`rounded-md px-1.5 py-0.5 text-[0.65rem] ${
-                      filter === value ? "bg-slate-950/15" : "bg-slate-950/45 text-slate-500"
+                    className={`rounded-md px-1.5 py-0.5 text-xs ${
+                      filter === value ? "bg-slate-950/15" : "bg-slate-950/45 text-slate-400"
                     }`}
                   >
                     {counts[value]}
@@ -110,13 +110,13 @@ export function TournamentList({
 
             <div className="flex flex-col gap-3 sm:flex-row">
               <label className="relative block sm:min-w-72">
-                <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-600">⌕</span>
+                <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">⌕</span>
                 <span className="sr-only">Search tournaments</span>
                 <input
                   value={query}
                   onChange={(event: ChangeEvent<HTMLInputElement>) => setQuery(event.target.value)}
                   placeholder="Search event, venue or player..."
-                  className="w-full rounded-2xl border border-white/10 bg-white/[0.04] py-3 pl-10 pr-4 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/40 focus:ring-4 focus:ring-cyan-400/10"
+                  className="w-full rounded-2xl border border-white/10 bg-white/[0.04] py-3 pl-10 pr-4 text-sm text-white outline-none placeholder:text-slate-400 focus:border-cyan-400/40 focus:ring-4 focus:ring-cyan-400/10"
                 />
               </label>
 
@@ -137,7 +137,7 @@ export function TournamentList({
           </div>
 
           {query || filter !== "all" ? (
-            <div className="flex items-center justify-between rounded-2xl border border-white/8 bg-white/[0.025] px-4 py-3 text-xs text-slate-500">
+            <div className="flex items-center justify-between rounded-2xl border border-white/8 bg-white/[0.025] px-4 py-3 text-xs text-slate-400">
               <span>
                 Showing <strong className="text-slate-300">{filtered.length}</strong> matching event{filtered.length === 1 ? "" : "s"}
               </span>

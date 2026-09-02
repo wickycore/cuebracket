@@ -100,7 +100,7 @@ export function ChampionsGallery() {
           ["Most decorated", summary.mostDecorated ? `${summary.mostDecorated.name} · ${summary.mostDecorated.titles}` : "—"],
         ].map(([label, value]) => (
           <article key={String(label)} className="cb-card rounded-3xl p-5">
-            <p className="text-[0.66rem] font-black uppercase tracking-[0.16em] text-slate-600">{label}</p>
+            <p className="text-[0.66rem] font-black uppercase tracking-[0.16em] text-slate-400">{label}</p>
             <p className="mt-2 truncate text-2xl font-black text-white">{value}</p>
           </article>
         ))}
@@ -154,9 +154,9 @@ export function ChampionsGallery() {
                 <div className="mt-5 rounded-2xl border border-white/7 bg-slate-950/45 p-4">
                   <div className="flex items-center justify-between gap-4">
                     <div className="min-w-0">
-                      <p className="text-[0.62rem] font-black uppercase tracking-wider text-slate-600">Final</p>
+                      <p className="text-xs font-black uppercase tracking-wider text-slate-400">Final</p>
                       <p className="mt-1 truncate text-sm font-black text-slate-200">
-                        {champion} {runnerUp ? <><span className="text-slate-600">over</span> {runnerUp}</> : "claimed the title"}
+                        {champion} {runnerUp ? <><span className="text-slate-400">over</span> {runnerUp}</> : "claimed the title"}
                       </p>
                     </div>
                     {finalMatch ? (
@@ -169,20 +169,20 @@ export function ChampionsGallery() {
 
                 <div className="mt-5 grid grid-cols-3 gap-2.5">
                   <div className="rounded-2xl border border-white/5 bg-slate-950/40 p-3">
-                    <p className="text-[0.58rem] font-black uppercase tracking-wider text-slate-600">Players</p>
+                    <p className="text-xs font-black uppercase tracking-wider text-slate-400">Players</p>
                     <p className="mt-1 text-lg font-black text-white">{tournament.players.length}</p>
                   </div>
                   <div className="rounded-2xl border border-white/5 bg-slate-950/40 p-3">
-                    <p className="text-[0.58rem] font-black uppercase tracking-wider text-slate-600">Results</p>
+                    <p className="text-xs font-black uppercase tracking-wider text-slate-400">Results</p>
                     <p className="mt-1 text-lg font-black text-white">{completed}</p>
                   </div>
                   <div className="rounded-2xl border border-white/5 bg-slate-950/40 p-3">
-                    <p className="text-[0.58rem] font-black uppercase tracking-wider text-slate-600">Race</p>
+                    <p className="text-xs font-black uppercase tracking-wider text-slate-400">Race</p>
                     <p className="mt-1 text-lg font-black text-white">{tournament.raceTo}</p>
                   </div>
                 </div>
 
-                <div className="mt-5 flex items-center justify-between gap-3 text-xs text-slate-600">
+                <div className="mt-5 flex items-center justify-between gap-3 text-xs text-slate-400">
                   <span className="truncate">{tournament.venue || "Venue not set"}</span>
                   <span className="shrink-0">{formatDate(tournament.updatedAt)}</span>
                 </div>

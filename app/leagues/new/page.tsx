@@ -68,7 +68,7 @@ export default function NewLeaguePage() {
               <option value="">Independent league</option>
               {managedClubs.map((club) => <option key={club.id} value={club.id}>{club.name}</option>)}
             </select>
-            {!managedClubs.length ? <span className="mt-2 block text-xs text-slate-500"><Link href="/clubs/new" className="font-black text-cyan-300">Create a club</Link> to run club seasons and import its registered roster.</span> : null}
+            {!managedClubs.length ? <span className="mt-2 block text-xs text-slate-400"><Link href="/clubs/new" className="font-black text-cyan-300">Create a club</Link> to run club seasons and import its registered roster.</span> : null}
           </Field>
           <Field label="Game type">
             <select value={form.gameType} onChange={(e) => setForm({ ...form, gameType: e.target.value as LeagueInput["gameType"] })} className={input}>

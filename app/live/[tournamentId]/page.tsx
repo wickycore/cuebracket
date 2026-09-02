@@ -1,12 +1,12 @@
 "use client";
 
-/* eslint-disable @next/next/no-img-element */
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { ChampionCelebration } from "@/components/ChampionCelebration";
 import { ReadOnlyBracket } from "@/components/ReadOnlyBracket";
+import { RemoteMedia } from "@/components/RemoteMedia";
 import { ReadOnlyCompetition } from "@/components/ReadOnlyCompetition";
 import { getTournamentStats } from "@/components/TournamentStats";
 import { getAllMatches, getTournament, getTournamentChampion, getTournamentChampionDescription, subscribeToTournamentChanges, Tournament } from "@/lib/tournaments";
@@ -59,7 +59,7 @@ export default function PublicLivePage() {
         </div>
       </header>
       <div className="mx-auto max-w-7xl px-5 py-10 sm:px-8">
-        {tournament.posterUrl ? <div className="mb-8 h-52 overflow-hidden rounded-[2rem] border border-white/10 sm:h-80"><img src={tournament.posterUrl} alt={`${tournament.name} poster`} className="h-full w-full object-cover" /></div> : null}
+        {tournament.posterUrl ? <div className="mb-8 h-52 overflow-hidden rounded-[2rem] border border-white/10 sm:h-80"><RemoteMedia src={tournament.posterUrl} alt={`${tournament.name} poster`} sizes="(max-width: 768px) 100vw, 72rem" priority /></div> : null}
         <div className="text-center">
           <p className="text-sm font-black uppercase tracking-[0.25em] text-cyan-400">Public spectator view</p>
           <h1 className="mt-3 text-4xl font-black sm:text-6xl">{tournament.name}</h1>
@@ -69,13 +69,13 @@ export default function PublicLivePage() {
         {getTournamentChampion(tournament) ? <div className="mt-8"><ChampionCelebration champion={getTournamentChampion(tournament)!} description={getTournamentChampionDescription(tournament)} tournament={tournament} /></div> : null}
 
         <section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {summaryCards.map(([label, value]) => <div key={label} className="rounded-3xl border border-white/10 bg-white/[0.04] p-5"><p className="text-xs font-black uppercase tracking-wider text-slate-500">{label}</p><p className="mt-2 text-2xl font-black">{value}</p></div>)}
+          {summaryCards.map(([label, value]) => <div key={label} className="rounded-3xl border border-white/10 bg-white/[0.04] p-5"><p className="text-xs font-black uppercase tracking-wider text-slate-400">{label}</p><p className="mt-2 text-2xl font-black">{value}</p></div>)}
         </section>
 
         <section className="mt-8">
           <h2 className="text-2xl font-black">Current matches</h2>
           <div className="mt-4 grid gap-4 lg:grid-cols-2">
-            {current.length ? current.map((match) => <article key={match.id} className="rounded-[2rem] border border-emerald-400/25 bg-emerald-400/[0.07] p-6"><div className="flex items-center justify-between"><span className="text-xs font-black uppercase tracking-widest text-emerald-300">● Live</span><span className="text-sm text-slate-400">{match.tableNumber || "Table TBA"}</span></div><div className="mt-5 grid grid-cols-[1fr_auto_1fr] items-center gap-4 text-center"><div><p className="truncate font-black">{match.player1}</p><p className="mt-2 text-5xl font-black text-cyan-300">{match.score1 ?? 0}</p></div><span className="text-slate-600">VS</span><div><p className="truncate font-black">{match.player2}</p><p className="mt-2 text-5xl font-black text-cyan-300">{match.score2 ?? 0}</p></div></div>{match.breakPlayer ? <p className="mt-4 text-center text-sm text-amber-300">Break: {match.breakPlayer === 1 ? match.player1 : match.player2}</p> : null}</article>) : <div className="rounded-3xl border border-dashed border-white/15 p-8 text-slate-400">No match is marked live right now.</div>}
+            {current.length ? current.map((match) => <article key={match.id} className="rounded-[2rem] border border-emerald-400/25 bg-emerald-400/[0.07] p-6"><div className="flex items-center justify-between"><span className="text-xs font-black uppercase tracking-widest text-emerald-300">● Live</span><span className="text-sm text-slate-400">{match.tableNumber || "Table TBA"}</span></div><div className="mt-5 grid grid-cols-[1fr_auto_1fr] items-center gap-4 text-center"><div><p className="truncate font-black">{match.player1}</p><p className="mt-2 text-5xl font-black text-cyan-300">{match.score1 ?? 0}</p></div><span className="text-slate-400">VS</span><div><p className="truncate font-black">{match.player2}</p><p className="mt-2 text-5xl font-black text-cyan-300">{match.score2 ?? 0}</p></div></div>{match.breakPlayer ? <p className="mt-4 text-center text-sm text-amber-300">Break: {match.breakPlayer === 1 ? match.player1 : match.player2}</p> : null}</article>) : <div className="rounded-3xl border border-dashed border-white/15 p-8 text-slate-400">No match is marked live right now.</div>}
           </div>
         </section>
 

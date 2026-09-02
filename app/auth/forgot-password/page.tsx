@@ -41,7 +41,7 @@ export default function ForgotPasswordPage() {
 
           <ForgotPasswordForm />
 
-          <p className="mt-6 text-center text-sm text-slate-500">
+          <p className="mt-6 text-center text-sm text-slate-400">
             Remembered it?{" "}
             <Link href="/auth/login" className="font-black text-cyan-300">
               Sign in

@@ -82,7 +82,7 @@ export default function LeagueManagePage() {
         <div className="mt-8 rounded-3xl border border-white/10 bg-slate-900/70 p-5">
           <div className="flex justify-between text-sm font-bold text-slate-300"><span>League progress</span><span>{progress}%</span></div>
           <div className="mt-3 h-3 overflow-hidden rounded-full bg-slate-950"><div className="h-full rounded-full bg-cyan-400 transition-all" style={{ width: `${progress}%` }} /></div>
-          <p className="mt-2 text-sm text-slate-500">{completed} of {league.fixtures.length} fixtures completed</p>
+          <p className="mt-2 text-sm text-slate-400">{completed} of {league.fixtures.length} fixtures completed</p>
         </div>
 
         <div className="mt-8 space-y-8">

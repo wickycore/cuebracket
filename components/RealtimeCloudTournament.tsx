@@ -1,8 +1,8 @@
 "use client";
 
-/* eslint-disable @next/next/no-img-element */
 
 import { useEffect, useState } from "react";
+import { RemoteMedia } from "@/components/RemoteMedia";
 import type {
   RealtimePostgresChangesPayload,
   REALTIME_SUBSCRIBE_STATES,
@@ -100,12 +100,12 @@ export function RealtimeCloudTournament({ id }: { id: string }) {
 
   return (
     <>
-      {tournament.posterUrl ? <div className="mb-5 h-48 overflow-hidden rounded-[1.75rem] border border-[#2a5680] bg-[#10305a] sm:mb-8 sm:h-72"><img src={tournament.posterUrl} alt={`${tournament.name} poster`} className="h-full w-full object-cover" /></div> : null}
+      {tournament.posterUrl ? <div className="mb-5 h-48 overflow-hidden rounded-[1.75rem] border border-[#2a5680] bg-[#10305a] sm:mb-8 sm:h-72"><RemoteMedia src={tournament.posterUrl} alt={`${tournament.name} poster`} sizes="(max-width: 768px) 100vw, 72rem" /></div> : null}
       <div className="mb-5 flex items-end justify-between gap-3 sm:mb-8">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <span
-              className={`rounded-full px-2.5 py-1 text-[0.68rem] font-black uppercase sm:px-3 sm:text-xs ${
+              className={`rounded-full px-2.5 py-1 text-xs font-black uppercase sm:px-3 sm:text-xs ${
                 connection === "live"
                   ? "bg-[#78c69b]/12 text-[#9fd7b7]"
                   : "bg-amber-300/10 text-amber-200"

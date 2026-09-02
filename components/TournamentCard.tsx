@@ -1,8 +1,8 @@
 "use client";
 
-/* eslint-disable @next/next/no-img-element */
 
 import Link from "next/link";
+import { RemoteMedia } from "@/components/RemoteMedia";
 import {
   Tournament,
   deleteTournament,
@@ -77,17 +77,17 @@ export function TournamentCard({
       <div className="pointer-events-none absolute -right-20 -top-20 h-44 w-44 rounded-full bg-cyan-400/[0.04] blur-3xl transition group-hover:bg-cyan-400/[0.08]" />
 
       <div className="relative">
-        {tournament.posterUrl ? <div className="-mx-5 -mt-5 mb-5 h-40 overflow-hidden border-b border-white/10 sm:-mx-6 sm:-mt-6"><img src={tournament.posterUrl} alt={`${tournament.name} poster`} className="h-full w-full object-cover" /></div> : null}
+        {tournament.posterUrl ? <div className="-mx-5 -mt-5 mb-5 h-40 overflow-hidden border-b border-white/10 sm:-mx-6 sm:-mt-6"><RemoteMedia src={tournament.posterUrl} alt={`${tournament.name} poster`} sizes="(max-width: 768px) 100vw, 33vw" /></div> : null}
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <div className="mb-3 flex flex-wrap items-center gap-2">
               <span
-                className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-[0.68rem] font-black uppercase tracking-wider ring-1 ${statusStyles[tournament.status]}`}
+                className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-black uppercase tracking-wider ring-1 ${statusStyles[tournament.status]}`}
               >
                 {tournament.status === "live" ? <span className="cb-live-dot" /> : null}
                 {tournament.status}
               </span>
-              <span className="rounded-full bg-white/5 px-3 py-1 text-[0.68rem] font-bold text-slate-400 ring-1 ring-white/10">
+              <span className="rounded-full bg-white/5 px-3 py-1 text-xs font-bold text-slate-400 ring-1 ring-white/10">
                 {tournament.type === "two_stage" ? "Groups → Finals" : getFormatLabel(tournament.format)}
               </span>
             </div>
@@ -96,7 +96,7 @@ export function TournamentCard({
               {tournament.name}
             </h2>
             <p className="mt-1 flex items-center gap-2 truncate text-sm text-slate-400">
-              <span className="text-slate-600">⌖</span>
+              <span className="text-slate-400">⌖</span>
               {tournament.venue || "Venue not set"}
             </p>
           </div>
@@ -105,7 +105,7 @@ export function TournamentCard({
             <span className="grid h-12 w-12 place-items-center rounded-2xl bg-cyan-400/10 text-lg font-black text-cyan-200 ring-1 ring-cyan-400/20">
               {tournament.players.length}
             </span>
-            <p className="mt-1 text-[0.62rem] font-black uppercase tracking-wider text-slate-600">
+            <p className="mt-1 text-xs font-black uppercase tracking-wider text-slate-400">
               Players
             </p>
           </div>
@@ -113,7 +113,7 @@ export function TournamentCard({
 
         <div className="mt-6">
           <div className="flex items-center justify-between text-xs">
-            <span className="font-bold text-slate-500">Tournament progress</span>
+            <span className="font-bold text-slate-400">Tournament progress</span>
             <span className="font-black text-slate-300">{progress}%</span>
           </div>
           <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-950/75 ring-1 ring-white/5">
@@ -126,7 +126,7 @@ export function TournamentCard({
               style={{ width: `${progress}%` }}
             />
           </div>
-          <div className="mt-2 flex items-center justify-between text-[0.68rem] text-slate-600">
+          <div className="mt-2 flex items-center justify-between text-xs text-slate-400">
             <span>{completed} of {eventCounts.total || "—"} events</span>
             <span>{liveMatches ? `${liveMatches} playing now` : `Updated ${formatDate(tournament.updatedAt)}`}</span>
           </div>
@@ -135,15 +135,15 @@ export function TournamentCard({
         {!compact ? (
           <dl className="mt-5 grid grid-cols-3 gap-2.5 text-sm">
             <div className="rounded-2xl border border-white/5 bg-slate-950/45 p-3.5">
-              <dt className="text-[0.66rem] font-black uppercase tracking-wider text-slate-600">Race</dt>
+              <dt className="text-[0.66rem] font-black uppercase tracking-wider text-slate-400">Race</dt>
               <dd className="mt-1 font-black text-white">To {tournament.raceTo}</dd>
             </div>
             <div className="rounded-2xl border border-white/5 bg-slate-950/45 p-3.5">
-              <dt className="text-[0.66rem] font-black uppercase tracking-wider text-slate-600">Bracket</dt>
+              <dt className="text-[0.66rem] font-black uppercase tracking-wider text-slate-400">Bracket</dt>
               <dd className="mt-1 font-black text-white">{tournament.bracketSize}</dd>
             </div>
             <div className="rounded-2xl border border-white/5 bg-slate-950/45 p-3.5">
-              <dt className="text-[0.66rem] font-black uppercase tracking-wider text-slate-600">Open spots</dt>
+              <dt className="text-[0.66rem] font-black uppercase tracking-wider text-slate-400">Open spots</dt>
               <dd className="mt-1 font-black text-white">{availableSeats}</dd>
             </div>
           </dl>

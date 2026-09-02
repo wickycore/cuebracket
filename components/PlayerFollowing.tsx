@@ -1,12 +1,12 @@
 "use client";
 
-/* eslint-disable @next/next/no-img-element */
 
 import Link from "next/link";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { FollowedProfile, PlayerFollow } from "@/lib/player-following";
 import { LiveMatchFeed } from "@/components/LiveMatchFeed";
+import { RemoteMedia } from "@/components/RemoteMedia";
 
 interface FollowingState {
   userId: string | null;
@@ -95,8 +95,8 @@ export function FollowPlayerButton({ playerId, profile }: { playerId: string; pr
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const followed = follows.find((row) => row.player_id === playerId);
-  if (userId === playerId) return <p className="text-xs text-slate-500">This is your profile</p>;
-  if (loading) return <p className="text-xs text-slate-500">Loading follow controls…</p>;
+  if (userId === playerId) return <p className="text-xs text-slate-400">This is your profile</p>;
+  if (loading) return <p className="text-xs text-slate-400">Loading follow controls…</p>;
   if (error) return <button type="button" onClick={() => void reload()} className="text-xs text-amber-300">Retry follow controls</button>;
   if (!userId) return <Link href={`/auth/login?next=${encodeURIComponent(profile?.username ? `/players/${profile.username}` : "/following")}`} className="inline-block rounded-xl border border-cyan-300/25 px-3 py-2 text-xs font-black text-cyan-300">Sign in to follow</Link>;
   if (!followed && !profile?.is_public) return null;
@@ -124,9 +124,9 @@ export function FollowingDashboard() {
   return <div className="space-y-7">
     <LiveMatchFeed playerIds={playerIds} enabled={!loading && !error} />
     <section className="rounded-[2rem] border border-white/10 bg-slate-900/60 p-5 sm:p-7">
-      <div className="flex flex-wrap items-center justify-between gap-4"><h2 className="text-2xl font-black">Your players <span className="text-slate-500">{follows.length}</span></h2><input aria-label="Search followed players" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search your players" className="min-h-11 rounded-xl border border-white/10 bg-slate-950 p-3 text-sm" /></div>
+      <div className="flex flex-wrap items-center justify-between gap-4"><h2 className="text-2xl font-black">Your players <span className="text-slate-400">{follows.length}</span></h2><input aria-label="Search followed players" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search your players" className="min-h-11 rounded-xl border border-white/10 bg-slate-950 p-3 text-sm" /></div>
       {loading ? <p className="mt-5 text-slate-400">Loading players…</p> : error ? <div role="alert" className="mt-5 text-amber-300">{error} <button type="button" onClick={() => void reload()} className="underline">Retry</button></div> : <div className="mt-5 grid gap-3 sm:grid-cols-2">{visible.map(({ player_id, player }) => <article key={player_id} className="space-y-4 rounded-2xl border border-white/10 bg-slate-950/50 p-4">
-        {player?.is_public && player.username ? <Link href={`/players/${player.username}`} className="flex items-center gap-3 font-black text-white"><span className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-2xl border border-cyan-300/15 bg-cyan-400/10 text-lg text-cyan-200">{player.avatar_url ? <img src={player.avatar_url} alt="" className="h-full w-full object-cover" /> : (player.tournament_name || player.display_name || "P").charAt(0).toUpperCase()}</span><span className="min-w-0"><span className="block truncate">{player.tournament_name || player.display_name}</span><span className="mt-1 block text-xs text-slate-500">@{player.username} →</span></span></Link> : <p className="text-sm text-slate-500">Profile unavailable or private. Alerts are paused.</p>}
+        {player?.is_public && player.username ? <Link href={`/players/${player.username}`} className="flex items-center gap-3 font-black text-white"><span className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-2xl border border-cyan-300/15 bg-cyan-400/10 text-lg text-cyan-200">{player.avatar_url ? <RemoteMedia src={player.avatar_url} alt={` profile picture`} width={96} height={96} sizes="48px" /> : (player.tournament_name || player.display_name || "P").charAt(0).toUpperCase()}</span><span className="min-w-0"><span className="block truncate">{player.tournament_name || player.display_name}</span><span className="mt-1 block text-xs text-slate-400">@{player.username} →</span></span></Link> : <p className="text-sm text-slate-400">Profile unavailable or private. Alerts are paused.</p>}
         <FollowPlayerButton playerId={player_id} profile={player ?? undefined} />
       </article>)}</div>}
       {!loading && !error && !visible.length ? <p className="mt-5 text-sm leading-6 text-slate-400">{follows.length ? "No players match your search." : <>Your watchlist starts here. Open a player’s public profile from <Link href="/clubs" className="text-cyan-300 underline">club members</Link> or <Link href="/rankings" className="text-cyan-300 underline">rankings</Link>, then choose Follow player.</>}</p> : null}

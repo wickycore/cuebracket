@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-/* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { TournamentRegistrationForm } from "@/components/TournamentRegistrationForm";
+import { RemoteMedia } from "@/components/RemoteMedia";
 import type { EventRegistrationRow, RegistrationSettingsRow } from "@/lib/cloud/registrations";
 import { createClient } from "@/lib/supabase/server";
 
@@ -25,7 +25,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { tournamentId } = await params;
   const settings = await getSettings(tournamentId);
   return settings
-    ? { title: `Register · ${settings.event_name}`, description: `Register to play in ${settings.event_name} on CueBracket.` }
+    ? {
+        title: `Register · ${settings.event_name}`,
+        description: `Register to play in ${settings.event_name} on CueBracket.`,
+        alternates: { canonical: `/register/${tournamentId}` },
+      }
     : { title: "Tournament registration" };
 }
 
@@ -86,7 +90,7 @@ export default async function TournamentRegistrationPage({ params }: Props) {
       </header>
 
       <div className="relative mx-auto max-w-6xl px-5 py-8 sm:px-8 sm:py-12">
-        {tournamentMedia?.poster_url ? <div className="mb-7 h-52 overflow-hidden rounded-[2rem] border border-white/10 shadow-2xl shadow-black/30 sm:h-80"><img src={tournamentMedia.poster_url} alt={`${settings.event_name} poster`} className="h-full w-full object-cover" /></div> : null}
+        {tournamentMedia?.poster_url ? <div className="mb-7 h-52 overflow-hidden rounded-[2rem] border border-white/10 shadow-2xl shadow-black/30 sm:h-80"><RemoteMedia src={tournamentMedia.poster_url} alt={`${settings.event_name} poster`} sizes="(max-width: 768px) 100vw, 72rem" priority /></div> : null}
         <section className="mb-7 overflow-hidden rounded-[2rem] border border-cyan-400/20 bg-[linear-gradient(135deg,rgba(15,23,42,0.96),rgba(3,20,33,0.96))] p-6 shadow-2xl shadow-black/30 sm:p-9">
           <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
             <div>
@@ -102,7 +106,7 @@ export default async function TournamentRegistrationPage({ params }: Props) {
             </div>
             {settings.scheduled_at ? (
               <div className="rounded-2xl border border-white/10 bg-slate-950/45 px-5 py-4 md:text-right">
-                <p className="text-xs font-black uppercase tracking-wider text-slate-500">Starts</p>
+                <p className="text-xs font-black uppercase tracking-wider text-slate-400">Starts</p>
                 <p className="mt-1 font-black text-white">{new Date(settings.scheduled_at).toLocaleString("en-KE", { dateStyle: "medium", timeStyle: "short" })}</p>
               </div>
             ) : null}

@@ -1,6 +1,9 @@
+import type { Metadata } from "next";
 import { AppHeader } from "@/components/AppHeader";
 import { PlayerProfileEditor } from "@/components/PlayerProfileEditor";
 import { createClient } from "@/lib/supabase/server";
+
+export const metadata: Metadata = { title: "My player profile", description: "Manage your public player name, photo and CueBracket profile." };
 
 export default async function AccountPage() {
   const supabase = await createClient();
@@ -42,7 +45,7 @@ export default async function AccountPage() {
             ["Joined", profile?.created_at ? new Date(profile.created_at).toLocaleDateString() : "—"],
           ].map(([label, value]) => (
             <div key={label} className="rounded-2xl border border-white/10 bg-slate-900/70 p-5">
-              <p className="text-xs font-black uppercase tracking-wider text-slate-500">{label}</p>
+              <p className="text-xs font-black uppercase tracking-wider text-slate-400">{label}</p>
               <p className="mt-2 break-all font-bold text-white">{value}</p>
             </div>
           ))}

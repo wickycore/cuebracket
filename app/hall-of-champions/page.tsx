@@ -1,5 +1,12 @@
+import type { Metadata } from "next";
 import { AppHeader } from "@/components/AppHeader";
 import { ChampionsGallery } from "@/components/ChampionsGallery";
+
+export const metadata: Metadata = {
+  title: "Hall of Champions",
+  description: "Celebrate verified CueBracket tournament champions and podium finishes.",
+  alternates: { canonical: "/hall-of-champions" },
+};
 
 export default function HallOfChampionsPage() {
   return (

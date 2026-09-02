@@ -83,8 +83,8 @@ export function EventDiscovery({ events, signedIn }: { events: DiscoveryEvent[];
         <div className="grid gap-3 lg:grid-cols-[minmax(16rem,1.6fr)_repeat(3,minmax(9rem,1fr))]">
           <label className="relative">
             <span className="sr-only">Search events</span>
-            <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-500">⌕</span>
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search event, venue or club" className="h-12 w-full rounded-2xl border border-white/10 bg-slate-950/70 pl-10 pr-4 text-sm font-bold text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-400/50" />
+            <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">⌕</span>
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search event, venue or club" className="h-12 w-full rounded-2xl border border-white/10 bg-slate-950/70 pl-10 pr-4 text-sm font-bold text-white outline-none transition placeholder:text-slate-400 focus:border-cyan-400/50" />
           </label>
           <select value={date} onChange={(event) => setDate(event.target.value as DiscoveryDateFilter)} aria-label="Filter by date" className="h-12 rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm font-bold text-white">
             {dateFilters.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
@@ -109,7 +109,7 @@ export function EventDiscovery({ events, signedIn }: { events: DiscoveryEvent[];
 
       <div className="mt-6 flex items-center justify-between gap-3">
         <p className="text-sm font-bold text-slate-400"><span className="font-black text-white">{visible.length}</span> event{visible.length === 1 ? "" : "s"} found</p>
-        <p className="hidden text-xs font-bold text-slate-600 sm:block">Times shown in East Africa Time</p>
+        <p className="hidden text-xs font-bold text-slate-400 sm:block">Times shown in East Africa Time</p>
       </div>
 
       {groups.length ? <div className="mt-5 space-y-9">{groups.map(([month, monthEvents]) => (
@@ -119,7 +119,7 @@ export function EventDiscovery({ events, signedIn }: { events: DiscoveryEvent[];
         </section>
       ))}</div> : (
         <section className="mt-5 rounded-[2rem] border border-dashed border-white/10 bg-white/[0.025] px-6 py-16 text-center">
-          <p className="text-4xl">🎱</p><h2 className="mt-4 text-2xl font-black">No events match those filters</h2><p className="mt-2 text-slate-500">Clear a filter or check again when organizers publish new events.</p><button type="button" onClick={reset} className="mt-5 rounded-xl bg-cyan-400 px-4 py-2.5 text-sm font-black text-slate-950">Show all events</button>
+          <p className="text-4xl">🎱</p><h2 className="mt-4 text-2xl font-black">No events match those filters</h2><p className="mt-2 text-slate-400">Clear a filter or check again when organizers publish new events.</p><button type="button" onClick={reset} className="mt-5 rounded-xl bg-cyan-400 px-4 py-2.5 text-sm font-black text-slate-950">Show all events</button>
         </section>
       )}
     </>
@@ -137,19 +137,19 @@ function EventCard({ event }: { event: DiscoveryEvent }) {
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <span className={`rounded-full px-2.5 py-1 text-[0.62rem] font-black uppercase tracking-wider ${event.type === "league" ? "bg-violet-300/10 text-violet-200 ring-1 ring-violet-300/20" : "bg-cyan-300/10 text-cyan-200 ring-1 ring-cyan-300/20"}`}>{event.type}</span>
-              {event.followed ? <span className="rounded-full bg-amber-300/10 px-2.5 py-1 text-[0.62rem] font-black uppercase text-amber-200 ring-1 ring-amber-300/20">★ Followed club</span> : null}
-              {event.status === "live" ? <span className="rounded-full bg-rose-300/10 px-2.5 py-1 text-[0.62rem] font-black uppercase text-rose-200 ring-1 ring-rose-300/20">● Live</span> : null}
+              <span className={`rounded-full px-2.5 py-1 text-xs font-black uppercase tracking-wider ${event.type === "league" ? "bg-violet-300/10 text-violet-200 ring-1 ring-violet-300/20" : "bg-cyan-300/10 text-cyan-200 ring-1 ring-cyan-300/20"}`}>{event.type}</span>
+              {event.followed ? <span className="rounded-full bg-amber-300/10 px-2.5 py-1 text-xs font-black uppercase text-amber-200 ring-1 ring-amber-300/20">★ Followed club</span> : null}
+              {event.status === "live" ? <span className="rounded-full bg-rose-300/10 px-2.5 py-1 text-xs font-black uppercase text-rose-200 ring-1 ring-rose-300/20">● Live</span> : null}
             </div>
             <h3 className="mt-3 text-2xl font-black tracking-tight text-white">{event.name}</h3>
             <p className="mt-2 text-sm font-bold text-slate-400">{event.clubSlug ? <a href={`/clubs/${event.clubSlug}`} className="text-cyan-300 hover:text-cyan-200">{event.clubName}</a> : event.clubName}{event.venue ? ` · ${event.venue}` : ""}</p>
           </div>
-          <div className="shrink-0 rounded-2xl border border-white/10 bg-slate-950/60 px-3 py-2 text-center"><p className="text-xs font-black text-white">{event.raceTo ? `R${event.raceTo}` : "—"}</p><p className="mt-0.5 text-[0.55rem] font-black uppercase text-slate-600">Race</p></div>
+          <div className="shrink-0 rounded-2xl border border-white/10 bg-slate-950/60 px-3 py-2 text-center"><p className="text-xs font-black text-white">{event.raceTo ? `R${event.raceTo}` : "—"}</p><p className="mt-0.5 text-xs font-black uppercase text-slate-400">Race</p></div>
         </div>
 
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4"><p className="text-[0.62rem] font-black uppercase tracking-wider text-slate-600">When</p><p className="mt-2 font-black text-white">{when.date}</p><p className="mt-1 text-xs text-slate-500">{when.time}</p></div>
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4"><p className="text-[0.62rem] font-black uppercase tracking-wider text-slate-600">Game / format</p><p className="mt-2 font-black capitalize text-white">{event.format.replaceAll("_", " ").replaceAll("-", " ")}</p><p className="mt-1 text-xs text-slate-500">{event.entryFee || "Entry fee not listed"}</p></div>
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4"><p className="text-xs font-black uppercase tracking-wider text-slate-400">When</p><p className="mt-2 font-black text-white">{when.date}</p><p className="mt-1 text-xs text-slate-400">{when.time}</p></div>
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4"><p className="text-xs font-black uppercase tracking-wider text-slate-400">Game / format</p><p className="mt-2 font-black capitalize text-white">{event.format.replaceAll("_", " ").replaceAll("-", " ")}</p><p className="mt-1 text-xs text-slate-400">{event.entryFee || "Entry fee not listed"}</p></div>
         </div>
 
         {event.type === "tournament" ? <div className="mt-4 rounded-2xl border border-white/10 bg-slate-950/45 p-4">

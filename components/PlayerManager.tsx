@@ -161,7 +161,7 @@ export function PlayerManager({ tournament, onTournamentChange }: PlayerManagerP
             value={name}
             onChange={(event) => setName(event.target.value)}
             placeholder="Enter player name"
-            className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3.5 text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/50 focus:ring-4 focus:ring-cyan-400/10"
+            className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3.5 text-white outline-none placeholder:text-slate-400 focus:border-cyan-400/50 focus:ring-4 focus:ring-cyan-400/10"
           />
           <button
             type="submit"
@@ -225,7 +225,7 @@ export function PlayerManager({ tournament, onTournamentChange }: PlayerManagerP
             <div className="px-6 py-12 text-center">
               <div className="text-4xl">👥</div>
               <p className="mt-4 font-black text-white">No players added yet</p>
-              <p className="mt-1 text-sm text-slate-500">Add one name above or import several names at once.</p>
+              <p className="mt-1 text-sm text-slate-400">Add one name above or import several names at once.</p>
             </div>
           )}
         </div>
@@ -237,7 +237,7 @@ export function PlayerManager({ tournament, onTournamentChange }: PlayerManagerP
           <div className="mt-4 flex items-end justify-between gap-4">
             <div>
               <p className="text-4xl font-black text-white">{tournament.players.length}</p>
-              <p className="text-sm text-slate-500">of {tournament.bracketSize} capacity</p>
+              <p className="text-sm text-slate-400">of {tournament.bracketSize} capacity</p>
             </div>
             <p className="rounded-full bg-white/5 px-3 py-1 text-sm font-bold text-slate-300 ring-1 ring-white/10">
               {remaining} slots left
@@ -260,7 +260,7 @@ export function PlayerManager({ tournament, onTournamentChange }: PlayerManagerP
             onChange={(event) => setBulkNames(event.target.value)}
             placeholder={"Wicky\nBen\nGM\nSam"}
             rows={7}
-            className="mt-5 w-full resize-none rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/50 focus:ring-4 focus:ring-cyan-400/10"
+            className="mt-5 w-full resize-none rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-400 focus:border-cyan-400/50 focus:ring-4 focus:ring-cyan-400/10"
           />
           <button
             type="button"

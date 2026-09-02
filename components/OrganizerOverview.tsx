@@ -114,11 +114,11 @@ export function OrganizerOverview() {
           <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-cyan-400/[0.035] blur-2xl transition group-hover:bg-cyan-400/[0.08]" />
           <div className="relative flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="truncate text-[0.66rem] font-black uppercase tracking-[0.16em] text-slate-500">
+              <p className="truncate text-[0.66rem] font-black uppercase tracking-[0.16em] text-slate-400">
                 {card.label}
               </p>
               <p className="mt-2 text-3xl font-black tracking-tight text-white">{card.value}</p>
-              <p className="mt-1 truncate text-xs text-slate-500">{card.helper}</p>
+              <p className="mt-1 truncate text-xs text-slate-400">{card.helper}</p>
             </div>
             <span
               className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl text-sm font-black ring-1 ${card.tone}`}

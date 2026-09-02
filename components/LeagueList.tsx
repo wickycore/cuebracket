@@ -55,7 +55,7 @@ export function LeagueList({ compact = false }: { compact?: boolean }) {
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search league, season or venue..."
-            className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/50 focus:ring-4 focus:ring-cyan-400/10"
+            className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-400 focus:border-cyan-400/50 focus:ring-4 focus:ring-cyan-400/10"
           />
         </div>
       ) : null}

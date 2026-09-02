@@ -27,7 +27,7 @@ export function StandingsTable({
       </div>
       <div className="overflow-x-auto">
         <table className="min-w-full text-left text-sm">
-          <thead className="bg-slate-950/55 text-[0.66rem] font-black uppercase tracking-wider text-slate-500">
+          <thead className="bg-slate-950/55 text-[0.66rem] font-black uppercase tracking-wider text-slate-400">
             <tr>
               <th className="px-4 py-3">#</th>
               <th className="px-4 py-3">Player</th>
@@ -46,7 +46,7 @@ export function StandingsTable({
           <tbody>
             {rows.map((row) => (
               <tr key={row.player} className="border-t border-white/7 text-slate-300 first:border-t-0">
-                <td className="px-4 py-3 font-black text-slate-500">{row.rank}</td>
+                <td className="px-4 py-3 font-black text-slate-400">{row.rank}</td>
                 <td className="px-4 py-3 font-black text-white">{row.player}</td>
                 <td className="px-3 py-3 text-center">{row.played}</td>
                 <td className="px-3 py-3 text-center text-emerald-300">{row.won}</td>
@@ -65,7 +65,7 @@ export function StandingsTable({
           </tbody>
         </table>
       </div>
-      {rules ? <p className="border-t border-white/10 px-5 py-3 text-xs leading-5 text-slate-500 sm:px-6">{rules}</p> : null}
+      {rules ? <p className="border-t border-white/10 px-5 py-3 text-xs leading-5 text-slate-400 sm:px-6">{rules}</p> : null}
     </section>
   );
 }
@@ -86,7 +86,7 @@ export function FreeForAllStandingsTable({
       </div>
       <div className="overflow-x-auto">
         <table className="min-w-full text-left text-sm">
-          <thead className="bg-slate-950/55 text-[0.66rem] font-black uppercase tracking-wider text-slate-500">
+          <thead className="bg-slate-950/55 text-[0.66rem] font-black uppercase tracking-wider text-slate-400">
             <tr>
               <th className="px-4 py-3">#</th>
               <th className="px-4 py-3">Player</th>
@@ -101,7 +101,7 @@ export function FreeForAllStandingsTable({
           <tbody>
             {rows.map((row) => (
               <tr key={row.player} className="border-t border-white/7 text-slate-300 first:border-t-0">
-                <td className="px-4 py-3 font-black text-slate-500">{row.rank}</td>
+                <td className="px-4 py-3 font-black text-slate-400">{row.rank}</td>
                 <td className="px-4 py-3 font-black text-white">{row.player}</td>
                 <td className="px-3 py-3 text-center">{row.played}</td>
                 <td className="px-3 py-3 text-center text-emerald-300">{row.heatWins ?? row.won}</td>
@@ -114,7 +114,7 @@ export function FreeForAllStandingsTable({
           </tbody>
         </table>
       </div>
-      {rules ? <p className="border-t border-white/10 px-5 py-3 text-xs leading-5 text-slate-500 sm:px-6">{rules}</p> : null}
+      {rules ? <p className="border-t border-white/10 px-5 py-3 text-xs leading-5 text-slate-400 sm:px-6">{rules}</p> : null}
     </section>
   );
 }

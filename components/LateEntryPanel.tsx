@@ -114,14 +114,14 @@ export function LateEntryPanel({
       {availableSlots.length > 0 ? (
         <div className="mt-5 grid gap-4">
           <form onSubmit={submitRandom} className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
-            <label className="grid gap-2 text-xs font-black uppercase tracking-[0.18em] text-slate-500">
+            <label className="grid gap-2 text-xs font-black uppercase tracking-[0.18em] text-slate-400">
               Player name
               <input
                 value={name}
                 onChange={(event) => setName(event.target.value)}
                 placeholder="Enter late player"
                 autoComplete="off"
-                className="h-12 min-w-0 rounded-xl border border-white/10 bg-slate-950 px-4 text-sm font-bold normal-case tracking-normal text-white outline-none placeholder:text-slate-600 focus:border-amber-300/50 focus:ring-4 focus:ring-amber-300/10"
+                className="h-12 min-w-0 rounded-xl border border-white/10 bg-slate-950 px-4 text-sm font-bold normal-case tracking-normal text-white outline-none placeholder:text-slate-400 focus:border-amber-300/50 focus:ring-4 focus:ring-amber-300/10"
               />
             </label>
             <button type="submit" className="min-h-12 self-end rounded-xl bg-amber-300 px-5 py-3 text-sm font-black text-slate-950 shadow-lg shadow-amber-300/10 hover:bg-amber-200">
@@ -133,7 +133,7 @@ export function LateEntryPanel({
             <details className="rounded-2xl border border-white/10 bg-black/10 p-4">
               <summary className="cursor-pointer text-sm font-bold text-slate-300">Choose a BYE manually instead</summary>
               <form onSubmit={submitManual} className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
-                <label className="grid gap-2 text-xs font-black uppercase tracking-[0.18em] text-slate-500">
+                <label className="grid gap-2 text-xs font-black uppercase tracking-[0.18em] text-slate-400">
                   BYE to replace
                   <select
                     value={activeMatchId}
@@ -167,7 +167,7 @@ export function LateEntryPanel({
           </summary>
           <div className="mt-3 grid gap-2">
             {lockedSlots.map((slot) => (
-              <p key={slot.matchId} className="text-xs leading-5 text-slate-500">
+              <p key={slot.matchId} className="text-xs leading-5 text-slate-400">
                 <strong className="text-slate-300">
                   {slot.advancingPlayer} · Match {slot.matchNumber}:
                 </strong>{" "}

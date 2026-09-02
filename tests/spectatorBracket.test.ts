@@ -173,12 +173,13 @@ test("spectator list uses the match-card palette while the flowchart stays Royal
   assert.doesNotMatch(bracketSource, /shadow-\[0_0_30px_rgba\(34,211,238/);
 });
 
-test("the entire phone website uses the approved 75-percent density at normal zoom", () => {
+test("phone pages respect browser text sizing and keep form controls readable", () => {
   const source = readFileSync(
     new URL("../app/globals.css", import.meta.url),
     "utf8",
   );
 
-  assert.match(source, /@media \(max-width: 639px\)[\s\S]*html \{[\s\S]*font-size: 75%;/);
+  assert.doesNotMatch(source, /html \{[\s\S]*font-size: 75%;/);
+  assert.match(source, /-webkit-text-size-adjust: 100%;/);
   assert.match(source, /input,[\s\S]*select,[\s\S]*textarea \{[\s\S]*font-size: 1rem;/);
 });

@@ -396,7 +396,7 @@ export function LiveMatchCenter({
 
       <div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
-          <p className="text-xs font-bold uppercase tracking-widest text-slate-500">
+          <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
             Race to
           </p>
           <p className="mt-1 text-xl font-black text-white">
@@ -404,7 +404,7 @@ export function LiveMatchCenter({
           </p>
         </div>
         <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
-          <p className="text-xs font-bold uppercase tracking-widest text-slate-500">
+          <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
             Match timer
           </p>
           <p className="mt-1 text-xl font-black text-white">{elapsed}</p>

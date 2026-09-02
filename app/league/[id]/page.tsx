@@ -1,5 +1,20 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { RealtimeCloudLeague } from "@/components/RealtimeCloudLeague";
+import { createClient } from "@/lib/supabase/server";
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const supabase = await createClient();
+  const { data } = await supabase.from("cloud_leagues").select("name, season").eq("id", id).eq("is_public", true).maybeSingle();
+  return data
+    ? {
+        title: `${data.name} · ${data.season}`,
+        description: `Follow ${data.name} fixtures, scores and standings live on CueBracket.`,
+        alternates: { canonical: `/league/${id}` },
+      }
+    : { title: "Public league" };
+}
 
 export default async function PublicLeaguePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

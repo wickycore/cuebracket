@@ -17,6 +17,7 @@ interface AuthNavProps {
 export function AuthNav({ compact = false }: AuthNavProps) {
   const [user, setUser] = useState<User | null>(null);
   const [ready, setReady] = useState(false);
+  const [message, setMessage] = useState("");
   const supabase = useMemo(() => createClient(), []);
 
   useEffect(() => {
@@ -49,6 +50,7 @@ export function AuthNav({ compact = false }: AuthNavProps) {
   }, [supabase]);
 
   async function signOut() {
+    setMessage("");
     const clearThisDevice = window.confirm(
       "Clear CueBracket tournaments, leagues and table data from this device when signing out?\n\nChoose Cancel to keep an offline copy. Organizer pages will still require you to sign in again before the data can be opened or edited.",
     );
@@ -59,7 +61,7 @@ export function AuthNav({ compact = false }: AuthNavProps) {
       if (sub) await pushAction("unsubscribe", { endpoint: sub.endpoint });
     } catch { /* Browser revocation below still prevents delivery if the server is offline. */ }
     try { await clearBrowserPush(); }
-    catch { window.alert("Could not disable phone alerts. Block CueBracket notifications in browser settings before signing out on a shared device."); return; }
+    catch { setMessage("Phone alerts could not be disabled. Block CueBracket notifications in browser settings before signing out on a shared device."); return; }
     await supabase.auth.signOut();
     if (clearThisDevice) {
       [
@@ -113,6 +115,7 @@ export function AuthNav({ compact = false }: AuthNavProps) {
 
   return (
     <div className="flex items-center gap-2">
+      {message ? <p role="alert" className="fixed bottom-5 left-1/2 z-[200] w-[min(92vw,34rem)] -translate-x-1/2 rounded-2xl border border-amber-300/25 bg-[#172033] px-5 py-4 text-sm font-bold leading-6 text-amber-100 shadow-2xl shadow-black/60">{message}<button type="button" onClick={() => setMessage("")} className="ml-3 font-black text-cyan-300">Dismiss</button></p> : null}
       <a data-cb-hard-navigation="true"
         href="/account"
         className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold text-slate-300 transition hover:bg-white/5 hover:text-white"

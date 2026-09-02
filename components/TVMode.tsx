@@ -46,7 +46,7 @@ export function TVMode({ tournamentId }: { tournamentId: string }) {
           </div>
           <div className="text-right">
             <p className="text-4xl font-black tabular-nums">{now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</p>
-            <p className="mt-1 text-sm text-slate-500">{now.toLocaleDateString()}</p>
+            <p className="mt-1 text-sm text-slate-400">{now.toLocaleDateString()}</p>
           </div>
         </header>
 
@@ -64,7 +64,7 @@ export function TVMode({ tournamentId }: { tournamentId: string }) {
                     <p className="text-4xl font-black">{data.live.player1}</p>
                     <p className="mt-3 text-8xl font-black text-cyan-300">{data.live.score1 ?? 0}</p>
                   </div>
-                  <div className="text-3xl font-black text-slate-600">VS</div>
+                  <div className="text-3xl font-black text-slate-400">VS</div>
                   <div>
                     <p className="text-4xl font-black">{data.live.player2}</p>
                     <p className="mt-3 text-8xl font-black text-cyan-300">{data.live.score2 ?? 0}</p>
@@ -90,12 +90,12 @@ export function TVMode({ tournamentId }: { tournamentId: string }) {
             <div className="mt-5 space-y-3">
               {data.upcoming.length ? data.upcoming.map((match, index) => (
                 <div key={match.id} className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
-                  <p className="text-xs font-black uppercase tracking-wider text-slate-600">Match {index + 1}</p>
+                  <p className="text-xs font-black uppercase tracking-wider text-slate-400">Match {index + 1}</p>
                   <div className="mt-2 flex items-center justify-between gap-4 font-black">
-                    <span>{match.player1}</span><span className="text-slate-600">vs</span><span>{match.player2}</span>
+                    <span>{match.player1}</span><span className="text-slate-400">vs</span><span>{match.player2}</span>
                   </div>
                 </div>
-              )) : <p className="text-slate-500">No upcoming matches.</p>}
+              )) : <p className="text-slate-400">No upcoming matches.</p>}
             </div>
           </aside>
         </div>
@@ -107,7 +107,7 @@ export function TVMode({ tournamentId }: { tournamentId: string }) {
           <div className="mt-3 h-4 overflow-hidden rounded-full bg-slate-950">
             <div className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-violet-400 transition-all duration-700" style={{ width: `${data.progress}%` }} />
           </div>
-          <p className="mt-3 text-sm text-slate-500">{data.completed} of {data.playable} playable matches complete</p>
+          <p className="mt-3 text-sm text-slate-400">{data.completed} of {data.playable} playable matches complete</p>
         </section>
 
         {getTournamentChampion(tournament) ? (

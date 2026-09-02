@@ -156,7 +156,7 @@ canvas {
 }
 
 .cb-kicker {
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-weight: 900;
   letter-spacing: 0.24em;
   text-transform: uppercase;
@@ -197,14 +197,6 @@ canvas {
   100% {
     transform: scale(1.55);
     opacity: 0;
-  }
-}
-
-/* Keep every phone view at the compact density users previously got by
-   zooming the browser to 75%, while leaving tablet and desktop sizing intact. */
-@media (max-width: 639px) {
-  html {
-    font-size: 75%;
   }
 }
 

@@ -100,19 +100,19 @@ export function DashboardActivity() {
                   <span className="truncate font-black uppercase tracking-wider text-cyan-300">
                     {match.tableNumber ? `Table ${match.tableNumber}` : "Table pending"}
                   </span>
-                  <span className="text-slate-600">Race to {tournament.raceTo}</span>
+                  <span className="text-slate-400">Race to {tournament.raceTo}</span>
                 </div>
                 <p className="mt-2 truncate font-black text-white">
-                  {match.player1 || "TBD"} <span className="text-slate-600">vs</span> {match.player2 || "TBD"}
+                  {match.player1 || "TBD"} <span className="text-slate-400">vs</span> {match.player2 || "TBD"}
                 </p>
-                <p className="mt-1 truncate text-xs text-slate-500">{tournament.name}</p>
+                <p className="mt-1 truncate text-xs text-slate-400">{tournament.name}</p>
               </Link>
             ))}
           </div>
         ) : (
           <div className="mt-5 rounded-2xl border border-dashed border-white/10 bg-white/[0.02] p-5 text-center">
             <p className="font-bold text-slate-300">No matches playing</p>
-            <p className="mt-1 text-xs leading-5 text-slate-500">
+            <p className="mt-1 text-xs leading-5 text-slate-400">
               Start a match from a tournament to activate this panel.
             </p>
           </div>
@@ -125,7 +125,7 @@ export function DashboardActivity() {
             <p className="cb-kicker">Activity feed</p>
             <h2 className="mt-2 text-xl font-black">Latest results</h2>
           </div>
-          <span className="text-xl text-slate-700">↘</span>
+          <span className="text-xl text-slate-400">↘</span>
         </div>
 
         {activity.length ? (
@@ -143,10 +143,10 @@ export function DashboardActivity() {
                   <span className="block truncate text-sm font-black text-slate-200 group-hover:text-cyan-200">
                     {item.winner} won
                   </span>
-                  <span className="mt-0.5 block truncate text-xs text-slate-500">
+                  <span className="mt-0.5 block truncate text-xs text-slate-400">
                     {item.player1} vs {item.player2}
                   </span>
-                  <span className="mt-1 block truncate text-[0.65rem] text-slate-600">
+                  <span className="mt-1 block truncate text-xs text-slate-400">
                     {item.tournamentName} · {formatTimestamp(item.timestamp)} UTC
                   </span>
                 </span>
@@ -154,7 +154,7 @@ export function DashboardActivity() {
             ))}
           </div>
         ) : (
-          <p className="mt-5 rounded-2xl border border-dashed border-white/10 p-5 text-center text-sm text-slate-500">
+          <p className="mt-5 rounded-2xl border border-dashed border-white/10 p-5 text-center text-sm text-slate-400">
             Completed match results will appear here.
           </p>
         )}

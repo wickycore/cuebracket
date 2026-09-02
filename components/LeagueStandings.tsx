@@ -13,7 +13,7 @@ export function LeagueStandings({ league }: { league: League }) {
       </div>
       <div className="overflow-x-auto">
         <table className="min-w-[760px] w-full text-left text-sm">
-          <thead className="bg-slate-950/70 text-xs uppercase tracking-wider text-slate-500">
+          <thead className="bg-slate-950/70 text-xs uppercase tracking-wider text-slate-400">
             <tr>
               <th className="px-5 py-3">#</th>
               <th className="px-5 py-3">Player</th>

@@ -1,6 +1,9 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { AppHeader } from "@/components/AppHeader";
 import { TournamentList } from "@/components/TournamentList";
+
+export const metadata: Metadata = { title: "My tournaments", description: "Open, manage and continue your CueBracket pool tournaments." };
 
 export default function TournamentsPage() {
   return (

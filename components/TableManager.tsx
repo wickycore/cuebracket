@@ -124,27 +124,27 @@ export function TableManager({ compact = false, clubId = null }: { compact?: boo
 
       <div className="mt-5 grid grid-cols-3 gap-3">
         {(["available", "playing", "reserved"] as VenueTableStatus[]).map((status) => (
-          <div key={status} className={`rounded-2xl border p-3 text-center ${style[status]}`}><p className="text-2xl font-black text-white">{counts[status]}</p><p className="mt-1 text-[0.62rem] font-black uppercase tracking-wider">{status}</p></div>
+          <div key={status} className={`rounded-2xl border p-3 text-center ${style[status]}`}><p className="text-2xl font-black text-white">{counts[status]}</p><p className="mt-1 text-xs font-black uppercase tracking-wider">{status}</p></div>
         ))}
       </div>
 
       {message ? <p className="mt-4 rounded-xl bg-amber-400/10 p-3 text-sm font-bold text-amber-200">{message}</p> : null}
 
-      {loading ? <p className="mt-6 animate-pulse text-sm text-slate-500">Loading the venue floor...</p> : tables.length ? (
+      {loading ? <p className="mt-6 animate-pulse text-sm text-slate-400">Loading the venue floor...</p> : tables.length ? (
         <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {tables.slice(0, compact ? 4 : undefined).map((table) => (
             <article key={table.id} className={`rounded-2xl border p-4 ${style[table.status]}`}>
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   {compact ? <h3 className="truncate font-black text-white">{table.name}</h3> : <input defaultValue={table.name} onBlur={(event) => { if (event.target.value.trim() !== table.name) void update(table.id, { name: event.target.value }); }} aria-label={`${table.name} name`} className="w-full bg-transparent font-black text-white outline-none" />}
-                  <p className="mt-1 truncate text-[0.65rem] font-black uppercase tracking-wider text-slate-500">{table.club_id ? clubNames.get(table.club_id) ?? "Club venue" : "Independent venue"}</p>
+                  <p className="mt-1 truncate text-xs font-black uppercase tracking-wider text-slate-400">{table.club_id ? clubNames.get(table.club_id) ?? "Club venue" : "Independent venue"}</p>
                 </div>
                 <span className="rounded-full bg-black/20 px-2 py-1 text-[10px] font-black uppercase tracking-wider">{table.status}</span>
               </div>
 
               {table.active_match_id ? (
                 <div className="mt-4 rounded-xl border border-white/10 bg-slate-950/45 p-3">
-                  <p className="text-[0.62rem] font-black uppercase tracking-wider text-cyan-200">{table.active_event_type}</p>
+                  <p className="text-xs font-black uppercase tracking-wider text-cyan-200">{table.active_event_type}</p>
                   <p className="mt-1 line-clamp-2 text-sm font-black text-white">{table.active_match_label || "Assigned match"}</p>
                 </div>
               ) : null}
@@ -165,7 +165,7 @@ export function TableManager({ compact = false, clubId = null }: { compact?: boo
           ))}
         </div>
       ) : (
-        <div className="mt-5 rounded-2xl border border-dashed border-white/10 p-8 text-center text-slate-500">No cloud venue tables yet. Add the physical tables your tournaments use.</div>
+        <div className="mt-5 rounded-2xl border border-dashed border-white/10 p-8 text-center text-slate-400">No cloud venue tables yet. Add the physical tables your tournaments use.</div>
       )}
     </section>
   );

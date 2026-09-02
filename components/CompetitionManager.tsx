@@ -60,7 +60,7 @@ function MatchTimer({ startedAt, endedAt }: { startedAt?: string | null; endedAt
   }, [startedAt, endedAt]);
   if (!startedAt) return null;
   const endTime = endedAt ? new Date(endedAt).getTime() : now;
-  return <span className="text-[11px] font-bold tabular-nums text-slate-500">{formatDuration(endTime - new Date(startedAt).getTime())}</span>;
+  return <span className="text-[11px] font-bold tabular-nums text-slate-400">{formatDuration(endTime - new Date(startedAt).getTime())}</span>;
 }
 
 function formatPoints(value: number) {
@@ -114,7 +114,7 @@ function PairRounds({
           <section key={`${eyebrow ?? "round"}-${round.round}-${round.name}`} className="rounded-[2rem] border border-white/10 bg-white/[0.035] p-5 sm:p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                {eyebrow ? <p className="text-[0.65rem] font-black uppercase tracking-[0.18em] text-cyan-400">{eyebrow}</p> : null}
+                {eyebrow ? <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-400">{eyebrow}</p> : null}
                 <h3 className="mt-1 text-xl font-black text-white">{round.name}</h3>
               </div>
               <span className="rounded-full bg-white/5 px-3 py-1 text-xs font-bold text-slate-400 ring-1 ring-white/10">
@@ -131,10 +131,10 @@ function PairRounds({
                 return (
                   <article key={match.id} className={`overflow-hidden rounded-2xl border bg-slate-950/65 ${match.completed ? "border-emerald-400/25" : "border-white/10"}`}>
                     <div className="flex items-center justify-between border-b border-white/10 px-4 py-2.5">
-                      <span className="text-[0.64rem] font-black uppercase tracking-wider text-slate-500">
+                      <span className="text-[0.64rem] font-black uppercase tracking-wider text-slate-400">
                         {match.tableNumber || `Match ${matchIndex + 1}`}
                       </span>
-                      <span className={`rounded-full px-2 py-0.5 text-[0.6rem] font-black uppercase ${match.completed ? "bg-emerald-400/10 text-emerald-300" : match.status === "live" ? "bg-rose-400/15 text-rose-300" : "bg-cyan-400/10 text-cyan-300"}`}>
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-black uppercase ${match.completed ? "bg-emerald-400/10 text-emerald-300" : match.status === "live" ? "bg-rose-400/15 text-rose-300" : "bg-cyan-400/10 text-cyan-300"}`}>
                         {match.completed ? "Finished" : match.status === "live" ? "● Live" : `Race to ${raceTo}`}
                       </span>
                     </div>
@@ -195,7 +195,7 @@ function PairRounds({
                         <p className="text-[0.64rem] font-black uppercase tracking-wider text-violet-300">{byePoints === undefined ? "Rest round" : "Automatic BYE"}</p>
                         <p className="mt-1 font-black text-white">{player}</p>
                       </div>
-                      <span className="rounded-full bg-violet-400/10 px-2.5 py-1 text-[0.62rem] font-black uppercase text-violet-200">No fixture this round</span>
+                      <span className="rounded-full bg-violet-400/10 px-2.5 py-1 text-xs font-black uppercase text-violet-200">No fixture this round</span>
                     </div>
                     <p className="mt-3 text-xs leading-5 text-slate-400">
                       {byePoints === undefined
@@ -247,12 +247,12 @@ function FreeForAllEditor({
                 <article key={heat.id} className={`overflow-hidden rounded-2xl border bg-slate-950/65 ${heat.completed ? "border-emerald-400/25" : "border-white/10"}`}>
                   <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
                     <p className="font-black">{heat.name}</p>
-                    <span className={`rounded-full px-2 py-0.5 text-[0.62rem] font-black uppercase ${heat.completed ? "bg-emerald-400/10 text-emerald-300" : "bg-cyan-400/10 text-cyan-300"}`}>{heat.completed ? "Finished" : "Open"}</span>
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-black uppercase ${heat.completed ? "bg-emerald-400/10 text-emerald-300" : "bg-cyan-400/10 text-cyan-300"}`}>{heat.completed ? "Finished" : "Open"}</span>
                   </div>
                   {heat.entries.map((entry) => (
                     <div key={entry.player} className="flex items-center gap-3 border-b border-white/10 px-4 py-3 last:border-b-0">
                       <span className="min-w-0 flex-1 truncate font-black text-white">{entry.player}</span>
-                      {heat.completed ? <span className="text-xs font-bold text-slate-500">#{entry.placement} · {formatPoints(entry.points)} pts</span> : null}
+                      {heat.completed ? <span className="text-xs font-bold text-slate-400">#{entry.placement} · {formatPoints(entry.points)} pts</span> : null}
                       <input
                         inputMode="numeric"
                         value={heatDraft[entry.player] ?? ""}
@@ -475,7 +475,7 @@ export function CompetitionManager({ tournament, onTournamentChange }: Props) {
       {message ? <p className="rounded-2xl bg-amber-400/10 px-4 py-3 text-sm font-bold text-amber-200 ring-1 ring-amber-400/20">{message}</p> : null}
       <details className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5">
         <summary className="cursor-pointer list-none font-black text-slate-200">
-          <span className="flex items-center justify-between gap-3"><span>Tournament tools</span><span className="text-sm font-bold text-slate-500">Correct player names</span></span>
+          <span className="flex items-center justify-between gap-3"><span>Tournament tools</span><span className="text-sm font-bold text-slate-400">Correct player names</span></span>
         </summary>
         <div className="mt-4 border-t border-white/10 pt-4">
           <PlayerNameEditor tournament={tournament} onTournamentChange={onTournamentChange} />

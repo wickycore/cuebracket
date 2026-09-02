@@ -88,7 +88,7 @@ export function TournamentCollaborators({ tournament, onAccessRoleChange }: Prop
         <span className="flex items-center justify-between gap-4">
           <span>
             <span className="block font-black text-white">Co-organizers</span>
-            <span className="mt-1 block text-xs font-bold text-slate-500">Invite trusted CueBracket users to run matches and tables.</span>
+            <span className="mt-1 block text-xs font-bold text-slate-400">Invite trusted CueBracket users to run matches and tables.</span>
           </span>
           <span className="rounded-full bg-violet-300/10 px-3 py-1 text-xs font-black text-violet-200">{collaborators.filter((row) => row.status === "accepted").length} active</span>
         </span>
@@ -97,7 +97,7 @@ export function TournamentCollaborators({ tournament, onAccessRoleChange }: Prop
         <div className="flex flex-col gap-2 sm:flex-row">
           <label className="min-w-0 flex-1">
             <span className="sr-only">CueBracket username</span>
-            <input value={username} onChange={(event) => setUsername(event.target.value)} placeholder="Exact username, e.g. @wicky" className="min-h-12 w-full rounded-2xl border border-white/10 bg-slate-950/65 px-4 text-sm text-white outline-none placeholder:text-slate-600 focus:border-violet-300/45" />
+            <input value={username} onChange={(event) => setUsername(event.target.value)} placeholder="Exact username, e.g. @wicky" className="min-h-12 w-full rounded-2xl border border-white/10 bg-slate-950/65 px-4 text-sm text-white outline-none placeholder:text-slate-400 focus:border-violet-300/45" />
           </label>
           <button type="button" disabled={busy || !username.trim()} onClick={() => void invite()} className="rounded-2xl bg-violet-300 px-5 py-3 text-sm font-black text-slate-950 disabled:opacity-40">{busy ? "Working…" : "Send invitation"}</button>
         </div>
@@ -108,13 +108,13 @@ export function TournamentCollaborators({ tournament, onAccessRoleChange }: Prop
               <div key={row.id} className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-slate-950/45 p-3.5">
                 <div className="min-w-0">
                   <p className="truncate font-black text-white">{row.tournamentName || row.displayName}</p>
-                  <p className="mt-0.5 text-xs font-bold text-slate-500">{row.username ? `@${row.username} · ` : ""}{row.status}</p>
+                  <p className="mt-0.5 text-xs font-bold text-slate-400">{row.username ? `@${row.username} · ` : ""}{row.status}</p>
                 </div>
                 <button type="button" disabled={busy} onClick={() => void remove(row)} className="rounded-xl border border-rose-300/20 px-3 py-2 text-xs font-black text-rose-200 disabled:opacity-40">Remove</button>
               </div>
             ))}
           </div>
-        ) : <p className="mt-4 text-sm text-slate-500">Only you can manage this tournament right now.</p>}
+        ) : <p className="mt-4 text-sm text-slate-400">Only you can manage this tournament right now.</p>}
       </div>
     </details>
   );

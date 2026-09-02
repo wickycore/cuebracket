@@ -187,11 +187,11 @@ export default function NewTournamentPage() {
             <div className="mt-6 grid gap-5 sm:grid-cols-2">
               <label className="sm:col-span-2">
                 <span className="mb-2 block text-sm font-bold text-slate-300">Tournament name *</span>
-                <input value={name} onChange={(event) => setName(event.target.value)} placeholder="e.g. Kasarani Sunday Masters" className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3.5 text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/50 focus:ring-4 focus:ring-cyan-400/10" />
+                <input value={name} onChange={(event) => setName(event.target.value)} placeholder="e.g. Kasarani Sunday Masters" className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3.5 text-white outline-none placeholder:text-slate-400 focus:border-cyan-400/50 focus:ring-4 focus:ring-cyan-400/10" />
               </label>
               <label>
                 <span className="mb-2 block text-sm font-bold text-slate-300">Venue</span>
-                <input value={venue} onChange={(event) => setVenue(event.target.value)} placeholder="e.g. Kasarani Pool House" className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3.5 text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/50" />
+                <input value={venue} onChange={(event) => setVenue(event.target.value)} placeholder="e.g. Kasarani Pool House" className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3.5 text-white outline-none placeholder:text-slate-400 focus:border-cyan-400/50" />
               </label>
               <label>
                 <span className="mb-2 block text-sm font-bold text-slate-300">{type === "single_stage" && format === "free_for_all" ? "Score cap" : "Race to"}</span>
@@ -203,15 +203,15 @@ export default function NewTournamentPage() {
                   <option value="">Independent event</option>
                   {managedClubs.map((club) => <option key={club.id} value={club.id}>{club.name}</option>)}
                 </select>
-                <span className="mt-2 block text-xs leading-5 text-slate-500">
+                <span className="mt-2 block text-xs leading-5 text-slate-400">
                   Linked events appear on the club page when registration is opened. {managedClubs.length ? "" : <><Link href="/clubs/new" className="font-black text-cyan-300">Create a club</Link> if this event has a host.</>}
                 </span>
               </label>
               <label className="sm:col-span-2">
-                <span className="mb-2 block text-sm font-bold text-slate-300">Tournament poster <span className="font-normal text-slate-600">(optional)</span></span>
+                <span className="mb-2 block text-sm font-bold text-slate-300">Tournament poster <span className="font-normal text-slate-400">(optional)</span></span>
                 <span className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-slate-950/50 p-4 sm:flex-row sm:items-center">
                   {posterPreview ? <span className="h-36 w-full shrink-0 overflow-hidden rounded-2xl border border-white/10 sm:w-56"><img src={posterPreview} alt="Tournament poster preview" className="h-full w-full object-cover" /></span> : <span className="grid h-36 w-full shrink-0 place-items-center rounded-2xl border border-dashed border-cyan-300/20 bg-cyan-400/[0.04] text-center text-sm font-black text-cyan-200 sm:w-56">Add event poster</span>}
-                  <span className="min-w-0 flex-1"><input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => { const file = event.target.files?.[0] ?? null; const problem = file ? validateImageFile(file) : null; if (problem) { setError(problem); event.target.value = ""; return; } setPosterFile(file); setPosterPreview(file ? URL.createObjectURL(file) : ""); setError(""); }} className="block w-full text-xs text-slate-400 file:mr-3 file:rounded-xl file:border-0 file:bg-cyan-400 file:px-4 file:py-2.5 file:font-black file:text-slate-950" /><span className="mt-2 block text-xs leading-5 text-slate-500">Shown on tournament cards and club events. JPG, PNG or WebP · maximum 5 MB.</span></span>
+                  <span className="min-w-0 flex-1"><input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => { const file = event.target.files?.[0] ?? null; const problem = file ? validateImageFile(file) : null; if (problem) { setError(problem); event.target.value = ""; return; } setPosterFile(file); setPosterPreview(file ? URL.createObjectURL(file) : ""); setError(""); }} className="block w-full text-xs text-slate-400 file:mr-3 file:rounded-xl file:border-0 file:bg-cyan-400 file:px-4 file:py-2.5 file:font-black file:text-slate-950" /><span className="mt-2 block text-xs leading-5 text-slate-400">Shown on tournament cards and club events. JPG, PNG or WebP · maximum 5 MB.</span></span>
                 </span>
               </label>
             </div>
@@ -253,7 +253,7 @@ export default function NewTournamentPage() {
                   <button key={item.value} type="button" onClick={() => chooseFormat(item.value)} className={`group rounded-3xl border p-5 text-left transition ${format === item.value ? "border-cyan-400/50 bg-cyan-400/10 ring-4 ring-cyan-400/10" : "border-white/10 bg-slate-950/40 hover:-translate-y-0.5 hover:border-white/20"}`}>
                     <div className="flex items-start justify-between gap-3">
                       <span className="text-3xl">{item.icon}</span>
-                      {format === item.value ? <span className="rounded-full bg-cyan-400 px-2.5 py-1 text-[0.62rem] font-black uppercase text-slate-950">Selected</span> : null}
+                      {format === item.value ? <span className="rounded-full bg-cyan-400 px-2.5 py-1 text-xs font-black uppercase text-slate-950">Selected</span> : null}
                     </div>
                     <p className="mt-4 text-lg font-black">{item.name}</p>
                     <p className="mt-2 text-sm leading-6 text-slate-400">{item.description}</p>

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { AppHeader } from "@/components/AppHeader";
+import { DataLoadNotice } from "@/components/DataLoadNotice";
 import { EventDiscovery } from "@/components/EventDiscovery";
 import type { ClubRow } from "@/lib/clubs";
 import type { RegistrationSettingsRow } from "@/lib/cloud/registrations";
@@ -10,6 +11,7 @@ import { createClient } from "@/lib/supabase/server";
 export const metadata: Metadata = {
   title: "Discover pool events",
   description: "Find upcoming pool tournaments and leagues, filter by club, venue, date and format, then register directly.",
+  alternates: { canonical: "/events" },
 };
 
 function leagueDate(value: string | undefined, end = false) {
@@ -28,6 +30,19 @@ export default async function EventsPage() {
     supabase.from("cloud_leagues").select("id, club_id, name, season, payload, is_public, updated_at").eq("is_public", true).order("updated_at", { ascending: false }).limit(200),
     user ? supabase.from("club_followers").select("club_id").eq("user_id", user.id).limit(500) : Promise.resolve({ data: [], error: null }),
   ]);
+
+  const discoveryError = settingsResult.error || registrationsResult.error || clubsResult.error || leaguesResult.error;
+  if (discoveryError) {
+    console.error("Event discovery could not load", discoveryError);
+    return (
+      <main className="min-h-dvh bg-[#020617] text-white">
+        <AppHeader />
+        <div className="cb-shell py-10 sm:py-14">
+          <DataLoadNotice title="Events are temporarily unavailable" detail="We could not confirm the latest tournaments and leagues, so CueBracket has not shown an incorrect empty calendar." />
+        </div>
+      </main>
+    );
+  }
 
   const clubs = (clubsResult.data ?? []) as ClubRow[];
   const clubMap = new Map(clubs.map((club) => [club.id, club]));
@@ -96,6 +111,7 @@ export default async function EventsPage() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const events = sortDiscoveryEvents([...tournaments, ...leagues].filter((event) => {
+    if (event.type === "league" && !["live", "completed"].includes(event.status)) return false;
     if (event.type === "league" && event.status === "completed") return false;
     const end = event.endsAt ?? event.startsAt;
     return !end || new Date(end).getTime() >= today.getTime();
@@ -108,9 +124,9 @@ export default async function EventsPage() {
       <section className="border-b border-white/10 bg-[radial-gradient(circle_at_15%_0%,rgba(34,211,238,.15),transparent_27rem),radial-gradient(circle_at_86%_0%,rgba(139,92,246,.13),transparent_25rem)]">
         <div className="cb-shell py-10 sm:py-14">
           <div className="flex flex-col gap-7 lg:flex-row lg:items-end lg:justify-between">
-            <div><p className="cb-kicker">Phase 4D · Event discovery</p><h1 className="mt-3 max-w-4xl text-4xl font-black tracking-[-0.045em] sm:text-6xl">Your next match starts here.</h1><p className="mt-4 max-w-2xl text-base leading-7 text-slate-400 sm:text-lg">Explore upcoming pool tournaments and leagues, see available places and move straight from discovery to registration.</p></div>
+            <div><p className="cb-kicker">Discover pool events</p><h1 className="mt-3 max-w-4xl text-4xl font-black tracking-[-0.045em] sm:text-6xl">Your next match starts here.</h1><p className="mt-4 max-w-2xl text-base leading-7 text-slate-400 sm:text-lg">Explore upcoming pool tournaments and active leagues, see available places and move straight from discovery to registration.</p></div>
             <div className="grid grid-cols-3 gap-2 sm:gap-3">
-              {[[events.length, "Upcoming"], [events.filter((event) => event.type === "tournament").length, "Open entry"], [followedCount, "Followed"]].map(([value, label]) => <div key={label} className="min-w-20 rounded-2xl border border-white/10 bg-slate-950/55 px-4 py-3 text-center"><p className="text-2xl font-black text-white">{value}</p><p className="mt-1 text-[0.58rem] font-black uppercase tracking-wider text-slate-500">{label}</p></div>)}
+              {[[events.length, "Upcoming"], [events.filter((event) => event.type === "tournament").length, "Open entry"], [followedCount, "Followed"]].map(([value, label]) => <div key={label} className="min-w-20 rounded-2xl border border-white/10 bg-slate-950/55 px-4 py-3 text-center"><p className="text-2xl font-black text-white">{value}</p><p className="mt-1 text-xs font-black uppercase tracking-wider text-slate-400">{label}</p></div>)}
             </div>
           </div>
         </div>

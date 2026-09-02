@@ -6,6 +6,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 
+import { RemoteMedia } from "@/components/RemoteMedia";
+
 import {
   followClub,
   removeClubMember,
@@ -158,9 +160,9 @@ export function ClubCommunityPanel({
               <div className="mb-4 overflow-hidden rounded-2xl border border-cyan-300/15 bg-slate-950/55">
                 <div className="border-b border-white/10 px-4 py-3"><p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-300">Required before joining</p><p className="mt-1 text-sm font-black text-white">Read the club guide</p></div>
                 <div className="max-h-64 space-y-4 overflow-y-auto px-4 py-4 text-sm leading-6 text-slate-400">
-                  <div><p className="text-xs font-black uppercase tracking-wider text-slate-600">Location</p><p className="mt-1 font-bold text-slate-200">📍 {club.location}</p><a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(club.location)}`} target="_blank" rel="noopener noreferrer" className="mt-1 inline-block font-black text-cyan-300">Open in Maps ↗</a></div>
-                  <div><p className="text-xs font-black uppercase tracking-wider text-slate-600">Opening hours</p><p className="mt-1 whitespace-pre-wrap">{guide.opening_hours || "Ask the organizer for opening hours."}</p></div>
-                  <div><p className="text-xs font-black uppercase tracking-wider text-slate-600">House rules and joining guide</p><p className="mt-1 whitespace-pre-wrap">{guide.rules}</p></div>
+                  <div><p className="text-xs font-black uppercase tracking-wider text-slate-400">Location</p><p className="mt-1 font-bold text-slate-200">📍 {club.location}</p><a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(club.location)}`} target="_blank" rel="noopener noreferrer" className="mt-1 inline-block font-black text-cyan-300">Open in Maps ↗</a></div>
+                  <div><p className="text-xs font-black uppercase tracking-wider text-slate-400">Opening hours</p><p className="mt-1 whitespace-pre-wrap">{guide.opening_hours || "Ask the organizer for opening hours."}</p></div>
+                  <div><p className="text-xs font-black uppercase tracking-wider text-slate-400">House rules and joining guide</p><p className="mt-1 whitespace-pre-wrap">{guide.rules}</p></div>
                 </div>
                 <label className="flex cursor-pointer items-start gap-3 border-t border-white/10 px-4 py-4 text-sm font-bold text-slate-200"><input type="checkbox" checked={acceptedGuide} onChange={(event) => setAcceptedGuide(event.target.checked)} className="mt-1 h-4 w-4 accent-cyan-400" /><span>I have read and accept the location information, opening hours and club rules.</span></label>
               </div>
@@ -176,7 +178,7 @@ export function ClubCommunityPanel({
             </button>
           </form>
         ) : (
-          <p className="mt-4 border-t border-white/10 pt-4 text-sm leading-6 text-slate-500">Following keeps you connected to public events. Membership is optional and approved by the club organizer.</p>
+          <p className="mt-4 border-t border-white/10 pt-4 text-sm leading-6 text-slate-400">Following keeps you connected to public events. Membership is optional and approved by the club organizer.</p>
         )}
 
       </section> : null}
@@ -197,7 +199,7 @@ export function ClubCommunityPanel({
                   return <div key={request.id} className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-slate-950/55 p-4 sm:flex-row sm:items-center">
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-black">{request.request_name}</p>
-                      <p className="mt-1 text-xs text-slate-500">Requested {new Date(request.created_at).toLocaleDateString("en-KE")} · {acceptedCurrentGuide ? `Accepted guide v${guide?.revision}` : "Needs the latest guide"}</p>
+                      <p className="mt-1 text-xs text-slate-400">Requested {new Date(request.created_at).toLocaleDateString("en-KE")} · {acceptedCurrentGuide ? `Accepted guide v${guide?.revision}` : "Needs the latest guide"}</p>
                     </div>
                     <div className="flex gap-2">
                       <button type="button" onClick={() => void run(`approve-${request.id}`, async () => { await updateMembershipRequest(request.id, "approved"); })} disabled={Boolean(busy) || !acceptedCurrentGuide} title={acceptedCurrentGuide ? "Approve membership" : "The player must withdraw and accept the latest guide before approval."} className="min-h-11 flex-1 rounded-xl bg-emerald-400 px-4 py-2 text-sm font-black text-slate-950 disabled:cursor-not-allowed disabled:opacity-40">Approve</button>
@@ -206,7 +208,7 @@ export function ClubCommunityPanel({
                   </div>
                 })}
               </div>
-            ) : <p className="mt-2 text-sm text-slate-500">No one is waiting for approval.</p>}
+            ) : <p className="mt-2 text-sm text-slate-400">No one is waiting for approval.</p>}
           </div>
 
           <details className="mt-5 rounded-2xl border border-white/10 bg-slate-950/45 p-4">
@@ -216,7 +218,7 @@ export function ClubCommunityPanel({
               <label className="text-sm font-bold text-slate-300">Public link<input value={slug} onChange={(event) => setSlug(normalizeClubSlug(event.target.value))} minLength={3} maxLength={48} className="mt-2 min-h-11 w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2 outline-none" /></label>
               <label className="text-sm font-bold text-slate-300">Location<input value={location} onChange={(event) => setLocation(event.target.value)} maxLength={100} className="mt-2 min-h-11 w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2 outline-none" /></label>
               <label className="text-sm font-bold text-slate-300">Description<textarea value={description} onChange={(event) => setDescription(event.target.value)} maxLength={500} rows={4} className="mt-2 w-full resize-none rounded-xl border border-white/10 bg-slate-950 px-3 py-2 outline-none" /></label>
-              <label className="text-sm font-bold text-slate-300">Club logo or image <span className="font-normal text-slate-600">(optional)</span><span className="mt-2 flex items-center gap-4 rounded-xl border border-white/10 bg-slate-950 p-3">{logoPreview ? <span className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-slate-900"><img src={logoPreview} alt="Club logo preview" className="h-full w-full object-cover" /></span> : <span className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl border border-white/10 bg-cyan-400/10 text-2xl font-black text-cyan-200">{name.charAt(0).toUpperCase()}</span>}<span className="min-w-0 flex-1"><input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => { const file = event.target.files?.[0] ?? null; const problem = file ? validateImageFile(file) : null; if (problem) { setMessage(problem); event.target.value = ""; return; } setLogoFile(file); setLogoPreview(file ? URL.createObjectURL(file) : club.logo_url ?? ""); setMessage(""); }} className="block w-full text-xs text-slate-400 file:mr-3 file:rounded-lg file:border-0 file:bg-cyan-400 file:px-3 file:py-2 file:font-black file:text-slate-950" /><span className="mt-2 block text-xs font-normal text-slate-600">JPG, PNG or WebP · maximum 5 MB</span></span></span></label>
+              <label className="text-sm font-bold text-slate-300">Club logo or image <span className="font-normal text-slate-400">(optional)</span><span className="mt-2 flex items-center gap-4 rounded-xl border border-white/10 bg-slate-950 p-3">{logoPreview ? <span className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-slate-900"><img src={logoPreview} alt="Club logo preview" className="h-full w-full object-cover" /></span> : <span className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl border border-white/10 bg-cyan-400/10 text-2xl font-black text-cyan-200">{name.charAt(0).toUpperCase()}</span>}<span className="min-w-0 flex-1"><input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => { const file = event.target.files?.[0] ?? null; const problem = file ? validateImageFile(file) : null; if (problem) { setMessage(problem); event.target.value = ""; return; } setLogoFile(file); setLogoPreview(file ? URL.createObjectURL(file) : club.logo_url ?? ""); setMessage(""); }} className="block w-full text-xs text-slate-400 file:mr-3 file:rounded-lg file:border-0 file:bg-cyan-400 file:px-3 file:py-2 file:font-black file:text-slate-950" /><span className="mt-2 block text-xs font-normal text-slate-400">JPG, PNG or WebP · maximum 5 MB</span></span></span></label>
               <button type="submit" disabled={Boolean(busy)} className="min-h-11 rounded-xl bg-cyan-400 px-4 py-2 font-black text-slate-950">{busy === "details" ? "Saving…" : "Save club details"}</button>
             </form>
           </details>
@@ -227,8 +229,8 @@ export function ClubCommunityPanel({
               {members.map((member) => (
                 <div key={member.userId} className="flex flex-col gap-3 rounded-xl border border-white/10 p-3 sm:flex-row sm:items-center">
                   <div className="flex min-w-0 flex-1 items-center gap-3">
-                    <span className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-xl border border-white/10 bg-cyan-400/10 font-black text-cyan-200">{member.avatarUrl ? <img src={member.avatarUrl} alt="" className="h-full w-full object-cover" /> : member.name.charAt(0).toUpperCase()}</span>
-                    <span className="min-w-0"><span className="block truncate font-bold">{member.name}</span><span className="text-xs font-black uppercase tracking-wider text-slate-600">{member.role} · {member.followerCount ?? 0} followers</span></span>
+                    <span className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-xl border border-white/10 bg-cyan-400/10 font-black text-cyan-200">{member.avatarUrl ? <RemoteMedia src={member.avatarUrl} alt={` profile picture`} width={88} height={88} sizes="44px" /> : member.name.charAt(0).toUpperCase()}</span>
+                    <span className="min-w-0"><span className="block truncate font-bold">{member.name}</span><span className="text-xs font-black uppercase tracking-wider text-slate-400">{member.role} · {member.followerCount ?? 0} followers</span></span>
                   </div>
                   {member.role !== "owner" && member.userId !== userId ? (
                     <div className="flex gap-2">

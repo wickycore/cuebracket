@@ -170,7 +170,7 @@ export default function TournamentDetailPage() {
               key={label}
               className="border-b border-r border-white/10 p-4 last:border-r-0 sm:border-b-0"
             >
-              <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">{label}</p>
+              <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-400">{label}</p>
               <p className="mt-1 text-lg font-black">{value}</p>
             </div>
           ))}
@@ -225,7 +225,7 @@ export default function TournamentDetailPage() {
         {structureReady && cloudAccessRole !== "co_organizer" ? (
           <details className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5">
             <summary className="cursor-pointer list-none font-black text-slate-200">
-              <span className="flex items-center justify-between gap-3"><span>Share tournament</span><span className="text-sm font-bold text-slate-500">Link · Social · QR</span></span>
+              <span className="flex items-center justify-between gap-3"><span>Share tournament</span><span className="text-sm font-bold text-slate-400">Link · Social · QR</span></span>
             </summary>
             <div className="mt-4 border-t border-white/10 pt-1">
               <ShareTournament tournament={tournament} />

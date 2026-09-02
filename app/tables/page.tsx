@@ -1,5 +1,8 @@
+import type { Metadata } from "next";
 import { AppHeader } from "@/components/AppHeader";
 import { TableManager } from "@/components/TableManager";
+
+export const metadata: Metadata = { title: "Table floor control", description: "Assign pool tables to live tournament and league matches." };
 
 export default function TablesPage() {
   return (
@@ -24,7 +27,7 @@ export default function TablesPage() {
               ].map(([value, label]) => (
                 <div key={label} className="rounded-2xl border border-white/10 bg-slate-950/45 p-4 text-center">
                   <p className="text-lg font-black text-white">{value}</p>
-                  <p className="mt-1 text-[0.65rem] font-black uppercase tracking-wider text-slate-600">{label}</p>
+                  <p className="mt-1 text-xs font-black uppercase tracking-wider text-slate-400">{label}</p>
                 </div>
               ))}
             </div>

@@ -127,7 +127,7 @@ export function OrganizerMatchQueue({
                       {section.name}
                     </span>
                   ) : null}
-                  <span className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-500">
+                  <span className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
                     {roundName} · Match {matchNumber}
                   </span>
                 </div>
@@ -161,14 +161,14 @@ export function OrganizerMatchQueue({
                   {match.status === "live" ? "Return to live match" : "Control match"}
                 </button>
               ) : (
-                <p className="mt-3 text-xs text-slate-500">Waiting for feeder results.</p>
+                <p className="mt-3 text-xs text-slate-400">Waiting for feeder results.</p>
               )}
             </article>
           );
         })}
 
         {visibleItems.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-sm text-slate-500 lg:col-span-2">
+          <div className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-sm text-slate-400 lg:col-span-2">
             No {tabLabels[activeTab].toLowerCase()} matches.
           </div>
         ) : null}

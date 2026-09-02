@@ -65,7 +65,7 @@ export function NotificationInbox({ initialNotifications, initialPreferences }: 
     <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-start">
       <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-slate-900/65">
         <div className="flex items-center justify-between gap-4 border-b border-white/10 px-5 py-4 sm:px-6">
-          <div><h2 className="text-xl font-black">Latest updates</h2><p className="mt-1 text-sm text-slate-500">{unread ? `${unread} unread notification${unread === 1 ? "" : "s"}` : "You are all caught up"}</p></div>
+          <div><h2 className="text-xl font-black">Latest updates</h2><p className="mt-1 text-sm text-slate-400">{unread ? `${unread} unread notification${unread === 1 ? "" : "s"}` : "You are all caught up"}</p></div>
           {unread ? <button type="button" onClick={() => void markAll()} disabled={Boolean(busy)} className="rounded-xl border border-cyan-400/20 px-3 py-2 text-xs font-black text-cyan-300">{busy === "all" ? "Saving…" : "Mark all read"}</button> : null}
         </div>
         {notifications.length ? (
@@ -75,19 +75,19 @@ export function NotificationInbox({ initialNotifications, initialPreferences }: 
                 <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-white/10 bg-slate-950/55 text-xl">{notificationIcon(item.type)}</span>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start gap-3"><div className="min-w-0 flex-1"><h3 className="font-black text-white">{item.title}</h3><p className="mt-1 text-sm leading-6 text-slate-400">{item.message}</p></div>{!item.read_at ? <span className="mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-cyan-400" /> : null}</div>
-                  <div className="mt-3 flex flex-wrap items-center gap-3"><Link href={item.href} onClick={() => void openItem(item)} className="text-sm font-black text-cyan-300">Open update →</Link><button type="button" onClick={() => void remove(item.id)} disabled={busy === item.id} className="text-xs font-bold text-slate-600 hover:text-rose-300">Remove</button><span className="text-xs text-slate-600">{new Date(item.created_at).toLocaleString("en-KE", { dateStyle: "medium", timeStyle: "short" })}</span></div>
+                  <div className="mt-3 flex flex-wrap items-center gap-3"><Link href={item.href} onClick={() => void openItem(item)} className="text-sm font-black text-cyan-300">Open update →</Link><button type="button" onClick={() => void remove(item.id)} disabled={busy === item.id} className="text-xs font-bold text-slate-400 hover:text-rose-300">Remove</button><span className="text-xs text-slate-400">{new Date(item.created_at).toLocaleString("en-KE", { dateStyle: "medium", timeStyle: "short" })}</span></div>
                 </div>
               </div>
             ))}
           </div>
-        ) : <div className="px-6 py-16 text-center"><p className="text-3xl">🔔</p><p className="mt-4 text-lg font-black">Nothing here yet.</p><p className="mt-2 text-sm text-slate-500">Follow a player, follow a club or register for a tournament to receive useful updates.</p></div>}
+        ) : <div className="px-6 py-16 text-center"><p className="text-3xl">🔔</p><p className="mt-4 text-lg font-black">Nothing here yet.</p><p className="mt-2 text-sm text-slate-400">Follow a player, follow a club or register for a tournament to receive useful updates.</p></div>}
       </section>
 
       <section className="rounded-[2rem] border border-white/10 bg-slate-900/65 p-5 sm:p-6">
         <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">Preferences</p>
         <h2 className="mt-2 text-xl font-black">Only useful alerts.</h2>
         <Link href="/following" className="mt-3 inline-block text-sm font-black text-cyan-300">Manage followed players →</Link>
-        <p className="mt-2 text-sm leading-6 text-slate-500">Choose your inbox updates and opted-in phone alerts. These preferences apply across your devices.</p>
+        <p className="mt-2 text-sm leading-6 text-slate-400">Choose your inbox updates and opted-in phone alerts. These preferences apply across your devices.</p>
         <div className="mt-5 space-y-3">
           {([
             ["club_events", "Club tournaments", "Registration openings from clubs you follow or belong to."],
@@ -98,12 +98,12 @@ export function NotificationInbox({ initialNotifications, initialPreferences }: 
           ] as const).map(([key, title, description]) => (
             <label key={key} className="flex cursor-pointer items-start gap-3 rounded-2xl border border-white/10 bg-slate-950/45 p-4">
               <input type="checkbox" checked={preferences[key]} disabled={busy.startsWith("preference-")} onChange={(event) => void changePreference(key, event.target.checked)} className="mt-1 h-5 w-5 accent-cyan-400" />
-              <span><span className="block text-sm font-black text-white">{title}</span><span className="mt-1 block text-xs leading-5 text-slate-500">{description}</span></span>
+              <span><span className="block text-sm font-black text-white">{title}</span><span className="mt-1 block text-xs leading-5 text-slate-400">{description}</span></span>
             </label>
           ))}
         </div>
         {message ? <p role="alert" className="mt-4 text-sm text-amber-200">{message}</p> : null}
-        <p className="mt-5 text-xs leading-5 text-slate-500">Changing these preferences does not grant phone notification permission. Use the device controls above to opt in or turn phone alerts off.</p>
+        <p className="mt-5 text-xs leading-5 text-slate-400">Changing these preferences does not grant phone notification permission. Use the device controls above to opt in or turn phone alerts off.</p>
       </section>
     </div>
   );

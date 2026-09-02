@@ -45,15 +45,15 @@ export function LeagueCard({ league, onChange }: Props) {
 
       <div className="mt-5 grid grid-cols-3 gap-3">
         <div className="rounded-2xl bg-slate-950/60 p-3">
-          <p className="text-xs uppercase tracking-wider text-slate-500">Players</p>
+          <p className="text-xs uppercase tracking-wider text-slate-400">Players</p>
           <p className="mt-1 text-lg font-black text-white">{league.players.length}</p>
         </div>
         <div className="rounded-2xl bg-slate-950/60 p-3">
-          <p className="text-xs uppercase tracking-wider text-slate-500">Fixtures</p>
+          <p className="text-xs uppercase tracking-wider text-slate-400">Fixtures</p>
           <p className="mt-1 text-lg font-black text-white">{league.fixtures.length}</p>
         </div>
         <div className="rounded-2xl bg-slate-950/60 p-3">
-          <p className="text-xs uppercase tracking-wider text-slate-500">Played</p>
+          <p className="text-xs uppercase tracking-wider text-slate-400">Played</p>
           <p className="mt-1 text-lg font-black text-white">{completed}</p>
         </div>
       </div>

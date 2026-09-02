@@ -351,7 +351,7 @@ export function CloudSyncPanel() {
                     </span>
                   </div>
 
-                  <p className="mt-1 text-sm text-slate-500">
+                  <p className="mt-1 text-sm text-slate-400">
                     {tournament.players.length} players · {tournament.status}
                     {cloudRow
                       ? ` · Cloud ${timeLabel(cloudRow.updated_at)}`
@@ -429,7 +429,7 @@ export function CloudSyncPanel() {
             );
           })
         ) : (
-          <p className="rounded-2xl border border-dashed border-white/10 p-8 text-center text-slate-500">
+          <p className="rounded-2xl border border-dashed border-white/10 p-8 text-center text-slate-400">
             Create a tournament and it will appear here automatically.
           </p>
         )}

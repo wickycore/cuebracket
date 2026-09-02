@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 export const metadata: Metadata = {
   title: "Player rankings",
   description: "Verified CueBracket match statistics and overall player rankings.",
+  alternates: { canonical: "/rankings" },
 };
 
 export default async function RankingsPage() {
@@ -35,7 +36,7 @@ export default async function RankingsPage() {
           <p className="mt-6 rounded-2xl border border-rose-300/20 bg-rose-300/10 p-4 font-bold text-rose-100">Rankings are temporarily unavailable.</p>
         ) : rankings.length ? (
           <section className="mt-6 overflow-hidden rounded-[2rem] border border-white/10 bg-slate-900/60">
-            <div className="hidden grid-cols-[4rem_minmax(12rem,1fr)_7rem_7rem_7rem_7rem] gap-3 border-b border-white/10 px-5 py-3 text-[0.68rem] font-black uppercase tracking-[0.16em] text-slate-500 md:grid">
+            <div className="hidden grid-cols-[4rem_minmax(12rem,1fr)_7rem_7rem_7rem_7rem] gap-3 border-b border-white/10 px-5 py-3 text-xs font-black uppercase tracking-[0.16em] text-slate-400 md:grid">
               <span>Rank</span><span>Player</span><span className="text-right">Points</span><span className="text-right">W–L</span><span className="text-right">Win %</span><span className="text-right">Titles</span>
             </div>
             <div className="divide-y divide-white/8">
@@ -47,12 +48,12 @@ export default async function RankingsPage() {
                   </div>
                   <div className="min-w-0">
                     <p className="truncate text-lg font-black">{player.tournament_name || player.display_name}</p>
-                    <p className="mt-0.5 truncate text-sm font-bold text-slate-500">@{player.username} · {player.matches_played} verified matches</p>
+                    <p className="mt-0.5 truncate text-sm font-bold text-slate-400">@{player.username} · {player.matches_played} verified matches</p>
                   </div>
                   <p className="hidden text-right text-xl font-black text-cyan-300 md:block">{player.ranking_points}</p>
-                  <p className="text-sm font-black text-slate-300 md:text-right"><span className="text-slate-600 md:hidden">Record · </span>{player.wins}–{player.losses}</p>
-                  <p className="text-sm font-black text-slate-300 md:text-right"><span className="text-slate-600 md:hidden">Win rate · </span>{player.win_percentage}%</p>
-                  <p className="text-sm font-black text-slate-300 md:text-right"><span className="text-slate-600 md:hidden">Titles · </span>{player.titles}</p>
+                  <p className="text-sm font-black text-slate-300 md:text-right"><span className="text-slate-400 md:hidden">Record · </span>{player.wins}–{player.losses}</p>
+                  <p className="text-sm font-black text-slate-300 md:text-right"><span className="text-slate-400 md:hidden">Win rate · </span>{player.win_percentage}%</p>
+                  <p className="text-sm font-black text-slate-300 md:text-right"><span className="text-slate-400 md:hidden">Titles · </span>{player.titles}</p>
                 </Link>
               ))}
             </div>
@@ -60,7 +61,7 @@ export default async function RankingsPage() {
         ) : (
           <section className="mt-6 rounded-[2rem] border border-dashed border-white/10 bg-white/[0.025] px-6 py-14 text-center">
             <h2 className="text-2xl font-black">The ranking table is ready</h2>
-            <p className="mx-auto mt-2 max-w-lg leading-7 text-slate-500">Verified results will appear after registered CueBracket players finish matches in cloud-synced tournaments.</p>
+            <p className="mx-auto mt-2 max-w-lg leading-7 text-slate-400">Verified results will appear after registered CueBracket players finish matches in cloud-synced tournaments.</p>
           </section>
         )}
       </div>

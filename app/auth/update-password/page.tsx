@@ -44,7 +44,7 @@ export default function UpdatePasswordPage() {
             <UpdatePasswordForm />
           </Suspense>
 
-          <p className="mt-6 text-center text-sm text-slate-500">
+          <p className="mt-6 text-center text-sm text-slate-400">
             Need another reset link?{" "}
             <Link href="/auth/forgot-password" className="font-black text-cyan-300">
               Send a new one

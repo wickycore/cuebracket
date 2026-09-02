@@ -93,7 +93,7 @@ export function LeaguePlayerManager({ league, onChange }: Props) {
           <div className="mt-3 flex flex-wrap gap-2">
             {availableRoster.map((profile) => (
               <button key={profile.id} onClick={() => addProfile(profile)} className="rounded-xl border border-white/10 bg-slate-950/55 px-3 py-2 text-left text-sm font-bold text-white">
-                + {profileName(profile)} {profile.username ? <span className="text-slate-500">@{profile.username}</span> : null}
+                + {profileName(profile)} {profile.username ? <span className="text-slate-400">@{profile.username}</span> : null}
               </button>
             ))}
           </div>
@@ -106,7 +106,7 @@ export function LeaguePlayerManager({ league, onChange }: Props) {
       </form>
       {message ? <p className="mt-2 text-sm font-bold text-slate-400">{message}</p> : null}
 
-      <div className="my-5 flex items-center gap-3 text-xs font-black uppercase tracking-wider text-slate-600"><span className="h-px flex-1 bg-white/10" />Guest players<span className="h-px flex-1 bg-white/10" /></div>
+      <div className="my-5 flex items-center gap-3 text-xs font-black uppercase tracking-wider text-slate-400"><span className="h-px flex-1 bg-white/10" />Guest players<span className="h-px flex-1 bg-white/10" /></div>
       <form onSubmit={addOne} className="flex gap-3">
         <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Guest player name" className="min-w-0 flex-1 rounded-xl border border-white/10 bg-slate-950/60 px-4 py-3 text-white outline-none" />
         <button className="rounded-xl bg-cyan-400 px-5 py-3 font-black text-slate-950">Add</button>
@@ -120,7 +120,7 @@ export function LeaguePlayerManager({ league, onChange }: Props) {
       <div className="mt-5 grid gap-2 sm:grid-cols-2">
         {league.players.map((player, index) => (
           <div key={player.id} className="flex items-center justify-between rounded-xl bg-slate-950/60 px-4 py-3">
-            <span className="min-w-0 truncate font-bold text-white">{index + 1}. {player.name} {player.username ? <span className="text-xs text-cyan-300">@{player.username}</span> : <span className="text-xs text-slate-600">guest</span>}</span>
+            <span className="min-w-0 truncate font-bold text-white">{index + 1}. {player.name} {player.username ? <span className="text-xs text-cyan-300">@{player.username}</span> : <span className="text-xs text-slate-400">guest</span>}</span>
             <button onClick={() => { const updated = removeLeaguePlayer(league.id, player.id); if (updated) onChange(updated); }} className="ml-3 text-sm font-bold text-rose-300">Remove</button>
           </div>
         ))}

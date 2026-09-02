@@ -1,6 +1,11 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { AppHeader } from "@/components/AppHeader";
+
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+};
 
 const platformFeatures = [
   {
@@ -52,7 +57,7 @@ export default function Home() {
 
           <div className="cb-shell relative grid items-center gap-10 py-12 sm:py-16 lg:grid-cols-[1.03fr_.97fr] lg:gap-16 lg:py-24">
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/[0.07] px-3 py-2 text-[0.65rem] font-black uppercase tracking-[0.2em] text-emerald-300">
+              <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/[0.07] px-3 py-2 text-xs font-black uppercase tracking-[0.2em] text-emerald-300">
                 <span className="cb-live-dot" />
                 Built for real pool nights
               </div>
@@ -98,7 +103,7 @@ export default function Home() {
                 ].map(([value, label]) => (
                   <div key={label} className="px-2 text-center">
                     <p className="text-lg font-black text-white sm:text-xl">{value}</p>
-                    <p className="mt-1 text-[0.62rem] font-bold uppercase tracking-[0.12em] text-slate-500 sm:text-xs">
+                    <p className="mt-1 text-xs font-bold uppercase tracking-[0.12em] text-slate-400 sm:text-xs">
                       {label}
                     </p>
                   </div>
@@ -115,14 +120,14 @@ export default function Home() {
                       Kasarani Open · Race to 4
                     </h2>
                   </div>
-                  <span className="inline-flex items-center gap-2 rounded-full bg-emerald-400/10 px-3 py-1.5 text-[0.65rem] font-black uppercase text-emerald-300">
+                  <span className="inline-flex items-center gap-2 rounded-full bg-emerald-400/10 px-3 py-1.5 text-xs font-black uppercase text-emerald-300">
                     <span className="cb-live-dot" />
                     Live
                   </span>
                 </div>
 
                 <div className="mt-4 rounded-2xl border border-cyan-400/15 bg-cyan-400/[0.045] p-4">
-                  <div className="flex items-center justify-between text-[0.63rem] font-black uppercase tracking-[0.16em] text-slate-500">
+                  <div className="flex items-center justify-between text-[0.63rem] font-black uppercase tracking-[0.16em] text-slate-400">
                     <span>Table 3</span>
                     <span className="text-cyan-300">Winners semi-final</span>
                   </div>
@@ -134,7 +139,7 @@ export default function Home() {
                           key={name}
                           className="flex min-h-14 items-center gap-3 rounded-xl bg-slate-950/65 px-3"
                         >
-                          <span className="grid h-9 w-9 place-items-center rounded-xl bg-cyan-400/10 text-[0.68rem] font-black text-cyan-200">
+                          <span className="grid h-9 w-9 place-items-center rounded-xl bg-cyan-400/10 text-xs font-black text-cyan-200">
                             {initials}
                           </span>
                           <strong className="flex-1 text-sm">{name}</strong>
@@ -154,13 +159,13 @@ export default function Home() {
 
                   <div className="mt-3 flex items-center justify-between rounded-xl border border-amber-300/10 bg-amber-300/[0.055] px-3 py-2 text-xs text-amber-200">
                     <span>GM is on the hill</span>
-                    <span className="text-slate-500">18:42</span>
+                    <span className="text-slate-400">18:42</span>
                   </div>
                 </div>
 
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   <div className="rounded-2xl border border-white/10 bg-slate-950/45 p-4">
-                    <p className="text-[0.62rem] font-black uppercase tracking-[0.18em] text-slate-500">
+                    <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
                       Table queue
                     </p>
                     <div className="mt-3 space-y-3 text-xs">
@@ -176,7 +181,7 @@ export default function Home() {
                           <span className="flex-1 font-bold text-slate-300">
                             {match}
                           </span>
-                          <span className="text-[0.58rem] font-black uppercase tracking-wider text-cyan-300">
+                          <span className="text-xs font-black uppercase tracking-wider text-cyan-300">
                             {status}
                           </span>
                         </div>
@@ -186,7 +191,7 @@ export default function Home() {
 
                   <div className="rounded-2xl border border-white/10 bg-slate-950/45 p-4">
                     <div className="flex items-center justify-between">
-                      <p className="text-[0.62rem] font-black uppercase tracking-[0.18em] text-slate-500">
+                      <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
                         Progress
                       </p>
                       <strong className="text-cyan-200">68%</strong>
@@ -194,7 +199,7 @@ export default function Home() {
                     <div className="mt-5 h-2 overflow-hidden rounded-full bg-slate-900">
                       <div className="h-full w-[68%] rounded-full bg-gradient-to-r from-cyan-400 to-blue-500" />
                     </div>
-                    <p className="mt-3 text-xs text-slate-500">
+                    <p className="mt-3 text-xs text-slate-400">
                       13 of 19 matches completed
                     </p>
                   </div>
@@ -225,7 +230,7 @@ export default function Home() {
                     <span className="grid h-10 w-10 place-items-center rounded-xl bg-cyan-400/10 text-xs font-black text-cyan-300">
                       {feature.number}
                     </span>
-                    <span className="text-slate-600">↗</span>
+                    <span className="text-slate-400">↗</span>
                   </div>
                   <h3 className="mt-5 text-xl font-black">{feature.title}</h3>
                   <p className="mt-2 text-sm leading-6 text-slate-400">
@@ -276,7 +281,7 @@ export default function Home() {
                   key={step}
                   className="rounded-3xl border border-white/10 bg-white/[0.025] p-5"
                 >
-                  <p className="text-[0.65rem] font-black uppercase tracking-[0.2em] text-cyan-300">
+                  <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-300">
                     Step {step}
                   </p>
                   <h3 className="mt-5 text-lg font-black">{title}</h3>
@@ -313,7 +318,7 @@ export default function Home() {
       </main>
 
       <footer className="border-t border-white/10 py-8">
-        <div className="cb-shell flex flex-col gap-5 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+        <div className="cb-shell flex flex-col gap-5 text-sm text-slate-400 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
             <span className="grid h-8 w-8 place-items-center rounded-lg bg-cyan-400 text-xs font-black text-slate-950">
               8

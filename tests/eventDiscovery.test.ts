@@ -37,13 +37,14 @@ test("availability, search and chronological sorting stay deterministic", () => 
   assert.deepEqual(sorted.map((event) => event.id), ["event-1", "later", "tba"]);
 });
 
-test("the public discovery route and navigation expose Phase 4D", () => {
+test("the public discovery route exposes events without internal roadmap labels", () => {
   const page = readFileSync(new URL("../app/events/page.tsx", import.meta.url), "utf8");
   const explorer = readFileSync(new URL("../components/EventDiscovery.tsx", import.meta.url), "utf8");
   const navigation = readFileSync(new URL("../components/AppHeader.tsx", import.meta.url), "utf8");
   assert.match(page, /event_registration_settings/);
   assert.match(page, /club_followers/);
   assert.match(page, /cloud_leagues/);
+  assert.doesNotMatch(page, /Phase 4D/);
   assert.match(explorer, /Clubs I follow/);
   assert.match(explorer, /Spaces available/);
   assert.match(navigation, /href: "\/events"/);

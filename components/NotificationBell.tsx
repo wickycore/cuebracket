@@ -96,23 +96,23 @@ export function NotificationBell() {
     <div ref={containerRef} className="relative">
       <button type="button" onClick={() => setOpen((value) => !value)} aria-label={`Notifications${unread ? `, ${unread} unread` : ""}`} aria-expanded={open} className="relative grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/[0.045] text-lg text-slate-200 hover:border-cyan-400/25 hover:text-white">
         <span aria-hidden="true">🔔</span>
-        {unread ? <span className="absolute -right-1 -top-1 grid min-h-5 min-w-5 place-items-center rounded-full bg-cyan-400 px-1 text-[0.62rem] font-black text-slate-950 ring-2 ring-slate-950">{unread > 9 ? "9+" : unread}</span> : null}
+        {unread ? <span className="absolute -right-1 -top-1 grid min-h-5 min-w-5 place-items-center rounded-full bg-cyan-400 px-1 text-xs font-black text-slate-950 ring-2 ring-slate-950">{unread > 9 ? "9+" : unread}</span> : null}
       </button>
 
       {open ? (
         <div className="absolute right-0 top-12 z-[160] w-[min(90vw,24rem)] overflow-hidden rounded-[1.5rem] border border-white/10 bg-[#07111f] shadow-2xl shadow-black/60">
           <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3.5">
-            <div><p className="text-sm font-black text-white">Notifications</p><p className="text-xs text-slate-500">{unread ? `${unread} unread` : "You are all caught up"}</p></div>
+            <div><p className="text-sm font-black text-white">Notifications</p><p className="text-xs text-slate-400">{unread ? `${unread} unread` : "You are all caught up"}</p></div>
             {unread ? <button type="button" onClick={() => void markAll()} className="text-xs font-black text-cyan-300">Mark all read</button> : null}
           </div>
           <div className="max-h-[28rem] overflow-y-auto p-2">
             {notifications.length ? notifications.map((item) => (
               <Link key={item.id} href={item.href} onClick={() => openNotification(item)} className={`flex gap-3 rounded-2xl p-3 transition hover:bg-white/[0.055] ${item.read_at ? "opacity-65" : "bg-cyan-400/[0.055]"}`}>
                 <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/[0.06] text-lg">{notificationIcon(item.type)}</span>
-                <span className="min-w-0 flex-1"><span className="block text-sm font-black text-white">{item.title}</span><span className="mt-1 line-clamp-2 block text-xs leading-5 text-slate-400">{item.message}</span><span className="mt-1.5 block text-[0.68rem] font-bold text-slate-600">{new Date(item.created_at).toLocaleString("en-KE", { dateStyle: "medium", timeStyle: "short" })}</span></span>
+                <span className="min-w-0 flex-1"><span className="block text-sm font-black text-white">{item.title}</span><span className="mt-1 line-clamp-2 block text-xs leading-5 text-slate-400">{item.message}</span><span className="mt-1.5 block text-xs font-bold text-slate-400">{new Date(item.created_at).toLocaleString("en-KE", { dateStyle: "medium", timeStyle: "short" })}</span></span>
                 {!item.read_at ? <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-cyan-400" /> : null}
               </Link>
-            )) : <div className="px-5 py-9 text-center text-sm text-slate-500">Club and tournament updates will appear here.</div>}
+            )) : <div className="px-5 py-9 text-center text-sm text-slate-400">Club and tournament updates will appear here.</div>}
           </div>
           <Link href="/notifications" onClick={() => setOpen(false)} className="block border-t border-white/10 px-4 py-3.5 text-center text-sm font-black text-cyan-300 hover:bg-white/[0.04]">Open notification inbox →</Link>
         </div>

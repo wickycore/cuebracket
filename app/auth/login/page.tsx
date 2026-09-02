@@ -1,7 +1,10 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { Suspense } from "react";
 
 import { AuthForm } from "@/components/AuthForm";
+
+export const metadata: Metadata = { title: "Sign in", description: "Sign in to manage your CueBracket tournaments, leagues, clubs and live scores." };
 
 export default async function LoginPage({
   searchParams,
@@ -25,9 +28,9 @@ export default async function LoginPage({
             ← CueBracket Pro
           </Link>
           <p className="cb-kicker mt-12">Organizer access</p>
-          <h1 className="mt-4 max-w-xl text-6xl font-black leading-[0.96] tracking-[-0.055em]">
+          <h2 className="mt-4 max-w-xl text-6xl font-black leading-[0.96] tracking-[-0.055em]">
             Your control room is ready.
-          </h1>
+          </h2>
           <p className="mt-6 max-w-xl text-lg leading-8 text-slate-400">
             Continue your tournaments, manage live scores and keep spectators updated.
           </p>
@@ -53,7 +56,7 @@ export default async function LoginPage({
             <AuthForm mode="login" />
           </Suspense>
 
-          <p className="mt-6 text-center text-sm text-slate-500">
+          <p className="mt-6 text-center text-sm text-slate-400">
             New here?{" "}
             <Link href={signupHref} className="font-black text-cyan-300">
               Create an account

@@ -1,6 +1,9 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { AppHeader } from "@/components/AppHeader";
 import { LeagueList } from "@/components/LeagueList";
+
+export const metadata: Metadata = { title: "My leagues", description: "Create pool leagues, schedule fixtures and calculate standings automatically." };
 
 export default function LeaguesPage() {
   return (
