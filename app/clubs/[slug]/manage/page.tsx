@@ -97,6 +97,7 @@ export default async function ManageClubPage({ params, searchParams }: Props) {
       guide={guideResult.data as ClubGuideRow | null}
       members={members}
       pendingRequests={(pendingResult.data ?? []) as ClubMembershipRequestRow[]}
+      pendingRequestsError={Boolean(pendingResult.error)}
       announcements={(announcementsResult.data ?? []) as ClubAnnouncementRow[]}
       calendarEvents={calendarEvents}
       calendarRsvps={(rsvpsResult.data ?? []) as ClubCalendarRsvpRow[]}

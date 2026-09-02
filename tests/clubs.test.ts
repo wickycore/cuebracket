@@ -50,3 +50,27 @@ test("only club owners can grant, demote or remove admin access", () => {
   assert.match(panel, /isOwner \|\| member\.role === "member"/);
   assert.match(client, /Only the club owner can assign or remove admin access/);
 });
+
+test("club organizers are notified and management refreshes when membership requests arrive", () => {
+  const migration = readFileSync(
+    new URL("../supabase/migrations/20260902205617_notify_club_membership_requests.sql", import.meta.url),
+    "utf8",
+  );
+  const panel = readFileSync(
+    new URL("../components/ClubCommunityPanel.tsx", import.meta.url),
+    "utf8",
+  );
+  const workspace = readFileSync(
+    new URL("../components/ClubAdminWorkspace.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(migration, /function private\.notify_club_membership_request\(\)/);
+  assert.match(migration, /after insert on public\.club_membership_requests/);
+  assert.match(migration, /member\.role in \('owner', 'admin'\)/);
+  assert.match(migration, /\/manage\?section=people/);
+  assert.match(migration, /revoke all on function private\.notify_club_membership_request\(\) from public, anon, authenticated/);
+  assert.match(panel, /table: "club_membership_requests"/);
+  assert.match(panel, /Refresh requests/);
+  assert.match(workspace, /We will not show an incorrect zero/);
+});

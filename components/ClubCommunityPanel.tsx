@@ -20,6 +20,7 @@ import {
 } from "@/lib/cloud/clubs";
 import { removePublicImage, uploadPublicImage, validateImageFile } from "@/lib/cloud/media";
 import { normalizeClubSlug, type ClubGuideRow, type ClubMembershipRequestRow, type ClubRole, type ClubRow } from "@/lib/clubs";
+import { createClient } from "@/lib/supabase/client";
 
 export interface ClubMemberView {
   userId: string;
@@ -76,6 +77,20 @@ export function ClubCommunityPanel({
   useEffect(() => () => {
     if (logoPreview.startsWith("blob:")) URL.revokeObjectURL(logoPreview);
   }, [logoPreview]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`club-membership-requests-${club.id}-${crypto.randomUUID()}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "club_membership_requests", filter: `club_id=eq.${club.id}` },
+        () => router.refresh(),
+      )
+      .subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  }, [club.id, isAdmin, router]);
 
   async function run(key: string, action: () => Promise<void>) {
     if (busy) return;
@@ -192,7 +207,10 @@ export function ClubCommunityPanel({
           <h2 className="mt-2 text-xl font-black">Keep club work simple.</h2>
 
           <div className="mt-5">
-            <h3 className="font-black">Membership requests <span className="text-cyan-300">{pendingRequests.length}</span></h3>
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="font-black">Membership requests <span className="text-cyan-300">{pendingRequests.length}</span></h3>
+              <button type="button" onClick={() => router.refresh()} disabled={Boolean(busy)} className="min-h-10 rounded-xl border border-white/10 px-3 text-xs font-black text-slate-300 hover:bg-white/5 disabled:opacity-50">Refresh requests</button>
+            </div>
             {pendingRequests.length ? (
               <div className="mt-3 space-y-2">
                 {pendingRequests.map((request) => {
