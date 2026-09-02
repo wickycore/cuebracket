@@ -31,11 +31,11 @@ test("unknown routes show the branded recovery page", async ({ page }) => {
   await expect(page.getByRole("link", { name: "Discover events" })).toBeVisible();
 });
 
-test("mobile respects browser text size instead of shrinking the whole app", async ({ page }) => {
+test("mobile uses the approved compact density across the whole app", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
   const rootFontSize = await page.locator("html").evaluate((element) => getComputedStyle(element).fontSize);
-  expect(rootFontSize).toBe("16px");
+  expect(rootFontSize).toBe("12px");
   await expect(page.getByRole("button", { name: "Open navigation menu" })).toBeVisible();
 });
 
