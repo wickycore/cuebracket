@@ -55,6 +55,19 @@ test("future fixtures name their feeder match instead of showing only TBD", () =
   assert.equal(spectatorSourceLabel(rounds[1].matches[0].source2, numbers), "Winner of Match #2");
 });
 
+test("flowchart cards use feeder match labels for unresolved players", () => {
+  const source = readFileSync(
+    new URL("../components/ReadOnlyBracket.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(source, /spectatorSourceLabel\(source, sectionMatchNumbers\)/);
+  assert.match(source, /index === 0 \? match\.source1 : match\.source2/);
+  assert.match(source, /sectionMatchNumbers\.get\(match\.id\)/);
+  assert.match(source, /`Match #\$\{matchNumber\}`/);
+  assert.doesNotMatch(source, /playerPlaceholders\?\.\[index\] \?\? "TBD"/);
+});
+
 test("spectator match list keeps one visual match card per row", () => {
   const source = readFileSync(
     new URL("../components/BracketMatchList.tsx", import.meta.url),

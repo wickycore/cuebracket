@@ -17,6 +17,10 @@ import {
 import { BracketViewport } from "@/components/BracketViewport";
 import { BracketMatchList } from "@/components/BracketMatchList";
 import { ChampionCelebration } from "@/components/ChampionCelebration";
+import {
+  numberBracketMatches,
+  spectatorSourceLabel,
+} from "@/lib/bracket/spectator";
 
 type SingleBracketView = "flowchart" | "list";
 const SPECTATOR_VIEW_KEY = "cuebracket:spectator-bracket-view:v2";
@@ -103,6 +107,7 @@ function Section({
   tone = "cyan",
   balancedGeometry = false,
   playerPlaceholders,
+  matchNumbers,
   showHeader = true,
   edgeToEdge = false,
 }: {
@@ -113,6 +118,7 @@ function Section({
   tone?: Tone;
   balancedGeometry?: boolean;
   playerPlaceholders?: [string, string];
+  matchNumbers?: Map<string, number>;
   showHeader?: boolean;
   edgeToEdge?: boolean;
 }) {
@@ -124,6 +130,7 @@ function Section({
   const balancedCenters = balancedGeometry
     ? buildBalancedCenters(rounds, maxMatches)
     : new Map<string, number>();
+  const sectionMatchNumbers = matchNumbers ?? numberBracketMatches(rounds);
   const contentRef = useRef<HTMLDivElement>(null);
   const { matchRefs, registerMatch } = useBracketMatchRefs();
   const hasLiveTimer = rounds.some((round) =>
@@ -173,6 +180,7 @@ function Section({
                   {round.matches.map((match) => {
                     const automaticAdvance = isAutomaticAdvance(match);
                     const advancingPlayer = match.player1 ?? match.player2 ?? match.winner;
+                    const matchNumber = sectionMatchNumbers.get(match.id) ?? match.position + 1;
                     const centerSlot =
                       balancedCenters.get(match.id) ?? match.position;
 
@@ -214,7 +222,7 @@ function Section({
                         ) : (
                           <article data-bracket-card className={`group relative z-10 overflow-hidden rounded-xl border bg-[#123763] shadow-[0_10px_24px_rgba(0,0,0,.18)] transition-colors duration-200 ${match.completed ? "border-[#78c69b]/60" : match.status === "live" ? "border-[#ef8193]/65" : "border-[#356a98]"}`}>
                             <div className="flex items-center justify-between border-b border-[#2a5680] bg-[#11335d] px-3 py-1.5">
-                              <span className="text-[10px] font-black uppercase tracking-[0.16em] text-[#dce8f4]">{match.tableNumber ? `Table ${match.tableNumber}` : `Match ${match.position + 1}`}</span>
+                              <span className="text-[10px] font-black uppercase tracking-[0.16em] text-[#dce8f4]">{match.tableNumber ? `Table ${match.tableNumber} · Match #${matchNumber}` : `Match #${matchNumber}`}</span>
                               <span className={`rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] ${match.completed ? "bg-[#78c69b]/15 text-[#b9e7ca]" : match.status === "live" ? "bg-[#ef8193]/18 text-[#ffc2cb] ring-1 ring-[#ef8193]/40" : match.player1 && match.player2 ? "bg-[#27c2e6]/15 text-[#7ce8fb]" : "bg-[#1a426d] text-[#d2dfec]"}`}>
                                 {match.completed ? "Finished" : match.status === "live" ? "● Live" : match.player1 && match.player2 ? "Ready" : "Waiting"}
                               </span>
@@ -222,7 +230,9 @@ function Section({
                             {[match.player1, match.player2].map((player, index) => {
                               const winner = Boolean(match.completed && player && match.winner === player);
                               const score = index === 0 ? match.score1 : match.score2;
-                              const placeholder = playerPlaceholders?.[index] ?? "TBD";
+                              const source = index === 0 ? match.source1 : match.source2;
+                              const placeholder = playerPlaceholders?.[index]
+                                ?? spectatorSourceLabel(source, sectionMatchNumbers);
                               return (
                                 <div key={index} className={`flex min-h-10 items-center gap-3 border-b border-[#2a5680] px-3 py-1.5 last:border-b-0 ${winner ? "bg-[#78c69b]/12" : ""}`}>
                                   <span className={`min-w-0 flex-1 truncate text-sm font-extrabold ${winner ? "text-[#b9e7ca]" : player ? "text-[#fafcff]" : playerPlaceholders ? "text-[#e3dcff]" : "text-[#b8c7dc]"}`}>{player ?? placeholder}</span>
@@ -286,6 +296,7 @@ export function ReadOnlyBracket({
       ...bracket.grandFinal.filter((round) => round.round === 1 || bracket.resetRequired),
     ];
     const allMatches = allRounds.flatMap((round) => round.matches);
+    const matchNumbers = numberBracketMatches(allRounds);
     const completed = allMatches.filter(
       (match) => match.completed && match.player1 && match.player2,
     ).length;
@@ -324,6 +335,7 @@ export function ReadOnlyBracket({
           raceTo={tournament.raceTo}
           tone="cyan"
           balancedGeometry
+          matchNumbers={matchNumbers}
         />
         <Section
           title="Losers Bracket"
@@ -332,6 +344,7 @@ export function ReadOnlyBracket({
           raceTo={tournament.raceTo}
           tone="rose"
           balancedGeometry
+          matchNumbers={matchNumbers}
         />
         <Section
           title="Grand Final"
@@ -346,6 +359,7 @@ export function ReadOnlyBracket({
           raceTo={tournament.raceTo}
           tone="violet"
           balancedGeometry
+          matchNumbers={matchNumbers}
           playerPlaceholders={[
             "Winners bracket winner",
             "Losers bracket winner",
@@ -405,6 +419,7 @@ export function ReadOnlyBracket({
             balancedGeometry
             showHeader={false}
             edgeToEdge
+            matchNumbers={numberBracketMatches(bracket.rounds)}
           />
         </>
       ) : (
