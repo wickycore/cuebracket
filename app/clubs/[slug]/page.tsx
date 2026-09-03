@@ -11,6 +11,8 @@ import type {
   ClubCalendarEventRow,
   ClubCalendarRsvpRow,
   ClubChallengeRow,
+  ClubGalleryItemRow,
+  ClubMemberRestrictionRow,
   ClubLeagueSummary,
   ClubRegistrationCount,
   ClubTournamentSummary,
@@ -50,16 +52,20 @@ export default async function ClubPage({ params, searchParams }: Props) {
   if (!club) notFound();
 
   const { data: { user } } = await supabase.auth.getUser();
-  const [ownMembershipResult, ownFollowResult, memberCountResult] = await Promise.all([
+  const [ownMembershipResult, ownFollowResult, memberCountResult, ownRestrictionResult] = await Promise.all([
     user ? supabase.from("club_members").select("club_id,user_id,role,created_at").eq("club_id", club.id).eq("user_id", user.id).maybeSingle() : Promise.resolve({ data: null, error: null }),
     user ? supabase.from("club_followers").select("club_id,user_id").eq("club_id", club.id).eq("user_id", user.id).maybeSingle() : Promise.resolve({ data: null, error: null }),
     supabase.from("club_member_counts").select("member_count").eq("club_id", club.id).maybeSingle(),
+    user ? supabase.from("club_member_restrictions").select("*").eq("club_id", club.id).eq("user_id", user.id).maybeSingle() : Promise.resolve({ data: null, error: null }),
   ]);
-  if (ownMembershipResult.error || ownFollowResult.error || memberCountResult.error) throw new Error("The club membership could not be loaded.");
+  if (ownMembershipResult.error || ownFollowResult.error || memberCountResult.error || ownRestrictionResult.error) throw new Error("The club membership could not be loaded.");
   const ownMembership = ownMembershipResult.data as ClubMemberRow | null;
   const ownRole: ClubRole | null = club.owner_id === user?.id ? "owner" : ownMembership?.role ?? null;
   const isAdmin = ownRole === "owner" || ownRole === "admin";
-  const isMember = Boolean(ownRole || isAdmin);
+  const ownRestriction = ownRestrictionResult.data as ClubMemberRestrictionRow | null;
+  const isSuspended = Boolean(ownRestriction?.is_suspended && !isAdmin);
+  const isMuted = Boolean(ownRestriction?.is_muted && !isAdmin);
+  const isMember = isAdmin || Boolean(ownRole && !isSuspended);
 
   const [membersResult, followerTotalResult] = await Promise.all([
     isMember ? supabase.from("club_members").select("*").eq("club_id", club.id).order("created_at") : Promise.resolve({ data: [], error: null }),
@@ -72,7 +78,7 @@ export default async function ClubPage({ params, searchParams }: Props) {
   const currentTime = currentDate.toISOString();
   const calendarFloor = new Date(currentDate.getTime() - 30 * 86_400_000).toISOString();
 
-  const [profilesResult, followerCountsResult, guideResult, ownRequestResult, settingsResult, tournamentsResult, leaguesResult, rankingsResult, announcementsResult, calendarResult, challengesResult, achievementsResult, ownProfileResult] = await Promise.all([
+  const [profilesResult, followerCountsResult, guideResult, ownRequestResult, settingsResult, tournamentsResult, leaguesResult, rankingsResult, announcementsResult, calendarResult, challengesResult, achievementsResult, galleryResult, ownProfileResult, ownRegistrationsResult, playerFollowsResult] = await Promise.all([
     memberIds.length ? supabase.from("profiles").select("id, display_name, username, tournament_name, avatar_url, is_public").in("id", memberIds) : Promise.resolve({ data: [] }),
     memberIds.length ? supabase.from("player_follower_counts").select("player_id,follower_count").in("player_id", memberIds) : Promise.resolve({ data: [] }),
     supabase.from("club_guides").select("club_id,opening_hours,rules,revision,updated_at").eq("club_id", club.id).maybeSingle(),
@@ -85,10 +91,13 @@ export default async function ClubPage({ params, searchParams }: Props) {
     isMember ? supabase.from("club_calendar_events").select("*").eq("club_id", club.id).gte("starts_at", calendarFloor).order("starts_at", { ascending: true }).limit(100) : Promise.resolve({ data: [], error: null }),
     isMember ? supabase.from("club_challenges").select("*").eq("club_id", club.id).neq("status", "closed").gte("expires_at", currentTime).order("updated_at", { ascending: false }).limit(100) : Promise.resolve({ data: [], error: null }),
     supabase.from("club_achievements").select("*").eq("club_id", club.id).order("is_featured", { ascending: false }).order("awarded_on", { ascending: false }).order("created_at", { ascending: false }).limit(100),
-    user ? supabase.from("profiles").select("display_name,tournament_name").eq("id", user.id).maybeSingle() : Promise.resolve({ data: null, error: null }),
+    supabase.from("club_gallery_items").select("*").eq("club_id", club.id).order("occurred_on", { ascending: false }).order("created_at", { ascending: false }).limit(100),
+    user ? supabase.from("profiles").select("display_name,tournament_name,avatar_url,username").eq("id", user.id).maybeSingle() : Promise.resolve({ data: null, error: null }),
+    user ? supabase.from("event_registrations").select("tournament_id").eq("profile_id", user.id).in("status", ["approved", "checked_in", "waitlisted"]).limit(500) : Promise.resolve({ data: [], error: null }),
+    user ? supabase.from("player_followers").select("player_id").eq("user_id", user.id).limit(1000) : Promise.resolve({ data: [], error: null }),
   ]);
 
-  const sectionError = [profilesResult, followerCountsResult, guideResult, ownRequestResult, settingsResult, tournamentsResult, leaguesResult, rankingsResult, announcementsResult, calendarResult, challengesResult, achievementsResult, ownProfileResult]
+  const sectionError = [profilesResult, followerCountsResult, guideResult, ownRequestResult, settingsResult, tournamentsResult, leaguesResult, rankingsResult, announcementsResult, calendarResult, challengesResult, achievementsResult, galleryResult, ownProfileResult, ownRegistrationsResult, playerFollowsResult]
     .find((result) => "error" in result && result.error);
   if (sectionError) throw new Error("Some club information could not be loaded.");
 
@@ -135,6 +144,9 @@ export default async function ClubPage({ params, searchParams }: Props) {
         club={club}
         userId={user?.id ?? null}
         isAdmin={isAdmin}
+        isMember={isMember}
+        isSuspended={isSuspended}
+        isMuted={isMuted}
         isFollowing={Boolean(ownFollowResult.data)}
         memberCount={memberCountResult.data?.member_count ?? 0}
         followerCount={isMember ? followerTotalResult.data?.follower_count ?? 0 : null}
@@ -152,6 +164,10 @@ export default async function ClubPage({ params, searchParams }: Props) {
         calendarRsvps={(ownRsvpsResult.data ?? []) as ClubCalendarRsvpRow[]}
         challenges={(challengesResult.data ?? []) as ClubChallengeRow[]}
         achievements={(achievementsResult.data ?? []) as ClubAchievementRow[]}
+        galleryItems={(galleryResult.data ?? []) as ClubGalleryItemRow[]}
+        ownProfile={ownProfile ? { avatar_url: ownProfile.avatar_url ?? null, username: ownProfile.username ?? null } : null}
+        ownRegistrationIds={(ownRegistrationsResult.data ?? []).map((row) => row.tournament_id)}
+        followedPlayerIds={(playerFollowsResult.data ?? []).map((row) => row.player_id)}
         guide={guideResult.data as ClubGuideRow | null}
       />
     </main>

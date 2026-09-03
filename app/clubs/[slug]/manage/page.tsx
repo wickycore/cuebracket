@@ -11,6 +11,10 @@ import type {
   ClubCalendarEventRow,
   ClubCalendarRsvpRow,
   ClubChallengeRow,
+  ClubGalleryItemRow,
+  ClubMemberBlockRow,
+  ClubMemberReportRow,
+  ClubMemberRestrictionRow,
 } from "@/lib/club-command-center";
 import type { ClubBroadcastRow } from "@/lib/club-communications";
 import { createClient } from "@/lib/supabase/server";
@@ -45,7 +49,7 @@ export default async function ManageClubPage({ params, searchParams }: Props) {
   const now = new Date();
   const currentTime = now.toISOString();
   const calendarFloor = new Date(now.getTime() - 30 * 86_400_000).toISOString();
-  const [membersResult, pendingResult, followersResult, guideResult, announcementsResult, calendarResult, challengesResult, achievementsResult, broadcastsResult, liveEventsResult] = await Promise.all([
+  const [membersResult, pendingResult, followersResult, guideResult, announcementsResult, calendarResult, challengesResult, achievementsResult, galleryResult, reportsResult, restrictionsResult, blocksResult, broadcastsResult, liveEventsResult] = await Promise.all([
     supabase.from("club_members").select("*").eq("club_id", club.id).order("created_at"),
     supabase.from("club_membership_requests").select("*").eq("club_id", club.id).eq("status", "pending").order("created_at"),
     supabase.from("club_followers").select("user_id").eq("club_id", club.id),
@@ -54,6 +58,10 @@ export default async function ManageClubPage({ params, searchParams }: Props) {
     supabase.from("club_calendar_events").select("*").eq("club_id", club.id).gte("starts_at", calendarFloor).order("starts_at", { ascending: true }).limit(100),
     supabase.from("club_challenges").select("*").eq("club_id", club.id).neq("status", "closed").gte("expires_at", currentTime).order("updated_at", { ascending: false }).limit(100),
     supabase.from("club_achievements").select("*").eq("club_id", club.id).order("is_featured", { ascending: false }).order("awarded_on", { ascending: false }).order("created_at", { ascending: false }).limit(100),
+    supabase.from("club_gallery_items").select("*").eq("club_id", club.id).order("occurred_on", { ascending: false }).order("created_at", { ascending: false }).limit(100),
+    supabase.from("club_member_reports").select("*").eq("club_id", club.id).order("created_at", { ascending: false }).limit(200),
+    supabase.from("club_member_restrictions").select("*").eq("club_id", club.id),
+    supabase.from("club_member_blocks").select("*").eq("club_id", club.id).order("created_at", { ascending: false }).limit(200),
     supabase.from("club_broadcasts").select("*").eq("club_id", club.id).order("created_at", { ascending: false }).limit(25),
     supabase.from("cloud_tournaments").select("id").eq("club_id", club.id).eq("status", "live"),
   ]);
@@ -103,6 +111,10 @@ export default async function ManageClubPage({ params, searchParams }: Props) {
       calendarRsvps={(rsvpsResult.data ?? []) as ClubCalendarRsvpRow[]}
       challenges={(challengesResult.data ?? []) as ClubChallengeRow[]}
       achievements={(achievementsResult.data ?? []) as ClubAchievementRow[]}
+      galleryItems={(galleryResult.data ?? []) as ClubGalleryItemRow[]}
+      reports={(reportsResult.data ?? []) as ClubMemberReportRow[]}
+      restrictions={(restrictionsResult.data ?? []) as ClubMemberRestrictionRow[]}
+      blocks={(blocksResult.data ?? []) as ClubMemberBlockRow[]}
       broadcasts={(broadcastsResult.data ?? []) as ClubBroadcastRow[]}
       followerCount={(followersResult.data ?? []).length}
       liveEventCount={(liveEventsResult.data ?? []).length}

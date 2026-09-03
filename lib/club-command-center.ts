@@ -112,6 +112,7 @@ export interface ClubAchievementRow {
   id: string;
   club_id: string;
   recipient_id: string;
+  recipient_name: string;
   awarded_by: string | null;
   kind: ClubAchievementKind;
   title: string;
@@ -121,6 +122,53 @@ export interface ClubAchievementRow {
   is_featured: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface ClubGalleryItemRow {
+  id: string;
+  club_id: string;
+  author_id: string;
+  image_url: string;
+  caption: string;
+  occurred_on: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export type ClubReportCategory = "harassment" | "spam" | "unsafe_conduct" | "club_rules" | "other";
+export type ClubReportStatus = "open" | "reviewed" | "dismissed";
+
+export interface ClubMemberReportRow {
+  id: string;
+  club_id: string;
+  reporter_id: string;
+  reported_user_id: string;
+  reported_name: string;
+  category: ClubReportCategory;
+  details: string;
+  status: ClubReportStatus;
+  reviewed_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ClubMemberRestrictionRow {
+  club_id: string;
+  user_id: string;
+  is_suspended: boolean;
+  is_muted: boolean;
+  reason: string;
+  updated_by: string;
+  updated_at: string;
+}
+
+export interface ClubMemberBlockRow {
+  club_id: string;
+  user_id: string;
+  user_name: string;
+  blocked_by: string;
+  reason: string;
+  created_at: string;
 }
 
 export interface ClubActivityItem {
@@ -223,6 +271,24 @@ export function validateClubAchievement(input: {
   if (!value.description || value.description.length > 300) return { ok: false as const, message: "Recognition details must contain 1–300 characters." };
   if (!Number.isFinite(date.getTime()) || date > today) return { ok: false as const, message: "Choose today or an earlier achievement date." };
   return { ok: true as const, value };
+}
+
+export function validateClubGalleryItem(input: { caption: string; occurredOn: string }, now = new Date()) {
+  const caption = input.caption.trim().replace(/\s+/g, " ");
+  const occurredOn = input.occurredOn.trim();
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(occurredOn) ? new Date(`${occurredOn}T00:00:00Z`) : new Date(Number.NaN);
+  const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  if (caption.length > 220) return { ok: false as const, message: "Gallery captions must be 220 characters or fewer." };
+  if (!Number.isFinite(date.getTime()) || date > today) return { ok: false as const, message: "Choose today or an earlier gallery date." };
+  return { ok: true as const, value: { caption, occurredOn } };
+}
+
+export function validateClubReport(input: { category: ClubReportCategory; details: string }) {
+  const categories: ClubReportCategory[] = ["harassment", "spam", "unsafe_conduct", "club_rules", "other"];
+  const details = input.details.trim();
+  if (!categories.includes(input.category)) return { ok: false as const, message: "Choose a valid report reason." };
+  if (details.length < 5 || details.length > 800) return { ok: false as const, message: "Report details must contain 5–800 characters." };
+  return { ok: true as const, value: { category: input.category, details } };
 }
 
 export function clubAchievementLabel(kind: ClubAchievementKind) {

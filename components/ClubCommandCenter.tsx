@@ -8,8 +8,10 @@ import { ClubAnnouncementBoard } from "@/components/ClubAnnouncementBoard";
 import { ClubAchievementWall } from "@/components/ClubAchievementWall";
 import { ClubCalendarBoard } from "@/components/ClubCalendarBoard";
 import { ClubCommunityPanel, type ClubMemberView } from "@/components/ClubCommunityPanel";
+import { ClubGallery } from "@/components/ClubGallery";
 import { ClubGuide } from "@/components/ClubGuide";
 import { ClubPracticeBoard } from "@/components/ClubPracticeBoard";
+import { ClubReportMemberButton } from "@/components/ClubReportMemberButton";
 import { LiveMatchFeed } from "@/components/LiveMatchFeed";
 import { FollowPlayerButton, PlayerFollowingProvider } from "@/components/PlayerFollowing";
 import { RemoteMedia } from "@/components/RemoteMedia";
@@ -24,6 +26,7 @@ import {
   type ClubCalendarEventRow,
   type ClubCalendarRsvpRow,
   type ClubChallengeRow,
+  type ClubGalleryItemRow,
   type ClubLeagueSummary,
   type ClubRegistrationCount,
   type ClubTournamentSummary,
@@ -31,7 +34,7 @@ import {
 import type { RegistrationSettingsRow } from "@/lib/cloud/registrations";
 import type { ClubPlayerRankingRow } from "@/lib/rankings";
 
-type ClubTab = "home" | "live" | "events" | "rankings" | "members" | "clubhouse";
+type ClubTab = "home" | "live" | "events" | "gallery" | "rankings" | "members" | "clubhouse";
 type EventFilter = "all" | "open" | "live" | "finished";
 
 interface Props {
@@ -39,6 +42,9 @@ interface Props {
   club: ClubRow;
   userId: string | null;
   isAdmin: boolean;
+  isMember: boolean;
+  isSuspended: boolean;
+  isMuted: boolean;
   isFollowing: boolean;
   memberCount: number;
   followerCount: number | null;
@@ -56,6 +62,10 @@ interface Props {
   calendarRsvps: ClubCalendarRsvpRow[];
   challenges: ClubChallengeRow[];
   achievements: ClubAchievementRow[];
+  galleryItems: ClubGalleryItemRow[];
+  ownProfile: { avatar_url: string | null; username: string | null } | null;
+  ownRegistrationIds: string[];
+  followedPlayerIds: string[];
   guide: ClubGuideRow | null;
 }
 
@@ -63,6 +73,7 @@ const tabs: Array<{ id: ClubTab; label: string }> = [
   { id: "home", label: "Home" },
   { id: "live", label: "Live now" },
   { id: "events", label: "Events" },
+  { id: "gallery", label: "Gallery" },
   { id: "rankings", label: "Rankings" },
   { id: "members", label: "Members" },
   { id: "clubhouse", label: "Clubhouse" },
@@ -90,10 +101,10 @@ function StatCard({ value, label, detail, tone = "cyan" }: { value: number | str
 
 export function ClubCommandCenter(props: Props) {
   const {
-    club, userId, isAdmin, isFollowing, ownRole, ownRequest,
+    club, userId, isAdmin, isFollowing, ownRole, ownRequest, isMember, isSuspended, isMuted,
     members, defaultRequestName, tournaments, registrationSettings,
     registrationCounts, leagues, rankings, announcements, calendarEvents,
-    calendarRsvps, challenges, achievements, guide,
+    calendarRsvps, challenges, achievements, galleryItems, ownProfile, ownRegistrationIds, followedPlayerIds, guide,
   } = props;
   const [activeTab, setActiveTab] = useState<ClubTab>(() => tabs.find((tab) => tab.id === props.initialTab)?.id ?? "home");
   const [eventFilter, setEventFilter] = useState<EventFilter>("all");
@@ -120,7 +131,9 @@ export function ClubCommandCenter(props: Props) {
   const spotlight = achievements.find((item) => item.is_featured) ?? achievements[0] ?? null;
   const spotlightMember = spotlight ? members.find((member) => member.userId === spotlight.recipient_id) : null;
   const initial = club.name.charAt(0).toUpperCase();
-  const isMember = Boolean(ownRole || isAdmin);
+  const ownRanking = userId ? rankings.find((item) => item.profile_id === userId) ?? null : null;
+  const suggestedMembers = members.filter((member) => member.userId !== userId && member.isPublic && member.username && !followedPlayerIds.includes(member.userId)).slice(0, 3);
+  const registeredEvents = registrationSettings.filter((item) => ownRegistrationIds.includes(item.tournament_id));
 
   const visibleMembers = members.filter((member) => `${member.name} ${member.username ?? ""} ${member.role}`.toLowerCase().includes(memberQuery.trim().toLowerCase()));
   const visibleRankings = rankings.filter((player) => `${player.tournament_name ?? ""} ${player.display_name} ${player.username ?? ""}`.toLowerCase().includes(rankingQuery.trim().toLowerCase()));
@@ -178,7 +191,7 @@ export function ClubCommandCenter(props: Props) {
             <div className="flex flex-wrap gap-2 sm:gap-3">
               {isAdmin ? <Link href={`/clubs/${club.slug}/manage`} className="inline-flex min-h-12 items-center rounded-2xl border border-amber-300/25 bg-amber-300/10 px-5 py-3 text-sm font-black text-amber-100 hover:bg-amber-300/15">Manage club →</Link> : null}
               <button type="button" onClick={() => void shareClub()} className="min-h-12 rounded-2xl border border-white/10 bg-white/[0.055] px-5 py-3 text-sm font-black text-white hover:bg-white/[0.09]">{shareMessage || "Share club"}</button>
-              <button type="button" onClick={() => chooseTab("members")} className="min-h-12 rounded-2xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950 hover:bg-cyan-300">{ownRole ? "Open member area" : isFollowing ? "Following · Join club" : "Follow or join"}</button>
+              <button type="button" onClick={() => chooseTab("members")} className="min-h-12 rounded-2xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950 hover:bg-cyan-300">{isMember ? "Open member area" : isSuspended ? "View access status" : isFollowing ? "Following · Join club" : "Follow or join"}</button>
             </div>
           </div>
           {club.description ? <p className="mt-6 max-w-3xl text-sm leading-7 text-slate-300 sm:text-base">{club.description}</p> : null}
@@ -193,6 +206,7 @@ export function ClubCommandCenter(props: Props) {
       </nav>
 
       <div id="club-command-content" className="cb-shell scroll-mt-36 py-6 sm:scroll-mt-40 sm:py-9">
+        {isSuspended ? <section className="mb-6 rounded-2xl border border-amber-300/25 bg-amber-300/10 p-5"><p className="font-black text-amber-100">Your club access is suspended.</p><p className="mt-1 text-sm leading-6 text-amber-100/70">Public events, results, gallery photos and achievements remain available. Contact a club organizer to restore the private member areas.</p></section> : null}
         {activeTab === "home" ? (
           <div className="space-y-6">
             {pinnedAnnouncement ? <button type="button" onClick={() => chooseTab("clubhouse")} className="group w-full overflow-hidden rounded-2xl border border-cyan-300/20 bg-[linear-gradient(100deg,rgba(8,47,73,.8),rgba(15,23,42,.72))] text-left"><div className="flex items-stretch"><span className="w-1.5 shrink-0 bg-gradient-to-b from-cyan-300 to-blue-500" /><span className="flex min-w-0 flex-1 flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5"><span className="min-w-0"><span className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">{pinnedAnnouncement.is_pinned ? "Pinned notice" : "Latest notice"} · {clubAnnouncementLabel(pinnedAnnouncement.kind)}</span><span className="mt-1 block truncate font-black text-white">{pinnedAnnouncement.title}</span></span><span className="shrink-0 text-xs font-black text-cyan-300 group-hover:text-cyan-200">Open noticeboard →</span></span></div></button> : null}
@@ -203,6 +217,8 @@ export function ClubCommandCenter(props: Props) {
               <StatCard value={props.memberCount} label="Members" detail={isMember ? `${rankings.length} ranked players` : "Directory unlocks after approval"} tone="violet" />
               <StatCard value={totalTitles} label="Club titles" detail="Verified CueBracket titles" tone="amber" />
             </section>
+
+            {isMember ? <PersonalizedClubHome clubSlug={club.slug} ownProfile={ownProfile} ownRanking={ownRanking} registeredEvents={registeredEvents} announcements={announcements} openChallenges={challenges.filter((item) => item.status === "open" && item.creator_id !== userId).length} suggestedMembers={suggestedMembers} /> : null}
 
             <div className="grid gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(19rem,.65fr)]">
               <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_90%_0%,rgba(34,211,238,.12),transparent_22rem),linear-gradient(145deg,rgba(15,30,51,.9),rgba(3,9,21,.94))] p-5 sm:p-7">
@@ -216,7 +232,7 @@ export function ClubCommandCenter(props: Props) {
               </section>
             </div>
 
-            {spotlight ? <button type="button" onClick={() => chooseTab("rankings")} className="group w-full overflow-hidden rounded-[2rem] border border-amber-300/20 bg-[radial-gradient(circle_at_90%_0%,rgba(251,191,36,.16),transparent_22rem),linear-gradient(135deg,rgba(120,53,15,.22),rgba(15,23,42,.78))] p-5 text-left sm:p-7"><div className="flex flex-col gap-5 sm:flex-row sm:items-center"><span className="grid h-16 w-16 shrink-0 place-items-center rounded-[1.35rem] border border-amber-300/25 bg-amber-300/10 text-3xl">🏆</span><span className="min-w-0 flex-1"><span className="text-xs font-black uppercase tracking-[0.2em] text-amber-300">Member spotlight · {spotlightMember?.name ?? "Club member"}</span><span className="mt-2 block text-2xl font-black text-white group-hover:text-amber-100">{spotlight.title}</span><span className="mt-2 block line-clamp-2 text-sm leading-6 text-slate-400">{spotlight.description}</span></span><span className="shrink-0 text-sm font-black text-amber-300">Club honours →</span></div></button> : null}
+            {spotlight ? <Link href={`/clubs/${club.slug}/achievements/${spotlight.id}`} className="group block w-full overflow-hidden rounded-[2rem] border border-amber-300/20 bg-[radial-gradient(circle_at_90%_0%,rgba(251,191,36,.16),transparent_22rem),linear-gradient(135deg,rgba(120,53,15,.22),rgba(15,23,42,.78))] p-5 text-left sm:p-7"><div className="flex flex-col gap-5 sm:flex-row sm:items-center"><span className="grid h-16 w-16 shrink-0 place-items-center rounded-[1.35rem] border border-amber-300/25 bg-amber-300/10 text-3xl">🏆</span><span className="min-w-0 flex-1"><span className="text-xs font-black uppercase tracking-[0.2em] text-amber-300">Member spotlight · {spotlightMember?.name ?? spotlight.recipient_name}</span><span className="mt-2 block text-2xl font-black text-white group-hover:text-amber-100">{spotlight.title}</span><span className="mt-2 block line-clamp-2 text-sm leading-6 text-slate-400">{spotlight.description}</span></span><span className="shrink-0 text-sm font-black text-amber-300">Read story →</span></div></Link> : null}
 
             <ActivityFeed items={activity} chooseTab={chooseTab} />
 
@@ -239,6 +255,8 @@ export function ClubCommandCenter(props: Props) {
           </section>
         ) : null}
 
+        {activeTab === "gallery" ? <ClubGallery clubId={club.id} clubName={club.name} isAdmin={false} initialItems={galleryItems} /> : null}
+
         {activeTab === "rankings" ? (
           <section>
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="cb-kicker">Verified club rankings</p><h2 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">The club table</h2><p className="mt-2 max-w-2xl text-sm text-slate-400">Match wins, podiums and titles from cloud-synced CueBracket tournaments.</p></div><label className="relative sm:w-72"><span className="sr-only">Search rankings</span><input value={rankingQuery} onChange={(event) => setRankingQuery(event.target.value)} placeholder="Search a player" className="min-h-12 w-full rounded-xl border border-white/10 bg-slate-900/75 px-4 text-sm font-bold text-white outline-none focus:border-cyan-300/40" /></label></div>
@@ -251,7 +269,7 @@ export function ClubCommandCenter(props: Props) {
         {activeTab === "members" && isMember ? (
           <section>
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="cb-kicker">Club people</p><h2 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">Members & invitations</h2><p className="mt-2 text-sm text-slate-400">Find players, join the roster and manage trusted club roles.</p></div><input value={memberQuery} onChange={(event) => setMemberQuery(event.target.value)} placeholder="Search members" aria-label="Search club members" className="min-h-12 rounded-xl border border-white/10 bg-slate-900/75 px-4 text-sm font-bold text-white outline-none focus:border-cyan-300/40 sm:w-72" /></div>
-            <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(20rem,.65fr)] lg:items-start"><div><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{visibleMembers.map((member) => <MemberCard key={member.userId} member={member} achievementCount={achievementCounts[member.userId] ?? 0} />)}</div>{!visibleMembers.length ? <div className="rounded-2xl border border-dashed border-white/10 py-12 text-center text-slate-400">No members match that search.</div> : null}</div><InviteCard club={club} chooseTab={chooseTab} /></div>
+            <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(20rem,.65fr)] lg:items-start"><div><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{visibleMembers.map((member) => <MemberCard key={member.userId} clubId={club.id} userId={userId} member={member} achievementCount={achievementCounts[member.userId] ?? 0} />)}</div>{!visibleMembers.length ? <div className="rounded-2xl border border-dashed border-white/10 py-12 text-center text-slate-400">No members match that search.</div> : null}</div><InviteCard club={club} chooseTab={chooseTab} /></div>
             <div className="mt-7"><ClubCommunityPanel club={club} userId={userId} isFollowing={isFollowing} ownRole={ownRole} ownRequest={ownRequest} pendingRequests={[]} members={members} guide={guide} defaultRequestName={defaultRequestName} isAdmin={false} /></div>
           </section>
         ) : null}
@@ -262,7 +280,8 @@ export function ClubCommandCenter(props: Props) {
           <div className="space-y-6">
             <div><p className="cb-kicker">Inside the clubhouse</p><h2 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">Practice, news & venue</h2><p className="mt-2 text-sm text-slate-400">Everything that keeps the club moving between tournament days.</p></div>
             <ClubGuide clubId={club.id} isAdmin={false} location={club.location} />
-            <ClubPracticeBoard clubId={club.id} clubSlug={club.slug} userId={userId} isMember={Boolean(ownRole)} isAdmin={false} memberNames={memberNames} initialChallenges={challenges} />
+            {isMuted ? <div className="rounded-2xl border border-violet-300/20 bg-violet-300/10 px-4 py-3 text-sm font-bold text-violet-100">Your posting access is muted. You can read club content, but you cannot create or accept practice challenges.</div> : null}
+            <ClubPracticeBoard clubId={club.id} clubSlug={club.slug} userId={userId} isMember={!isMuted} isAdmin={false} memberNames={memberNames} initialChallenges={challenges} />
             <ClubAnnouncementBoard key={announcements.map((item) => item.updated_at).join("|")} clubId={club.id} initialAnnouncements={announcements} isAdmin={false} />
             <section className="rounded-[2rem] border border-violet-300/15 bg-slate-900/60 p-5 sm:p-7"><div className="flex items-end justify-between gap-4"><div><p className="cb-kicker !text-violet-300">League room</p><h2 className="mt-2 text-2xl font-black">Club seasons</h2></div></div><div className="mt-5 grid gap-4 lg:grid-cols-2"><LeagueList leagues={leagues} cards /></div></section>
             <section className="rounded-[2rem] border border-white/10 bg-slate-900/60 p-6"><p className="cb-kicker">Venue operations</p><div className="mt-3 flex items-center justify-between gap-4"><div><h2 className="text-2xl font-black">The live table floor</h2><p className="mt-2 text-sm leading-6 text-slate-400">Club organizers use this area to assign tables and keep matches moving in realtime.</p></div><span className="hidden rounded-2xl border border-white/10 bg-slate-950/50 px-5 py-4 text-center sm:block"><span className="block text-2xl font-black text-cyan-300">Live</span><span className="text-xs font-black uppercase text-slate-400">Organizer managed</span></span></div></section>
@@ -320,10 +339,33 @@ function LeagueList({ leagues, cards = false }: { leagues: ClubLeagueSummary[]; 
   return <>{leagues.map((item) => <Link key={item.id} href={`/league/${item.id}`} className={`${cards ? "" : "mt-3 first:mt-5"} block rounded-2xl border border-white/10 bg-slate-950/40 p-4 transition hover:border-violet-300/25`}><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate font-black text-white">{item.name}</p><p className="mt-1 text-xs font-bold text-slate-400">{item.payload?.players?.length ?? 0} players · {item.payload?.fixtures?.filter((fixture) => fixture.completed).length ?? 0} results</p></div><span className="rounded-full border border-violet-300/15 bg-violet-300/10 px-2.5 py-1 text-xs font-black text-violet-200">{item.season}</span></div><div className="mt-4 flex items-center justify-between text-xs font-bold"><span className="capitalize text-slate-400">{item.payload?.gameType ? cleanLabel(item.payload.gameType) : "League"} · {item.payload?.status ?? "draft"}</span><span className="text-violet-300">{item.payload?.playoff?.enabled ? `Top ${item.payload.playoff.qualifierCount} playoffs` : "League table"} →</span></div></Link>)}</>;
 }
 
-function MemberCard({ member, achievementCount }: { member: ClubMemberView; achievementCount: number }) {
+function PersonalizedClubHome({ clubSlug, ownProfile, ownRanking, registeredEvents, announcements, openChallenges, suggestedMembers }: {
+  clubSlug: string;
+  ownProfile: { avatar_url: string | null; username: string | null } | null;
+  ownRanking: ClubPlayerRankingRow | null;
+  registeredEvents: RegistrationSettingsRow[];
+  announcements: ClubAnnouncementRow[];
+  openChallenges: number;
+  suggestedMembers: ClubMemberView[];
+}) {
+  const profileComplete = Boolean(ownProfile?.avatar_url && ownProfile?.username);
+  const nextRegistration = [...registeredEvents].sort((a, b) => (a.scheduled_at ?? "9999").localeCompare(b.scheduled_at ?? "9999"))[0] ?? null;
+  return <section className="overflow-hidden rounded-[2rem] border border-violet-300/20 bg-[radial-gradient(circle_at_top_right,rgba(167,139,250,.16),transparent_25rem),linear-gradient(145deg,rgba(30,27,75,.58),rgba(3,9,21,.94))] p-5 sm:p-7">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-black uppercase tracking-[0.22em] text-violet-300">Your club home</p><h2 className="mt-2 text-2xl font-black sm:text-3xl">Picked for you</h2><p className="mt-2 text-sm text-slate-400">Your next action, current standing and club connections at a glance.</p></div><span className="w-fit rounded-full border border-violet-300/20 bg-violet-300/10 px-3 py-1.5 text-xs font-black text-violet-100">Member view</span></div>
+    <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <article className="rounded-2xl border border-white/10 bg-slate-950/45 p-4"><p className="text-xs font-black uppercase tracking-wider text-cyan-300">Your next event</p><p className="mt-2 font-black text-white">{nextRegistration?.event_name ?? "No registration yet"}</p><p className="mt-1 text-xs leading-5 text-slate-400">{nextRegistration ? clubDateLabel(nextRegistration.scheduled_at) : "Choose an open event when you are ready."}</p>{nextRegistration ? <Link href={`/register/${nextRegistration.tournament_id}`} className="mt-3 inline-block text-xs font-black text-cyan-300">Open registration →</Link> : null}</article>
+      <article className="rounded-2xl border border-white/10 bg-slate-950/45 p-4"><p className="text-xs font-black uppercase tracking-wider text-amber-300">Your club rank</p><p className="mt-2 text-2xl font-black text-white">{ownRanking ? `#${ownRanking.club_rank}` : "Unranked"}</p><p className="mt-1 text-xs leading-5 text-slate-400">{ownRanking ? `${ownRanking.ranking_points} points · ${ownRanking.wins} wins` : "Play a synced club event to enter the table."}</p></article>
+      <article className="rounded-2xl border border-white/10 bg-slate-950/45 p-4"><p className="text-xs font-black uppercase tracking-wider text-emerald-300">Club opportunities</p><p className="mt-2 text-2xl font-black text-white">{openChallenges}</p><p className="mt-1 text-xs leading-5 text-slate-400">Open practice challenge{openChallenges === 1 ? "" : "s"} · {announcements.length} club update{announcements.length === 1 ? "" : "s"}</p></article>
+      <article className="rounded-2xl border border-white/10 bg-slate-950/45 p-4"><p className="text-xs font-black uppercase tracking-wider text-violet-300">Player profile</p><p className="mt-2 font-black text-white">{profileComplete ? "Ready to be discovered" : "Complete your profile"}</p><p className="mt-1 text-xs leading-5 text-slate-400">{profileComplete ? "Club players can recognise and follow you." : "Add a username and photo so members know it is you."}</p>{!profileComplete ? <Link href="/account" className="mt-3 inline-block text-xs font-black text-violet-300">Update profile →</Link> : null}</article>
+    </div>
+    {suggestedMembers.length ? <div className="mt-5 border-t border-white/10 pt-5"><div className="flex items-end justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-wider text-slate-400">People you may know</p><p className="mt-1 text-sm font-black text-white">Follow club players</p></div><Link href={`/clubs/${clubSlug}?tab=members`} className="text-xs font-black text-violet-300">All members →</Link></div><div className="mt-3 grid gap-3 md:grid-cols-3">{suggestedMembers.map((member) => <article key={member.userId} className="rounded-xl border border-white/10 bg-slate-950/45 p-3"><div className="mb-3 flex items-center gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-xl border border-white/10 bg-violet-300/10 font-black text-violet-100">{member.avatarUrl ? <RemoteMedia src={member.avatarUrl} alt={`${member.name} profile picture`} width={80} height={80} sizes="40px" /> : member.name.charAt(0).toUpperCase()}</span><span className="min-w-0"><span className="block truncate text-sm font-black text-white">{member.name}</span><span className="block truncate text-xs text-slate-400">@{member.username}</span></span></div><FollowPlayerButton playerId={member.userId} profile={{ id: member.userId, username: member.username, display_name: member.name, tournament_name: member.name, avatar_url: member.avatarUrl, is_public: true }} /></article>)}</div></div> : null}
+  </section>;
+}
+
+function MemberCard({ clubId, userId, member, achievementCount }: { clubId: string; userId: string | null; member: ClubMemberView; achievementCount: number }) {
   const memberCode = member.userId.slice(0, 6).toUpperCase();
   const content = <>{member.avatarUrl ? <span className="h-12 w-12 shrink-0 overflow-hidden rounded-2xl border border-white/10"><RemoteMedia src={member.avatarUrl} alt={`${member.name} profile picture`} width={96} height={96} sizes="48px" /></span> : <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-white/10 bg-gradient-to-br from-cyan-300/15 to-blue-500/10 text-lg font-black text-cyan-100">{member.name.charAt(0).toUpperCase()}</span>}<span className="min-w-0 flex-1"><span className="block truncate font-black text-white">{member.name}</span><span className="mt-1 block truncate text-xs font-bold text-slate-400">{member.username ? `@${member.username}` : `Member ${memberCode}`}</span><span className="mt-1 block text-xs font-black text-cyan-300">{member.followerCount ?? 0} follower{member.followerCount === 1 ? "" : "s"}</span></span><span className="space-y-1 text-right"><span className="block rounded-full border border-white/10 px-2.5 py-1 text-xs font-black uppercase tracking-wider text-slate-400">{member.role}</span>{achievementCount ? <span className="block text-xs font-black text-amber-300">🏆 {achievementCount}</span> : null}</span></>;
-  return <article className="space-y-4 rounded-2xl border border-white/10 bg-slate-900/60 p-4"><Link href={`/players/${member.username ?? member.userId}`} className="flex items-center gap-3">{content}</Link>{member.isPublic && member.username ? <FollowPlayerButton playerId={member.userId} profile={{ id: member.userId, username: member.username, display_name: member.name, tournament_name: member.name, avatar_url: member.avatarUrl, is_public: true }} /> : <p className="text-xs text-slate-400">Open the member profile. Following becomes available when they publish a public username.</p>}</article>;
+  return <article className="space-y-4 rounded-2xl border border-white/10 bg-slate-900/60 p-4"><Link href={`/players/${member.username ?? member.userId}`} className="flex items-center gap-3">{content}</Link>{member.isPublic && member.username ? <FollowPlayerButton playerId={member.userId} profile={{ id: member.userId, username: member.username, display_name: member.name, tournament_name: member.name, avatar_url: member.avatarUrl, is_public: true }} /> : <p className="text-xs text-slate-400">Open the member profile. Following becomes available when they publish a public username.</p>}{userId && userId !== member.userId ? <ClubReportMemberButton clubId={clubId} memberId={member.userId} memberName={member.name} /> : null}</article>;
 }
 
 function InviteCard({ club, chooseTab }: { club: ClubRow; chooseTab: (tab: ClubTab) => void }) {
