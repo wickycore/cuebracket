@@ -12,13 +12,17 @@ interface PlayerProfilePageProps {
   params: Promise<{ username: string }>;
 }
 
-async function getProfile(username: string) {
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+async function getProfile(identifier: string) {
   const supabase = await createClient();
-  const { data } = await supabase
+  const query = supabase
     .from("profiles")
-    .select("id, display_name, username, tournament_name, bio, avatar_url, created_at, is_public")
-    .eq("username", username.toLowerCase())
-    .maybeSingle();
+    .select("id, display_name, username, tournament_name, bio, avatar_url, created_at, is_public");
+  const { data } = await (UUID_PATTERN.test(identifier)
+    ? query.eq("id", identifier)
+    : query.eq("username", identifier.toLowerCase())
+  ).maybeSingle();
 
   return data;
 }
@@ -30,9 +34,10 @@ export async function generateMetadata({ params }: PlayerProfilePageProps): Prom
   if (!profile) return { title: "Player not found" };
 
   return {
-    title: `${profile.display_name} (@${profile.username})`,
+    title: profile.username ? `${profile.display_name} (@${profile.username})` : `${profile.display_name} · Club member`,
     description: profile.bio || `${profile.display_name}'s CueBracket player profile.`,
-    alternates: { canonical: `/players/${profile.username}` },
+    alternates: { canonical: `/players/${profile.username ?? profile.id}` },
+    robots: profile.is_public && profile.username ? undefined : { index: false, follow: false },
   };
 }
 
@@ -80,7 +85,7 @@ export default async function PlayerProfilePage({ params }: PlayerProfilePagePro
               <div className="min-w-0">
                 <p className="text-xs font-black uppercase tracking-[0.24em] text-cyan-300">CueBracket player</p>
                 <h1 className="mt-2 break-words text-4xl font-black sm:text-5xl">{profile.display_name}</h1>
-                <p className="mt-2 text-base font-black text-slate-400">@{profile.username}</p>
+                <p className="mt-2 text-base font-black text-slate-400">{profile.username ? `@${profile.username}` : "Club member profile"}</p>
                 <p className="mt-3 inline-flex rounded-full border border-cyan-300/15 bg-cyan-300/10 px-3 py-1.5 text-xs font-black text-cyan-200">{followerCountData?.follower_count ?? 0} follower{followerCountData?.follower_count === 1 ? "" : "s"}</p>
               </div>
             </div>
@@ -89,7 +94,11 @@ export default async function PlayerProfilePage({ params }: PlayerProfilePagePro
               <p className="mt-7 max-w-2xl text-base leading-7 text-slate-300">{profile.bio}</p>
             ) : null}
 
-            <div className="mt-6 space-y-3"><PlayerFollowingProvider><FollowPlayerButton playerId={profile.id} profile={profile} /></PlayerFollowingProvider><p className="text-xs leading-5 text-slate-400">Follow first, then turn on match alerts. Enable phone delivery in Notifications.</p></div>
+            {profile.is_public && profile.username ? (
+              <div className="mt-6 space-y-3"><PlayerFollowingProvider><FollowPlayerButton playerId={profile.id} profile={profile} /></PlayerFollowingProvider><p className="text-xs leading-5 text-slate-400">Follow first, then turn on match alerts. Enable phone delivery in Notifications.</p></div>
+            ) : (
+              <p className="mt-6 rounded-2xl border border-white/10 bg-slate-950/45 px-4 py-3 text-sm leading-6 text-slate-400">This profile is shared privately with approved club members. Following becomes available if the player publishes their profile and chooses a username.</p>
+            )}
 
             <div className="mt-8 grid gap-4 sm:grid-cols-2">
               <div className="rounded-2xl border border-white/10 bg-slate-950/55 p-5">

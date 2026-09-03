@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
 import { ClubCommandCenter } from "@/components/ClubCommandCenter";
 import type { ClubMemberView } from "@/components/ClubCommunityPanel";
-import type { ClubGuideRow, ClubMembershipRequestRow, ClubMemberRow, ClubRow } from "@/lib/clubs";
+import type { ClubGuideRow, ClubMembershipRequestRow, ClubMemberRow, ClubRole, ClubRow } from "@/lib/clubs";
 import type {
   ClubAnnouncementRow,
   ClubAchievementRow,
@@ -50,21 +50,29 @@ export default async function ClubPage({ params, searchParams }: Props) {
   if (!club) notFound();
 
   const { data: { user } } = await supabase.auth.getUser();
-  const [membersResult, followersResult] = await Promise.all([
-    supabase.from("club_members").select("*").eq("club_id", club.id).order("created_at"),
-    supabase.from("club_followers").select("club_id, user_id").eq("club_id", club.id),
+  const [ownMembershipResult, ownFollowResult, memberCountResult] = await Promise.all([
+    user ? supabase.from("club_members").select("club_id,user_id,role,created_at").eq("club_id", club.id).eq("user_id", user.id).maybeSingle() : Promise.resolve({ data: null, error: null }),
+    user ? supabase.from("club_followers").select("club_id,user_id").eq("club_id", club.id).eq("user_id", user.id).maybeSingle() : Promise.resolve({ data: null, error: null }),
+    supabase.from("club_member_counts").select("member_count").eq("club_id", club.id).maybeSingle(),
   ]);
-  if (membersResult.error || followersResult.error) throw new Error("The club membership could not be loaded.");
+  if (ownMembershipResult.error || ownFollowResult.error || memberCountResult.error) throw new Error("The club membership could not be loaded.");
+  const ownMembership = ownMembershipResult.data as ClubMemberRow | null;
+  const ownRole: ClubRole | null = club.owner_id === user?.id ? "owner" : ownMembership?.role ?? null;
+  const isAdmin = ownRole === "owner" || ownRole === "admin";
+  const isMember = Boolean(ownRole || isAdmin);
+
+  const [membersResult, followerTotalResult] = await Promise.all([
+    isMember ? supabase.from("club_members").select("*").eq("club_id", club.id).order("created_at") : Promise.resolve({ data: [], error: null }),
+    isMember ? supabase.from("club_follower_counts").select("follower_count").eq("club_id", club.id).maybeSingle() : Promise.resolve({ data: null, error: null }),
+  ]);
+  if (membersResult.error || followerTotalResult.error) throw new Error("The private club membership could not be loaded.");
   const memberships = (membersResult.data ?? []) as ClubMemberRow[];
-  const followerIds = (followersResult.data ?? []).map((item) => item.user_id);
-  const ownMembership = user ? memberships.find((item) => item.user_id === user.id) ?? null : null;
-  const isAdmin = Boolean(user && (club.owner_id === user.id || ownMembership?.role === "owner" || ownMembership?.role === "admin"));
   const memberIds = memberships.map((item) => item.user_id);
   const currentDate = new Date();
   const currentTime = currentDate.toISOString();
   const calendarFloor = new Date(currentDate.getTime() - 30 * 86_400_000).toISOString();
 
-  const [profilesResult, followerCountsResult, guideResult, ownRequestResult, settingsResult, tournamentsResult, leaguesResult, rankingsResult, announcementsResult, calendarResult, challengesResult, achievementsResult] = await Promise.all([
+  const [profilesResult, followerCountsResult, guideResult, ownRequestResult, settingsResult, tournamentsResult, leaguesResult, rankingsResult, announcementsResult, calendarResult, challengesResult, achievementsResult, ownProfileResult] = await Promise.all([
     memberIds.length ? supabase.from("profiles").select("id, display_name, username, tournament_name, avatar_url, is_public").in("id", memberIds) : Promise.resolve({ data: [] }),
     memberIds.length ? supabase.from("player_follower_counts").select("player_id,follower_count").in("player_id", memberIds) : Promise.resolve({ data: [] }),
     supabase.from("club_guides").select("club_id,opening_hours,rules,revision,updated_at").eq("club_id", club.id).maybeSingle(),
@@ -73,13 +81,14 @@ export default async function ClubPage({ params, searchParams }: Props) {
     supabase.from("cloud_tournaments").select("id, name, venue, poster_url, format, race_to, bracket_size, status, is_public, created_at, updated_at").eq("club_id", club.id).order("updated_at", { ascending: false }).limit(100),
     supabase.from("cloud_leagues").select("id, name, season, payload, is_public, updated_at").eq("club_id", club.id).order("updated_at", { ascending: false }).limit(50),
     supabase.from("club_player_rankings").select("*").eq("club_id", club.id).order("club_rank").limit(100),
-    supabase.from("club_announcements").select("*").eq("club_id", club.id).order("is_pinned", { ascending: false }).order("published_at", { ascending: false }).limit(50),
-    supabase.from("club_calendar_events").select("*").eq("club_id", club.id).gte("starts_at", calendarFloor).order("starts_at", { ascending: true }).limit(100),
-    supabase.from("club_challenges").select("*").eq("club_id", club.id).neq("status", "closed").gte("expires_at", currentTime).order("updated_at", { ascending: false }).limit(100),
+    isMember ? supabase.from("club_announcements").select("*").eq("club_id", club.id).order("is_pinned", { ascending: false }).order("published_at", { ascending: false }).limit(50) : Promise.resolve({ data: [], error: null }),
+    isMember ? supabase.from("club_calendar_events").select("*").eq("club_id", club.id).gte("starts_at", calendarFloor).order("starts_at", { ascending: true }).limit(100) : Promise.resolve({ data: [], error: null }),
+    isMember ? supabase.from("club_challenges").select("*").eq("club_id", club.id).neq("status", "closed").gte("expires_at", currentTime).order("updated_at", { ascending: false }).limit(100) : Promise.resolve({ data: [], error: null }),
     supabase.from("club_achievements").select("*").eq("club_id", club.id).order("is_featured", { ascending: false }).order("awarded_on", { ascending: false }).order("created_at", { ascending: false }).limit(100),
+    user ? supabase.from("profiles").select("display_name,tournament_name").eq("id", user.id).maybeSingle() : Promise.resolve({ data: null, error: null }),
   ]);
 
-  const sectionError = [profilesResult, followerCountsResult, guideResult, ownRequestResult, settingsResult, tournamentsResult, leaguesResult, rankingsResult, announcementsResult, calendarResult, challengesResult, achievementsResult]
+  const sectionError = [profilesResult, followerCountsResult, guideResult, ownRequestResult, settingsResult, tournamentsResult, leaguesResult, rankingsResult, announcementsResult, calendarResult, challengesResult, achievementsResult, ownProfileResult]
     .find((result) => "error" in result && result.error);
   if (sectionError) throw new Error("Some club information could not be loaded.");
 
@@ -97,7 +106,7 @@ export default async function ClubPage({ params, searchParams }: Props) {
       followerCount: followerCountMap.get(membership.user_id) ?? 0,
     };
   });
-  const ownProfile = user ? profileMap.get(user.id) : null;
+  const ownProfile = ownProfileResult.data;
   const settings = (settingsResult.data ?? []) as RegistrationSettingsRow[];
   const calendarEvents = (calendarResult.data ?? []) as ClubCalendarEventRow[];
   const calendarEventIds = calendarEvents.map((item) => item.id);
@@ -126,9 +135,10 @@ export default async function ClubPage({ params, searchParams }: Props) {
         club={club}
         userId={user?.id ?? null}
         isAdmin={isAdmin}
-        isFollowing={Boolean(user && followerIds.includes(user.id))}
-        followerCount={followerIds.length}
-        ownRole={ownMembership?.role ?? null}
+        isFollowing={Boolean(ownFollowResult.data)}
+        memberCount={memberCountResult.data?.member_count ?? 0}
+        followerCount={isMember ? followerTotalResult.data?.follower_count ?? 0 : null}
+        ownRole={ownRole}
         ownRequest={ownRequestResult.data as ClubMembershipRequestRow | null}
         members={members}
         defaultRequestName={ownProfile?.tournament_name || ownProfile?.display_name || ""}

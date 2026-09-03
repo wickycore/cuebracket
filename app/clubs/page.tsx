@@ -23,30 +23,25 @@ export default async function ClubsPage() {
   const clubs = (clubsData ?? []) as ClubRow[];
   const clubIds = clubs.map((club) => club.id);
 
-  const [{ data: members, error: membersError }, { data: followers, error: followersError }] = clubIds.length
-    ? await Promise.all([
-        supabase.from("club_members").select("club_id").in("club_id", clubIds),
-        supabase.from("club_followers").select("club_id").in("club_id", clubIds),
-      ])
-    : [{ data: [], error: null }, { data: [], error: null }];
+  const { data: memberTotals, error: membersError } = clubIds.length
+    ? await supabase.from("club_member_counts").select("club_id,member_count").in("club_id", clubIds)
+    : { data: [], error: null };
 
-  const directoryError = clubsError || membersError || followersError;
+  const directoryError = clubsError || membersError;
   if (directoryError) {
     console.error("Club directory could not load", directoryError);
     return (
       <main className="min-h-dvh bg-[#020617] text-white">
         <AppHeader />
         <div className="mx-auto max-w-7xl px-5 py-10 sm:px-8 sm:py-14">
-          <DataLoadNotice title="The club directory is temporarily unavailable" detail="We could not verify the latest clubs and follower totals, so CueBracket has not shown a misleading empty directory." />
+          <DataLoadNotice title="The club directory is temporarily unavailable" detail="We could not verify the latest clubs and member totals, so CueBracket has not shown a misleading empty directory." />
         </div>
       </main>
     );
   }
 
   const memberCounts = new Map<string, number>();
-  const followerCounts = new Map<string, number>();
-  for (const item of members ?? []) memberCounts.set(item.club_id, (memberCounts.get(item.club_id) ?? 0) + 1);
-  for (const item of followers ?? []) followerCounts.set(item.club_id, (followerCounts.get(item.club_id) ?? 0) + 1);
+  for (const item of memberTotals ?? []) memberCounts.set(item.club_id, item.member_count);
 
   return (
     <main className="min-h-dvh bg-[#020617] text-white">
@@ -94,7 +89,6 @@ export default async function ClubsPage() {
                   </p>
                   <div className="mt-5 flex items-center gap-4 border-t border-white/10 pt-4 text-xs font-black uppercase tracking-wider text-slate-400">
                     <span>{memberCounts.get(club.id) ?? 0} members</span>
-                    <span>{followerCounts.get(club.id) ?? 0} followers</span>
                     <span className="ml-auto text-cyan-300">View club →</span>
                   </div>
                 </Link>

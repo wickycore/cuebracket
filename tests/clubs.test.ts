@@ -74,3 +74,45 @@ test("club organizers are notified and management refreshes when membership requ
   assert.match(panel, /Refresh requests/);
   assert.match(workspace, /We will not show an incorrect zero/);
 });
+
+test("public club pages expose a showcase while approved members unlock the private club", () => {
+  const privacyMigration = readFileSync(
+    new URL("../supabase/migrations/20260903090323_club_public_showcase_member_privacy.sql", import.meta.url),
+    "utf8",
+  );
+  const directory = readFileSync(new URL("../app/clubs/page.tsx", import.meta.url), "utf8");
+  const clubPage = readFileSync(new URL("../app/clubs/[slug]/page.tsx", import.meta.url), "utf8");
+  const commandCenter = readFileSync(new URL("../components/ClubCommandCenter.tsx", import.meta.url), "utf8");
+
+  assert.match(privacyMigration, /create policy "Approved members read their club roster"/);
+  assert.match(privacyMigration, /create policy "Followers read own follow and organizers read followers"/);
+  assert.match(privacyMigration, /revoke select on table public\.club_followers from anon/);
+  assert.match(privacyMigration, /create table if not exists public\.club_member_counts/);
+  assert.match(privacyMigration, /create table if not exists public\.club_follower_counts/);
+  assert.match(privacyMigration, /create policy "Approved members read club announcements"/);
+  assert.match(privacyMigration, /create policy "Approved members read club calendar events"/);
+  assert.match(privacyMigration, /create policy "Approved members read club challenges"/);
+  assert.match(directory, /from\("club_member_counts"\)/);
+  assert.doesNotMatch(directory, /from\("club_followers"\)/);
+  assert.match(clubPage, /isMember \? supabase\.from\("club_members"\)/);
+  assert.match(clubPage, /isMember \? supabase\.from\("club_announcements"\)/);
+  assert.match(commandCenter, /The member directory is private/);
+  assert.match(commandCenter, /The clubhouse is for approved members/);
+});
+
+test("approved members can open every clubmate profile without exposing private profiles publicly", () => {
+  const privacyMigration = readFileSync(
+    new URL("../supabase/migrations/20260903090323_club_public_showcase_member_privacy.sql", import.meta.url),
+    "utf8",
+  );
+  const commandCenter = readFileSync(new URL("../components/ClubCommandCenter.tsx", import.meta.url), "utf8");
+  const profilePage = readFileSync(new URL("../app/players/[username]/page.tsx", import.meta.url), "utf8");
+
+  assert.match(privacyMigration, /function private\.shares_club_with\(target_user uuid\)/);
+  assert.match(privacyMigration, /create policy "Public or shared club profiles readable"/);
+  assert.match(privacyMigration, /or private\.shares_club_with\(id\)/);
+  assert.match(commandCenter, /member\.username \?\? member\.userId/);
+  assert.match(profilePage, /UUID_PATTERN\.test\(identifier\)/);
+  assert.match(profilePage, /robots: profile\.is_public && profile\.username/);
+  assert.match(profilePage, /This profile is shared privately with approved club members/);
+});
