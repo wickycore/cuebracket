@@ -123,6 +123,8 @@ export interface ClubAchievementRow {
   image_url: string | null;
   awarded_on: string;
   is_featured: boolean;
+  source: "manual" | "system";
+  source_key: string | null;
   created_at: string;
   updated_at: string;
 }

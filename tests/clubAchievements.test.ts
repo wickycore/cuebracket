@@ -13,6 +13,10 @@ const migration = readFileSync(
   new URL("../supabase/migrations/20260901083517_add_club_achievement_wall.sql", import.meta.url),
   "utf8",
 );
+const automaticMigration = readFileSync(
+  new URL("../supabase/migrations/20260904123000_automatic_club_recognition.sql", import.meta.url),
+  "utf8",
+);
 const accountDeletionMigration = readFileSync(
   new URL("../supabase/migrations/20260901083916_align_club_achievement_account_deletion.sql", import.meta.url),
   "utf8",
@@ -54,11 +58,24 @@ test("achievement wall supports filters, spotlights and organizer controls", () 
   for (const label of ["All honours", "Featured", "Competition", "Community", "Recognise a member", "Feature on Home"]) {
     assert.match(wall, new RegExp(label));
   }
-  for (const label of ["5 events attended", "Club MVP this month", "Community champion"]) assert.match(wall, new RegExp(label));
+  assert.match(wall, /awarded automatically/);
+  assert.match(wall, /Automatically verified by CueBracket/);
   assert.match(page, /from\("club_achievements"\)/);
   assert.match(commandCenter, /ClubAchievementWall/);
   assert.match(commandCenter, /Member spotlight/);
   assert.match(commandCenter, /achievementCount/);
+});
+
+test("attendance milestones and monthly MVP honours are automatic and idempotent", () => {
+  assert.match(automaticMigration, /array\[5, 10, 25, 50, 100\]/);
+  assert.match(automaticMigration, /registration\.status = 'checked_in'/);
+  assert.match(automaticMigration, /rsvp\.response = 'going'/);
+  assert.match(automaticMigration, /having count\(\*\) >= 3/);
+  assert.match(automaticMigration, /club_achievements_system_key_idx/);
+  assert.match(automaticMigration, /on conflict \(club_id, source_key\).*do nothing/);
+  assert.match(automaticMigration, /cuebracket-club-recognition-daily/);
+  assert.match(automaticMigration, /revoke all on function private\.refresh_automatic_club_recognition/);
+  assert.doesNotMatch(wall, /recognitionPresets/);
 });
 
 test("club achievements join the activity feed and route to rankings", () => {
