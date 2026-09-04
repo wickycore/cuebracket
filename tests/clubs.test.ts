@@ -116,3 +116,24 @@ test("approved members can open every clubmate profile without exposing private 
   assert.match(profilePage, /robots: profile\.is_public && profile\.username/);
   assert.match(profilePage, /This profile is shared privately with approved club members/);
 });
+
+test("only the owner receives a guarded club deletion workflow", () => {
+  const workspace = readFileSync(new URL("../components/ClubAdminWorkspace.tsx", import.meta.url), "utf8");
+  const panel = readFileSync(new URL("../components/ClubDeletePanel.tsx", import.meta.url), "utf8");
+  const client = readFileSync(new URL("../lib/cloud/clubs.ts", import.meta.url), "utf8");
+  const migration = readFileSync(
+    new URL("../supabase/migrations/20260904225906_allow_owner_club_deletion.sql", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(workspace, /props\.role === "owner" \? <ClubDeletePanel/);
+  assert.match(panel, /confirmation === club\.name/);
+  assert.match(panel, /Permanently delete club/);
+  assert.match(panel, /Existing tournaments and leagues stay/);
+  assert.match(client, /club\.owner_id !== user\.id/);
+  assert.match(client, /\.eq\("owner_id", user\.id\)/);
+  assert.match(client, /path\?\.startsWith\(clubFolder\)/);
+  assert.match(migration, /if club_owner is null then/);
+  assert.match(migration, /The club owner membership cannot be removed/);
+  assert.match(migration, /revoke all on function private\.protect_club_owner_membership\(\)/);
+});

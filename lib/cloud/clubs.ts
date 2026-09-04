@@ -1,6 +1,7 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
+import { MEDIA_BUCKET, mediaPathFromUrl } from "@/lib/cloud/media";
 import {
   validateClubDetails,
   type ClubMembershipRequestRow,
@@ -202,4 +203,45 @@ export async function removeClubMember(clubId: string, userId: string) {
     .maybeSingle();
   if (error) throw error;
   if (!data) throw new Error("Only the club owner can remove an admin.");
+}
+
+export async function deleteClub(clubId: string) {
+  const { supabase, user } = await requireUser();
+  const { data: club, error: clubError } = await supabase
+    .from("clubs")
+    .select("id, owner_id, logo_url")
+    .eq("id", clubId)
+    .single();
+  if (clubError) throw clubError;
+  if (club.owner_id !== user.id) throw new Error("Only the club owner can delete this club.");
+
+  const [galleryResult, achievementResult] = await Promise.all([
+    supabase.from("club_gallery_items").select("image_url").eq("club_id", clubId),
+    supabase.from("club_achievements").select("image_url").eq("club_id", clubId),
+  ]);
+  if (galleryResult.error || achievementResult.error) {
+    throw new Error("The club media could not be checked. Nothing was deleted.");
+  }
+
+  const clubFolder = `clubs/${clubId}/`;
+  const mediaPaths = [...new Set([
+    mediaPathFromUrl(club.logo_url),
+    ...(galleryResult.data ?? []).map((item) => mediaPathFromUrl(item.image_url)),
+    ...(achievementResult.data ?? []).map((item) => mediaPathFromUrl(item.image_url)),
+  ].filter((path): path is string => Boolean(path?.startsWith(clubFolder))))];
+
+  if (mediaPaths.length) {
+    const { error: mediaError } = await supabase.storage.from(MEDIA_BUCKET).remove(mediaPaths);
+    if (mediaError) throw new Error("The club images could not be removed. Nothing else was deleted.");
+  }
+
+  const { data, error } = await supabase
+    .from("clubs")
+    .delete()
+    .eq("id", clubId)
+    .eq("owner_id", user.id)
+    .select("id")
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error("The club was not deleted. Only its owner can complete this action.");
 }
