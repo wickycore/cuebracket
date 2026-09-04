@@ -40,6 +40,12 @@ const filters: Array<{ id: WallFilter; label: string }> = [
   { id: "community", label: "Community" },
 ];
 
+const recognitionPresets = [
+  { label: "5 events attended", kind: "milestone" as const, title: "5 Events Attended", description: "Recognised for showing up and supporting five club events." },
+  { label: "Club MVP this month", kind: "contribution" as const, title: "Club MVP This Month", description: "Recognised for outstanding play, consistency and contribution to the club this month." },
+  { label: "Community champion", kind: "sportsmanship" as const, title: "Community Champion", description: "Recognised for sportsmanship and helping make the club welcoming." },
+];
+
 function todayValue() {
   const now = new Date();
   const local = new Date(now.getTime() - now.getTimezoneOffset() * 60_000);
@@ -175,6 +181,7 @@ export function ClubAchievementWall({ clubId, clubSlug, isAdmin, members, initia
           <details className="mt-6 rounded-2xl border border-amber-300/15 bg-amber-300/[0.045] p-4 sm:p-5">
             <summary className="cursor-pointer font-black text-amber-100">+ Recognise a member</summary>
             <form onSubmit={submit} className="mt-5 grid gap-4 sm:grid-cols-2">
+              <fieldset className="sm:col-span-2"><legend className="text-sm font-bold text-slate-300">Quick recognition</legend><div className="mt-2 flex flex-wrap gap-2">{recognitionPresets.map((preset) => <button key={preset.label} type="button" onClick={() => { setKind(preset.kind); setTitle(preset.title); setDescription(preset.description); setIsFeatured(preset.title.includes("MVP")); }} className="min-h-10 rounded-xl border border-amber-300/20 bg-amber-300/[0.055] px-3 text-xs font-black text-amber-100 hover:bg-amber-300/10">{preset.label}</button>)}</div><p className="mt-2 text-xs text-slate-400">Use a preset or write custom recognition. Organizers confirm attendance and MVP awards before publishing.</p></fieldset>
               <label className="text-sm font-bold text-slate-300">Club member<select value={recipientId} onChange={(event) => setRecipientId(event.target.value)} required className="mt-2 min-h-12 w-full rounded-xl border border-white/10 bg-slate-950 px-3 text-white outline-none"><option value="" disabled>Choose a member</option>{members.map((member) => <option key={member.userId} value={member.userId}>{member.name}</option>)}</select></label>
               <label className="text-sm font-bold text-slate-300">Recognition type<select value={kind} onChange={(event) => setKind(event.target.value as ClubAchievementKind)} className="mt-2 min-h-12 w-full rounded-xl border border-white/10 bg-slate-950 px-3 text-white outline-none">{kinds.map((item) => <option key={item} value={item}>{clubAchievementIcon(item)} {clubAchievementLabel(item)}</option>)}</select></label>
               <label className="text-sm font-bold text-slate-300 sm:col-span-2">Achievement title<input value={title} onChange={(event) => setTitle(event.target.value)} minLength={3} maxLength={80} required placeholder="e.g. Nairobi Open Champion" className="mt-2 min-h-12 w-full rounded-xl border border-white/10 bg-slate-950 px-4 text-white outline-none focus:border-amber-300/40" /></label>

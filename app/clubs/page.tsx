@@ -2,8 +2,8 @@ import Link from "next/link";
 
 
 import { AppHeader } from "@/components/AppHeader";
+import { ClubDirectory } from "@/components/ClubDirectory";
 import { DataLoadNotice } from "@/components/DataLoadNotice";
-import { RemoteMedia } from "@/components/RemoteMedia";
 import type { ClubRow } from "@/lib/clubs";
 import { createClient } from "@/lib/supabase/server";
 
@@ -72,28 +72,7 @@ export default async function ClubsPage() {
           </div>
 
           {clubs.length ? (
-            <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {clubs.map((club) => (
-                <Link key={club.id} href={`/clubs/${club.slug}`} className="group rounded-[1.75rem] border border-white/10 bg-slate-900/65 p-6 transition hover:-translate-y-0.5 hover:border-cyan-400/30 hover:bg-slate-900">
-                  <div className="flex items-start gap-4">
-                    <div className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-2xl border border-cyan-300/20 bg-cyan-400/10 text-2xl font-black text-cyan-200">
-                      {club.logo_url ? <RemoteMedia src={club.logo_url} alt={`${club.name} logo`} width={112} height={112} sizes="56px" /> : club.name.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="min-w-0">
-                      <h3 className="truncate text-xl font-black group-hover:text-cyan-200">{club.name}</h3>
-                      <p className="mt-1 truncate text-sm font-bold text-slate-400">{club.location || "Online club"}</p>
-                    </div>
-                  </div>
-                  <p className="mt-5 line-clamp-3 min-h-[4.5rem] text-sm leading-6 text-slate-400">
-                    {club.description || "Follow this club to discover its next CueBracket tournament."}
-                  </p>
-                  <div className="mt-5 flex items-center gap-4 border-t border-white/10 pt-4 text-xs font-black uppercase tracking-wider text-slate-400">
-                    <span>{memberCounts.get(club.id) ?? 0} members</span>
-                    <span className="ml-auto text-cyan-300">View club →</span>
-                  </div>
-                </Link>
-              ))}
-            </div>
+            <ClubDirectory clubs={clubs.map((club) => ({ ...club, memberCount: memberCounts.get(club.id) ?? 0 }))} />
           ) : (
             <div className="mt-5 rounded-[1.75rem] border border-dashed border-white/10 bg-white/[0.025] p-10 text-center">
               <p className="text-xl font-black">The club directory is ready.</p>

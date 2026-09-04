@@ -28,6 +28,12 @@ const communityMigration = readFileSync(
   new URL("../supabase/migrations/20260831221136_add_club_calendar_and_practice_board.sql", import.meta.url),
   "utf8",
 );
+const recurringMigration = readFileSync(
+  new URL("../supabase/migrations/20260904094629_add_recurring_club_calendar_events.sql", import.meta.url),
+  "utf8",
+);
+const calendarBoard = readFileSync(new URL("../components/ClubCalendarBoard.tsx", import.meta.url), "utf8");
+const clubDirectory = readFileSync(new URL("../components/ClubDirectory.tsx", import.meta.url), "utf8");
 
 test("club announcements are validated before they reach Supabase", () => {
   assert.equal(validateClubAnnouncement({ kind: "event", title: "  Friday   Open ", body: " Doors at 6. " }).ok, true);
@@ -88,8 +94,24 @@ test("calendar events and practice challenges are validated before storage", () 
   const now = new Date("2026-08-31T12:00:00Z");
   assert.equal(validateClubCalendarEvent({ title: "  Friday   practice ", kind: "practice", description: "", startsAt: "2026-09-01T18:00:00Z", location: "Main room", capacity: 12 }, now).ok, true);
   assert.equal(validateClubCalendarEvent({ title: "Past event", kind: "social", description: "", startsAt: "2026-08-30T18:00:00Z", location: "", capacity: null }, now).ok, false);
+  assert.equal(validateClubCalendarEvent({ title: "Tuesday league night", kind: "practice", description: "", startsAt: "2026-09-01T18:00:00Z", location: "Main room", recurrence: "weekly", recurrenceCount: 12 }, now).ok, true);
+  assert.equal(validateClubCalendarEvent({ title: "Never ending series", kind: "practice", description: "", startsAt: "2026-09-01T18:00:00Z", location: "Main room", recurrence: "weekly", recurrenceCount: 53 }, now).ok, false);
   assert.equal(validateClubChallenge({ title: "Race to seven", message: "Friendly set", gameType: "8-ball", skillLevel: "any", raceTo: 7, preferredAt: "2026-09-01T18:00:00Z", venue: "Table 2", expiresAt: "2026-09-14T12:00:00Z" }, now).ok, true);
   assert.equal(validateClubChallenge({ title: "No", message: "", gameType: "any", skillLevel: "any", venue: "", expiresAt: "2026-09-14T12:00:00Z" }, now).ok, false);
+});
+
+test("clubs support recurring schedules, directory discovery and friendly new-club onboarding", () => {
+  assert.match(recurringMigration, /add column series_id uuid/);
+  assert.match(recurringMigration, /recurrence in \('none', 'weekly'\)/);
+  assert.match(recurringMigration, /club_calendar_events_series_idx/);
+  assert.match(calendarBoard, /Every week/);
+  assert.match(calendarBoard, /Number of weeks/);
+  assert.match(clubDirectory, /Search by club name, location or description/);
+  assert.match(clubDirectory, /All locations/);
+  assert.match(commandCenter, /Bring your club page to life/);
+  assert.match(commandCenter, /New club/);
+  assert.match(commandCenter, /Request pending/);
+  assert.match(commandCenter, /Go to Clubhouse/);
 });
 
 test("club activity merges community updates into newest-first order", () => {

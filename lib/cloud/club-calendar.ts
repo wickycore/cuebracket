@@ -4,6 +4,7 @@ import {
   validateClubCalendarEvent,
   type ClubCalendarEventRow,
   type ClubCalendarKind,
+  type ClubCalendarRecurrence,
   type ClubCalendarResponse,
   type ClubCalendarRsvpRow,
 } from "@/lib/club-command-center";
@@ -26,23 +27,33 @@ export async function createClubCalendarEvent(input: {
   endsAt?: string | null;
   location: string;
   capacity?: number | null;
+  recurrence?: ClubCalendarRecurrence;
+  recurrenceCount?: number;
 }) {
   const validation = validateClubCalendarEvent(input);
   if (!validation.ok) throw new Error(validation.message);
   const { supabase } = await requireUser();
   const { value } = validation;
-  const { data, error } = await supabase.from("club_calendar_events").insert({
-    club_id: input.clubId,
-    title: value.title,
-    kind: value.kind,
-    description: value.description,
-    starts_at: value.startsAt.toISOString(),
-    ends_at: value.endsAt?.toISOString() ?? null,
-    location: value.location,
-    capacity: value.capacity,
-  }).select("*").single();
+  const seriesId = value.recurrence === "weekly" ? crypto.randomUUID() : null;
+  const duration = value.endsAt ? value.endsAt.getTime() - value.startsAt.getTime() : null;
+  const rows = Array.from({ length: value.recurrenceCount }, (_, index) => {
+    const occurrenceStart = new Date(value.startsAt.getTime() + index * 7 * 86_400_000);
+    return {
+      club_id: input.clubId,
+      title: value.title,
+      kind: value.kind,
+      description: value.description,
+      starts_at: occurrenceStart.toISOString(),
+      ends_at: duration === null ? null : new Date(occurrenceStart.getTime() + duration).toISOString(),
+      location: value.location,
+      capacity: value.capacity,
+      series_id: seriesId,
+      recurrence: value.recurrence,
+    };
+  });
+  const { data, error } = await supabase.from("club_calendar_events").insert(rows).select("*").order("starts_at");
   if (error) throw error;
-  return data as ClubCalendarEventRow;
+  return data as ClubCalendarEventRow[];
 }
 
 export async function setClubCalendarRsvp(eventId: string, response: ClubCalendarResponse | null) {

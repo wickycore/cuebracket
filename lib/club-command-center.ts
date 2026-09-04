@@ -51,6 +51,7 @@ export interface ClubRegistrationCount {
 
 export type ClubCalendarKind = "tournament" | "practice" | "meeting" | "social" | "other";
 export type ClubCalendarResponse = "going" | "maybe";
+export type ClubCalendarRecurrence = "none" | "weekly";
 
 export interface ClubCalendarEventRow {
   id: string;
@@ -66,6 +67,8 @@ export interface ClubCalendarEventRow {
   is_cancelled: boolean;
   going_count: number;
   maybe_count: number;
+  series_id: string | null;
+  recurrence: ClubCalendarRecurrence;
   created_at: string;
   updated_at: string;
 }
@@ -189,6 +192,8 @@ export function validateClubCalendarEvent(input: {
   endsAt?: string | null;
   location: string;
   capacity?: number | null;
+  recurrence?: ClubCalendarRecurrence;
+  recurrenceCount?: number;
 }, now = new Date()) {
   const startsAt = new Date(input.startsAt);
   const endsAt = input.endsAt ? new Date(input.endsAt) : null;
@@ -200,6 +205,8 @@ export function validateClubCalendarEvent(input: {
     endsAt,
     location: input.location.trim().replace(/\s+/g, " "),
     capacity: input.capacity ?? null,
+    recurrence: input.recurrence ?? "none",
+    recurrenceCount: input.recurrenceCount ?? 1,
   };
   const kinds: ClubCalendarKind[] = ["tournament", "practice", "meeting", "social", "other"];
   if (value.title.length < 3 || value.title.length > 100) return { ok: false as const, message: "Event title must contain 3–100 characters." };
@@ -209,6 +216,9 @@ export function validateClubCalendarEvent(input: {
   if (!Number.isFinite(value.startsAt.getTime()) || value.startsAt <= now) return { ok: false as const, message: "Choose a future event time." };
   if (value.endsAt && (!Number.isFinite(value.endsAt.getTime()) || value.endsAt <= value.startsAt)) return { ok: false as const, message: "The end time must be after the start time." };
   if (value.capacity !== null && (!Number.isInteger(value.capacity) || value.capacity < 2 || value.capacity > 500)) return { ok: false as const, message: "Capacity must be between 2 and 500." };
+  if (!(["none", "weekly"] as ClubCalendarRecurrence[]).includes(value.recurrence)) return { ok: false as const, message: "Choose a valid repeat option." };
+  if (!Number.isInteger(value.recurrenceCount) || value.recurrenceCount < 1 || value.recurrenceCount > 52) return { ok: false as const, message: "Recurring events can repeat up to 52 times." };
+  if (value.recurrence === "none") value.recurrenceCount = 1;
   return { ok: true as const, value };
 }
 

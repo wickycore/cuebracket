@@ -54,6 +54,7 @@ test("achievement wall supports filters, spotlights and organizer controls", () 
   for (const label of ["All honours", "Featured", "Competition", "Community", "Recognise a member", "Feature on Home"]) {
     assert.match(wall, new RegExp(label));
   }
+  for (const label of ["5 events attended", "Club MVP this month", "Community champion"]) assert.match(wall, new RegExp(label));
   assert.match(page, /from\("club_achievements"\)/);
   assert.match(commandCenter, /ClubAchievementWall/);
   assert.match(commandCenter, /Member spotlight/);
