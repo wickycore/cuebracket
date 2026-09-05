@@ -45,3 +45,18 @@ test("public registration clearly explains name visibility", async ({ page }) =>
   await expect(page.getByText(/tournament name will appear publicly/i)).toBeVisible();
   await expect(page.getByRole("button", { name: "Request my place" })).toBeVisible();
 });
+
+test("invalid spectator links resolve to a retryable not-found state", async ({ page }) => {
+  await page.goto("/cloud/live/not-a-real-tournament-id");
+  await expect(page.getByRole("heading", { name: "Tournament not found" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Try again" })).toBeVisible();
+  await expect(page.getByText("Connecting to tournament…")).toHaveCount(0);
+});
+
+test("public spectator details arrive without a client-only connecting screen", async ({ page }) => {
+  test.skip(!process.env.E2E_SPECTATOR_ID, "Set E2E_SPECTATOR_ID to a public cloud tournament.");
+  await page.goto(`/cloud/live/${process.env.E2E_SPECTATOR_ID}`);
+  await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
+  await expect(page.getByText("Connecting to tournament…")).toHaveCount(0);
+  await expect(page).toHaveTitle(/CueBracket Pro/);
+});

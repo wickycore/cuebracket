@@ -56,6 +56,7 @@ export interface BracketMatch {
   endedAt?: string | null;
   notes?: string;
   scoreHistory?: ScoreSnapshot[];
+  raceTo?: number;
   source1?: MatchSource;
   source2?: MatchSource;
 }
@@ -273,7 +274,7 @@ export const FORMAT_LABELS: Record<TournamentFormat, string> = {
   round_robin: "Round robin",
   swiss: "Swiss system",
   free_for_all: "Free for all",
-  leaderboard: "Leaderboard",
+  leaderboard: "Sets & standings",
 };
 
 export function getFormatLabel(format: TournamentFormat) {
@@ -304,6 +305,9 @@ function normalizeMatch(match: BracketMatch): BracketMatch {
     endedAt: match.endedAt ?? null,
     notes: match.notes ?? "",
     scoreHistory: match.scoreHistory ?? [],
+    raceTo: Number.isInteger(match.raceTo) && (match.raceTo ?? 0) > 0
+      ? Math.min(50, match.raceTo as number)
+      : undefined,
   };
 }
 
@@ -844,7 +848,7 @@ export function getTournamentChampionDescription(tournament: Tournament) {
   }
 
   if (competition.type === "leaderboard" && top) {
-    return `${champion} finishes top of the leaderboard with ${formatStandingPoints(top.points)} points.`;
+    return `${champion} finishes top of the sets standings with ${formatStandingPoints(top.points)} points after ${top.played} match${top.played === 1 ? "" : "es"}.`;
   }
 
   if (competition.type === "two_stage") {

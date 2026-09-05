@@ -32,7 +32,7 @@ const formats: Array<{
   { value: "round_robin", name: "Round Robin", icon: "🔄", description: "Every player meets every other player and earns table points.", bestFor: "Fair club competitions" },
   { value: "swiss", name: "Swiss System", icon: "♟️", description: "Players with similar records are paired without repeated opponents.", bestFor: "Large fields, fewer rounds" },
   { value: "free_for_all", name: "Free For All", icon: "🔥", description: "Multi-player heats award placement points across several rounds.", bestFor: "Creative club events" },
-  { value: "leaderboard", name: "Leaderboard", icon: "📈", description: "A season-style schedule with wins, frame difference and bonus points.", bestFor: "Ongoing rankings" },
+  { value: "leaderboard", name: "Sets & Standings", icon: "📊", description: "Players or teams contest repeated sets while CueBracket tracks wins, losses and points.", bestFor: "Race sets, team battles and mini-leagues" },
 ];
 
 const eliminationCapacities = [2, 4, 8, 16, 32, 64, 128];
@@ -310,8 +310,8 @@ export default function NewTournamentPage() {
 
             {type === "single_stage" && format === "leaderboard" ? (
               <div className="mt-6 grid gap-5 sm:grid-cols-2">
-                <label><span className="mb-2 block text-sm font-bold text-slate-300">Schedule cycles</span><input type="number" min={1} max={6} value={options.leaderboardCycles} onChange={(event) => updateOption("leaderboardCycles", Math.max(1, Number(event.target.value)))} className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3.5" /></label>
-                <div className="rounded-2xl border border-white/10 bg-slate-950/45 p-4 text-sm leading-6 text-slate-400">Bonus and penalty points remain editable during the competition for disciplinary or club-award rules.</div>
+                <label><span className="mb-2 block text-sm font-bold text-slate-300">Sets per matchup</span><input type="number" min={1} max={6} value={options.leaderboardCycles} onChange={(event) => updateOption("leaderboardCycles", Math.max(1, Math.min(6, Number(event.target.value))))} className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3.5" /><span className="mt-2 block text-xs leading-5 text-slate-400">Each player or team meets every opponent this many times.</span></label>
+                <div className="rounded-2xl border border-cyan-400/15 bg-cyan-400/[0.05] p-4 text-sm leading-6 text-slate-300"><strong className="text-cyan-200">Example:</strong> three teams with two sets per matchup creates six matches. Add each team as one entry, such as “Brayo & Sammy.” Wins, losses, frames and points update automatically.</div>
               </div>
             ) : null}
 

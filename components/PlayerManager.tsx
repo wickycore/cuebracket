@@ -21,6 +21,8 @@ export function PlayerManager({ tournament, onTournamentChange }: PlayerManagerP
   const [name, setName] = useState("");
   const [bulkNames, setBulkNames] = useState("");
   const [error, setError] = useState("");
+  const teamMode = tournament.format === "leaderboard";
+  const entryLabel = teamMode ? "team or player" : "player";
 
   const remaining = tournament.bracketSize - tournament.players.length;
   const duplicateNames = useMemo(() => {
@@ -47,17 +49,17 @@ export function PlayerManager({ tournament, onTournamentChange }: PlayerManagerP
 
     const cleanName = name.trim();
     if (!cleanName) {
-      setError("Enter a player name.");
+      setError(`Enter a ${entryLabel} name.`);
       return;
     }
 
     if (tournament.players.length >= tournament.bracketSize) {
-      setError(`This event is full at ${tournament.bracketSize} players.`);
+      setError(`This event is full at ${tournament.bracketSize} ${teamMode ? "entries" : "players"}.`);
       return;
     }
 
     if (tournament.players.some((player) => player.toLowerCase() === cleanName.toLowerCase())) {
-      setError("That player is already in the tournament.");
+      setError(`That ${entryLabel} is already in the tournament.`);
       return;
     }
 
@@ -129,10 +131,10 @@ export function PlayerManager({ tournament, onTournamentChange }: PlayerManagerP
       <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-6 sm:p-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="text-sm font-bold uppercase tracking-[0.2em] text-cyan-400">Player list</p>
-            <h2 className="mt-2 text-2xl font-black">Seeds and participants</h2>
+            <p className="text-sm font-bold uppercase tracking-[0.2em] text-cyan-400">{teamMode ? "Teams and players" : "Player list"}</p>
+            <h2 className="mt-2 text-2xl font-black">{teamMode ? "Standings entries" : "Seeds and participants"}</h2>
             <p className="mt-2 text-sm text-slate-400">
-              The number beside each name is the current seed. Move players manually or randomize the entire draw.
+              {teamMode ? "Add one player or a complete team as each entry. Their results feed the same live standings table." : "The number beside each name is the current seed. Move players manually or randomize the entire draw."}
             </p>
           </div>
 
@@ -160,7 +162,7 @@ export function PlayerManager({ tournament, onTournamentChange }: PlayerManagerP
           <input
             value={name}
             onChange={(event) => setName(event.target.value)}
-            placeholder="Enter player name"
+            placeholder={teamMode ? "Team or player — e.g. Brayo & Sammy" : "Enter player name"}
             className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3.5 text-white outline-none placeholder:text-slate-400 focus:border-cyan-400/50 focus:ring-4 focus:ring-cyan-400/10"
           />
           <button
@@ -168,7 +170,7 @@ export function PlayerManager({ tournament, onTournamentChange }: PlayerManagerP
             disabled={remaining <= 0}
             className="rounded-2xl bg-cyan-400 px-5 py-3.5 font-black text-slate-950 hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            + Add player
+            + Add {teamMode ? "entry" : "player"}
           </button>
         </form>
 
@@ -224,8 +226,8 @@ export function PlayerManager({ tournament, onTournamentChange }: PlayerManagerP
           ) : (
             <div className="px-6 py-12 text-center">
               <div className="text-4xl">👥</div>
-              <p className="mt-4 font-black text-white">No players added yet</p>
-              <p className="mt-1 text-sm text-slate-400">Add one name above or import several names at once.</p>
+              <p className="mt-4 font-black text-white">No {teamMode ? "teams or players" : "players"} added yet</p>
+              <p className="mt-1 text-sm text-slate-400">Add one {teamMode ? "entry" : "name"} above or import several at once.</p>
             </div>
           )}
         </div>

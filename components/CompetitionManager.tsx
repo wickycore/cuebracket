@@ -40,6 +40,7 @@ import {
   type TournamentCompetition,
   updateTournament,
 } from "@/lib/tournaments";
+import { getMatchRaceTo } from "@/lib/tournament-races";
 
 interface Props {
   tournament: Tournament;
@@ -124,6 +125,7 @@ function PairRounds({
 
             <div className="mt-5 grid gap-3 lg:grid-cols-2">
               {playableMatches.map((match, matchIndex) => {
+                const matchRaceTo = getMatchRaceTo(match, raceTo);
                 const draft = drafts[match.id] ?? {
                   score1: match.score1?.toString() ?? "",
                   score2: match.score2?.toString() ?? "",
@@ -135,7 +137,7 @@ function PairRounds({
                         {match.tableNumber || `Match ${matchIndex + 1}`}
                       </span>
                       <span className={`rounded-full px-2 py-0.5 text-xs font-black uppercase ${match.completed ? "bg-emerald-400/10 text-emerald-300" : match.status === "live" ? "bg-rose-400/15 text-rose-300" : "bg-cyan-400/10 text-cyan-300"}`}>
-                        {match.completed ? "Finished" : match.status === "live" ? "● Live" : `Race to ${raceTo}`}
+                        {match.completed ? "Finished" : match.status === "live" ? "● Live" : `Race to ${matchRaceTo}`}
                       </span>
                     </div>
                     {!match.completed ? (
@@ -336,10 +338,11 @@ export function CompetitionManager({ tournament, onTournamentChange }: Props) {
   }
 
   // 0.9F.5 strict shared race-to validation
-  function validateScores(score1: number, score2: number) {
-    if (!isValidRaceResult(score1, score2, tournament.raceTo)) {
+  function validateScores(match: BracketMatch, score1: number, score2: number) {
+    const raceTo = getMatchRaceTo(match, tournament.raceTo);
+    if (!isValidRaceResult(score1, score2, raceTo)) {
       setMessage(
-        `A completed race-to-${tournament.raceTo} result must have exactly one player on ${tournament.raceTo}, with the opponent below ${tournament.raceTo}.`,
+        `A completed race-to-${raceTo} result must have exactly one player on ${raceTo}, with the opponent below ${raceTo}.`,
       );
       return false;
     }
@@ -391,7 +394,7 @@ export function CompetitionManager({ tournament, onTournamentChange }: Props) {
   }
 
   async function savePairMatch(match: BracketMatch, score1: number, score2: number, groupId?: string) {
-    if (!competition || !validateScores(score1, score2)) return;
+    if (!competition || !validateScores(match, score1, score2)) return;
     if (match.tableId) {
       try {
         await releaseVenueTable({ tableId: match.tableId, scope: tableScope, matchId: match.id });
@@ -544,9 +547,9 @@ export function CompetitionManager({ tournament, onTournamentChange }: Props) {
 
       {competition.type === "leaderboard" ? (
         <>
-          <StandingsTable rows={competition.standings} title="Live leaderboard" rules="Ranking: total points → head-to-head mini-table → frame difference → frames won → wins. Bonus and penalty adjustments are included in total points." />
+          <StandingsTable rows={competition.standings} title="Sets standings" participantLabel="Team / players" rules="Ranking: total points → head-to-head mini-table → frame difference → frames won → wins. Bonus and penalty adjustments are included in total points." />
           <section className="rounded-[2rem] border border-white/10 bg-white/[0.035] p-5 sm:p-6">
-            <p className="text-sm font-black uppercase tracking-[0.18em] text-cyan-400">Bonus and penalty points</p>
+            <p className="text-sm font-black uppercase tracking-[0.18em] text-cyan-400">Standings adjustments</p>
             <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {tournament.players.map((player) => (
                 <label key={player} className="rounded-2xl border border-white/10 bg-slate-950/55 p-4 text-sm font-bold text-slate-300">

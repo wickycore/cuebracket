@@ -11,6 +11,7 @@ import {
   getTournamentChampionDescription,
   type Tournament,
 } from "@/lib/tournaments";
+import { getMatchRaceTo } from "@/lib/tournament-races";
 
 const TABLE_RULES = "Ranking: points → recursive head-to-head mini-table → head-to-head frame difference → overall frame difference → frames won → wins. An unresolved first-place tie requires a championship playoff.";
 const SWISS_RULES = "Ranking: match points → Buchholz (opponents’ earned points) → frame difference → frames won. A BYE awards the configured win points but is tracked separately; it does not increase played matches (P) or on-table wins (W).";
@@ -51,7 +52,7 @@ function ReadOnlyRounds({ rounds, raceTo, byePoints }: { rounds: BracketRound[];
                   <div className="flex items-center justify-between border-b border-white/10 px-4 py-2.5">
                     <span className="text-[0.64rem] font-black uppercase tracking-wider text-slate-400">{match.tableNumber ? `Table ${match.tableNumber}` : `Match ${index + 1}`}</span>
                     <span className={`rounded-full px-2 py-0.5 text-xs font-black uppercase ${match.completed ? "bg-emerald-400/10 text-emerald-300" : match.status === "live" ? "bg-rose-400/15 text-rose-300" : "bg-cyan-400/10 text-cyan-300"}`}>
-                      {match.completed ? "Finished" : match.status === "live" ? "● Live" : `Race to ${raceTo}`}
+                      {match.completed ? "Finished" : match.status === "live" ? "● Live" : `Race to ${getMatchRaceTo(match, raceTo)}`}
                     </span>
                   </div>
                   {[match.player1, match.player2].map((player, playerIndex) => {
@@ -63,7 +64,7 @@ function ReadOnlyRounds({ rounds, raceTo, byePoints }: { rounds: BracketRound[];
                       </div>
                     );
                   })}
-                  {match.startedAt ? <div className="flex items-center justify-between px-4 py-2 text-xs text-slate-400"><span>Race to {raceTo}</span><MatchTimer startedAt={match.startedAt} endedAt={match.endedAt} /></div> : null}
+                  {match.startedAt ? <div className="flex items-center justify-between px-4 py-2 text-xs text-slate-400"><span>Race to {getMatchRaceTo(match, raceTo)}</span><MatchTimer startedAt={match.startedAt} endedAt={match.endedAt} /></div> : null}
                 </article>
               ))}
               {byeMatches.map((match) => {
@@ -141,7 +142,7 @@ export function ReadOnlyCompetition({ tournament, showChampion = true }: { tourn
 
       {competition.type === "leaderboard" ? (
         <>
-          <StandingsTable rows={competition.standings} title="Live leaderboard" rules="Ranking: total points → head-to-head mini-table → frame difference → frames won → wins. Bonus and penalty adjustments are included." />
+          <StandingsTable rows={competition.standings} title="Sets standings" participantLabel="Team / players" rules="Ranking: total points → head-to-head mini-table → frame difference → frames won → wins. Bonus and penalty adjustments are included." />
           <ReadOnlyRounds rounds={competition.rounds} raceTo={tournament.raceTo} />
         </>
       ) : null}

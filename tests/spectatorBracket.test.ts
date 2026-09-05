@@ -82,8 +82,39 @@ test("spectator match list keeps one visual match card per row", () => {
   assert.match(source, /break-words text-sm font-black/);
   assert.doesNotMatch(source, /min-w-0 truncate/);
   assert.match(source, /h-\[6\.875rem\].*sm:h-auto/);
-  assert.match(source, /Race to \{raceTo\}/);
+  assert.match(source, /Race to \{matchRaceTo\}/);
   assert.doesNotMatch(source, /Best of/);
+});
+
+test("cloud spectator view server-renders details and exposes recovery states", () => {
+  const page = readFileSync(new URL("../app/cloud/live/[id]/page.tsx", import.meta.url), "utf8");
+  const realtime = readFileSync(new URL("../components/RealtimeCloudTournament.tsx", import.meta.url), "utf8");
+  const cloud = readFileSync(new URL("../lib/cloud/tournaments.ts", import.meta.url), "utf8");
+  const socialImage = readFileSync(new URL("../app/cloud/live/[id]/opengraph-image.tsx", import.meta.url), "utf8");
+
+  assert.match(page, /getPublicTournamentSnapshot/);
+  assert.match(page, /generateMetadata/);
+  assert.match(page, /initialRow=\{snapshot\.row\}/);
+  assert.match(realtime, /LOAD_TIMEOUT_MS/);
+  assert.match(realtime, /Tournament not found/);
+  assert.match(realtime, /You’re offline/);
+  assert.match(realtime, /Retry connection/);
+  assert.match(realtime, /Tournament not started yet/);
+  assert.match(realtime, /Final results/);
+  assert.match(cloud, /\.eq\("is_public", true\)/);
+  assert.match(realtime, /if \(!nextRow\.is_public\)/);
+  assert.match(socialImage, /ImageResponse/);
+  assert.match(socialImage, /CUEBRACKET LIVE/);
+});
+
+test("spectator match cards use compact desktop geometry", () => {
+  const list = readFileSync(new URL("../components/BracketMatchList.tsx", import.meta.url), "utf8");
+  const flowchart = readFileSync(new URL("../components/ReadOnlyBracket.tsx", import.meta.url), "utf8");
+
+  assert.match(list, /sm:min-h-\[4\.75rem\]/);
+  assert.match(list, /sm:h-10 sm:w-10/);
+  assert.match(flowchart, /const matchHeight = 122/);
+  assert.match(flowchart, /className="w-48 shrink-0 snap-start"/);
 });
 
 test("automatic advances use a dedicated BYE card", () => {

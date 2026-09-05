@@ -280,6 +280,7 @@ export async function getPublicCloudTournament(id: string) {
     .from("cloud_tournaments")
     .select("*")
     .eq("id", id)
+    .eq("is_public", true)
     .single();
 
   if (error) throw error;

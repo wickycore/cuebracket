@@ -1,13 +1,47 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { RealtimeCloudTournament } from "@/components/RealtimeCloudTournament";
 import { SpectatorAuthNav } from "@/components/SpectatorAuthNav";
+import { getPublicTournamentSnapshot } from "@/lib/cloud/public-tournaments.server";
+
+type Props = { params: Promise<{ id: string }> };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { id } = await params;
+  const snapshot = await getPublicTournamentSnapshot(id);
+  const row = snapshot.row;
+  const title = row ? `${row.name} · ${row.status === "live" ? "Live scores" : "Tournament results"}` : "Tournament spectator view";
+  const description = row
+    ? `${row.venue || "CueBracket tournament"} · ${row.format.replaceAll("_", " ")} · Race to ${row.race_to}. Follow the bracket, scores and results.`
+    : "Follow public pool tournament brackets, scores and results on CueBracket.";
+  const path = `/cloud/live/${id}`;
+
+  return {
+    title,
+    description,
+    alternates: { canonical: path },
+    openGraph: {
+      type: "website",
+      url: path,
+      siteName: "CueBracket Pro",
+      title,
+      description,
+      ...(row?.poster_url ? { images: [{ url: row.poster_url, alt: `${row.name} tournament poster` }] } : {}),
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      ...(row?.poster_url ? { images: [row.poster_url] } : {}),
+    },
+  };
+}
 
 export default async function CloudLivePage({
   params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+}: Props) {
   const { id } = await params;
+  const snapshot = await getPublicTournamentSnapshot(id);
 
   return (
     <main className="min-h-screen bg-[#071a35] text-[#fafcff]">
@@ -26,7 +60,11 @@ export default async function CloudLivePage({
       </header>
 
       <div className="mx-auto max-w-7xl px-3 py-5 sm:px-5 sm:py-10">
-        <RealtimeCloudTournament id={id} />
+        <RealtimeCloudTournament
+          id={id}
+          initialRow={snapshot.row}
+          initialState={snapshot.state}
+        />
       </div>
     </main>
   );

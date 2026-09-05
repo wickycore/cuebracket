@@ -10,6 +10,7 @@ export function StandingsTable({
   showByes = false,
   showDraws = false,
   title = "Standings",
+  participantLabel = "Player",
   rules,
 }: {
   rows: StandingRow[];
@@ -17,6 +18,7 @@ export function StandingsTable({
   showByes?: boolean;
   showDraws?: boolean;
   title?: string;
+  participantLabel?: string;
   rules?: string;
 }) {
   const byesVisible = showByes || rows.some((row) => (row.byes ?? 0) > 0);
@@ -30,7 +32,7 @@ export function StandingsTable({
           <thead className="bg-slate-950/55 text-[0.66rem] font-black uppercase tracking-wider text-slate-400">
             <tr>
               <th className="px-4 py-3">#</th>
-              <th className="px-4 py-3">Player</th>
+              <th className="px-4 py-3">{participantLabel}</th>
               <th className="px-3 py-3 text-center" title={byesVisible ? "Played matches; BYEs are excluded and shown separately" : "Played matches"}>P</th>
               <th className="px-3 py-3 text-center" title={byesVisible ? "On-table wins; BYEs are excluded and shown separately" : "Wins"}>W</th>
               {showDraws ? <th className="px-3 py-3 text-center">D</th> : null}

@@ -13,6 +13,7 @@ import {
   type SpectatorMatchState,
 } from "@/lib/bracket/spectator";
 import { formatDuration, type BracketMatch, type BracketRound } from "@/lib/tournaments";
+import { getMatchRaceTo } from "@/lib/tournament-races";
 
 const filters: Array<{ key: SpectatorMatchFilter; label: string }> = [
   { key: "all", label: "All" },
@@ -98,6 +99,7 @@ function MatchRow({
   now: number;
 }) {
   const state = getSpectatorMatchState(match);
+  const matchRaceTo = getMatchRaceTo(match, raceTo);
   const automaticAdvance = state === "advanced";
   const players = [
     match.player1 ?? (automaticAdvance ? "No opponent" : spectatorSourceLabel(match.source1, matchNumbers)),
@@ -126,16 +128,16 @@ function MatchRow({
     const hasPlayer = Boolean(index === 0 ? match.player1 : match.player2);
 
     return (
-      <div className={`flex min-w-0 items-center gap-1.5 sm:gap-3 ${index === 1 ? "flex-row-reverse text-right" : "text-left"}`}>
+      <div className={`flex min-w-0 items-center gap-1.5 sm:gap-2.5 ${index === 1 ? "flex-row-reverse text-right" : "text-left"}`}>
         {hasPlayer ? (
           <span
             aria-hidden="true"
-            className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-xs font-black lowercase text-white ring-1 ring-white/15 sm:h-12 sm:w-12 sm:text-base ${playerAvatarStyle(player)}`}
+            className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-xs font-black lowercase text-white ring-1 ring-white/15 sm:h-10 sm:w-10 sm:text-sm ${playerAvatarStyle(player)}`}
           >
             {playerInitials(player)}
           </span>
         ) : null}
-        <span className={`min-w-0 break-words text-sm font-black leading-4 sm:text-lg sm:leading-6 ${playerStyle(index)}`}>
+        <span className={`min-w-0 break-words text-sm font-black leading-4 sm:text-base sm:leading-5 ${playerStyle(index)}`}>
           {player}
         </span>
       </div>
@@ -148,7 +150,7 @@ function MatchRow({
     return (
       <article className="relative h-[7.5rem] overflow-hidden rounded-xl border border-[#3b3b61] bg-[linear-gradient(110deg,#17263f_0%,#18233b_52%,#151d34_100%)] shadow-[0_10px_30px_rgba(0,0,0,0.14)] sm:h-auto">
         <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-1.5 ${rowAccentStyles[state]}`} />
-        <div className="flex h-7 items-center justify-between gap-3 px-3 sm:h-auto sm:px-7 sm:pt-4">
+        <div className="flex h-7 items-center justify-between gap-3 px-3 sm:h-auto sm:px-5 sm:pt-3">
           <span className="text-xs font-black uppercase tracking-[0.08em] text-[#c1d0e2] sm:text-xs">
             {match.tableNumber ? `Table ${match.tableNumber} · ` : ""}Match {displayMatchNumber}
           </span>
@@ -157,23 +159,23 @@ function MatchRow({
           </span>
         </div>
 
-        <div className="grid h-16 grid-cols-[minmax(0,1fr)_2rem_minmax(0,1.35fr)] items-center gap-1.5 px-3 py-1 sm:h-auto sm:min-h-[6.4rem] sm:grid-cols-[minmax(0,1fr)_3rem_minmax(0,1.2fr)] sm:px-7 sm:py-4">
+        <div className="grid h-16 grid-cols-[minmax(0,1fr)_2rem_minmax(0,1.35fr)] items-center gap-1.5 px-3 py-1 sm:h-auto sm:min-h-[4.75rem] sm:grid-cols-[minmax(0,1fr)_2.5rem_minmax(0,1.2fr)] sm:px-5 sm:py-2.5">
           <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-            <span aria-hidden="true" className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-xs font-black uppercase text-white ring-1 ring-[#b17aff]/50 sm:h-12 sm:w-12 sm:text-base ${playerAvatarStyle(advancingPlayer)}`}>
+            <span aria-hidden="true" className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-xs font-black uppercase text-white ring-1 ring-[#b17aff]/50 sm:h-10 sm:w-10 sm:text-sm ${playerAvatarStyle(advancingPlayer)}`}>
               {playerInitials(advancingPlayer)}
             </span>
-            <span className="min-w-0 break-words text-sm font-black leading-4 text-[#fafcff] sm:text-lg sm:leading-6">{advancingPlayer}</span>
+            <span className="min-w-0 break-words text-sm font-black leading-4 text-[#fafcff] sm:text-base sm:leading-5">{advancingPlayer}</span>
           </div>
 
-          <span className="text-center text-lg font-black text-[#b9b5ca] sm:text-2xl">VS.</span>
+          <span className="text-center text-lg font-black text-[#b9b5ca] sm:text-xl">VS.</span>
 
-          <div className="flex min-h-10 min-w-0 items-center justify-center gap-1 rounded-xl border border-dashed border-[#a873ee] bg-[#281d42]/45 px-1.5 py-1 text-center text-xs font-bold leading-3.5 text-[#d9cfee] sm:min-h-16 sm:gap-2 sm:px-3 sm:py-2 sm:text-sm sm:leading-4" aria-label="Bye — no opponent">
+          <div className="flex min-h-10 min-w-0 items-center justify-center gap-1 rounded-xl border border-dashed border-[#a873ee] bg-[#281d42]/45 px-1.5 py-1 text-center text-xs font-bold leading-3.5 text-[#d9cfee] sm:min-h-12 sm:gap-2 sm:px-3 sm:py-2 sm:text-sm sm:leading-4" aria-label="Bye — no opponent">
             <span className="text-[#b17aff]"><UserPlusIcon /></span>
             <span><strong className="text-[#c798ff]">BYE</strong> — No opponent</span>
           </div>
         </div>
 
-        <p className="flex h-7 items-center justify-center border-t border-[#3b3b61] px-3 text-center text-xs font-bold text-[#d8b8ff] sm:block sm:h-auto sm:px-7 sm:py-2.5 sm:text-sm">
+        <p className="flex h-7 items-center justify-center border-t border-[#3b3b61] px-3 text-center text-xs font-bold text-[#d8b8ff] sm:block sm:h-auto sm:px-5 sm:py-2 sm:text-xs">
           <span className="whitespace-nowrap"><strong className="text-[#bd8cff]">Automatic advance</strong> · no match played</span>
         </p>
       </article>
@@ -183,7 +185,7 @@ function MatchRow({
   return (
     <article className="relative h-[6.875rem] overflow-hidden rounded-xl border border-[#2c425a] bg-[linear-gradient(110deg,#172a43_0%,#152940_52%,#11243a_100%)] shadow-[0_10px_30px_rgba(0,0,0,0.14)] transition hover:border-[#3c5875] hover:bg-[linear-gradient(110deg,#1b314d_0%,#193049_52%,#152b44_100%)] sm:h-auto">
       <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-1.5 ${rowAccentStyles[state]}`} />
-      <div className="grid h-7 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 px-3 sm:h-auto sm:px-7 sm:pt-4">
+      <div className="grid h-7 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 px-3 sm:h-auto sm:px-5 sm:pt-3">
         <span className="text-xs font-black uppercase tracking-[0.08em] text-[#c1d0e2] sm:text-xs">
           {match.tableNumber ? `Table ${match.tableNumber} · ` : ""}Match {displayMatchNumber}
         </span>
@@ -197,15 +199,15 @@ function MatchRow({
         </div>
       </div>
 
-      <div className="grid h-[3.375rem] grid-cols-[minmax(0,1fr)_2rem_1.5rem_2rem_minmax(0,1fr)] items-center gap-1 px-3 py-1 sm:h-auto sm:min-h-[6.2rem] sm:grid-cols-[minmax(0,1fr)_3.5rem_2rem_3.5rem_minmax(0,1fr)] sm:gap-3 sm:px-7 sm:py-3">
+      <div className="grid h-[3.375rem] grid-cols-[minmax(0,1fr)_2rem_1.5rem_2rem_minmax(0,1fr)] items-center gap-1 px-3 py-1 sm:h-auto sm:min-h-[4.75rem] sm:grid-cols-[minmax(0,1fr)_3rem_1.5rem_3rem_minmax(0,1fr)] sm:gap-2 sm:px-5 sm:py-2">
         {playerIdentity(0)}
-        <span className="text-center text-3xl font-black tabular-nums text-[#f8fbff] sm:text-4xl">{scores[0] ?? "—"}</span>
-        <span className="text-center text-base font-black uppercase text-[#aebdd0] sm:text-xl">vs</span>
-        <span className="text-center text-3xl font-black tabular-nums text-[#f8fbff] sm:text-4xl">{scores[1] ?? "—"}</span>
+        <span className="text-center text-3xl font-black tabular-nums text-[#f8fbff] sm:text-3xl">{scores[0] ?? "—"}</span>
+        <span className="text-center text-base font-black uppercase text-[#aebdd0] sm:text-lg">vs</span>
+        <span className="text-center text-3xl font-black tabular-nums text-[#f8fbff] sm:text-3xl">{scores[1] ?? "—"}</span>
         {playerIdentity(1)}
       </div>
 
-      <p className="grid h-7 place-items-center border-t border-[#2c425a] px-3 text-center text-xs font-medium text-[#b9c8da] sm:block sm:h-auto sm:px-7 sm:py-2 sm:text-sm">Race to {raceTo}</p>
+      <p className="grid h-7 place-items-center border-t border-[#2c425a] px-3 text-center text-xs font-medium text-[#b9c8da] sm:block sm:h-auto sm:px-5 sm:py-1.5 sm:text-xs">Race to {matchRaceTo}</p>
     </article>
   );
 }
@@ -229,6 +231,7 @@ function RoundGroup({
 }) {
   const completed = round.matches.filter((match) => match.completed).length;
   const progress = round.matches.length ? (completed / round.matches.length) * 100 : 0;
+  const roundRaceTo = getMatchRaceTo(round.matches[0], raceTo);
 
   return (
     <details
@@ -243,7 +246,7 @@ function RoundGroup({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
             <h3 className="text-xl font-black text-[#f8fbff] sm:text-2xl">{round.name}</h3>
-            <span className="rounded-lg border border-[#2d435c] bg-[#1b2d45] px-2.5 py-1 text-xs font-black text-[#cbd8e7] shadow-inner sm:text-sm">Race to {raceTo}</span>
+            <span className="rounded-lg border border-[#2d435c] bg-[#1b2d45] px-2.5 py-1 text-xs font-black text-[#cbd8e7] shadow-inner sm:text-sm">Race to {roundRaceTo}</span>
           </div>
           <p className="mt-2 text-sm font-bold text-[#c7d5e4] sm:text-base">{completed} / {round.matches.length} matches resolved</p>
           <span className="mt-2 block h-2 w-full max-w-sm overflow-hidden rounded-full bg-[#2b3c52]" aria-hidden="true">

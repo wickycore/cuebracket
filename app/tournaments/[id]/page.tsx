@@ -7,6 +7,7 @@ import { BracketManager } from "@/components/BracketManager";
 import { CompetitionManager } from "@/components/CompetitionManager";
 import { LiveMatchCenter } from "@/components/LiveMatchCenter";
 import { PlayerManager } from "@/components/PlayerManager";
+import { RoundRaceSettings } from "@/components/RoundRaceSettings";
 import { ShareTournament } from "@/components/ShareTournament";
 import { TournamentStats } from "@/components/TournamentStats";
 import { TournamentRegistrationManager } from "@/components/TournamentRegistrationManager";
@@ -180,6 +181,12 @@ export default function TournamentDetailPage() {
           tournament={tournament}
           onAccessRoleChange={setCloudAccessRole}
         />
+
+        {structureReady ? (
+          <div className="mt-6">
+            <RoundRaceSettings tournament={tournament} onTournamentChange={setTournament} />
+          </div>
+        ) : null}
 
         {!structureReady && cloudAccessRole !== "co_organizer" ? (
           <>

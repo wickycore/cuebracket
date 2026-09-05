@@ -18,6 +18,7 @@ import {
   getAllMatches,
   updateTournament,
 } from "@/lib/tournaments";
+import { getMatchRaceTo } from "@/lib/tournament-races";
 
 interface Props {
   tournament: Tournament;
@@ -92,6 +93,7 @@ export function LiveMatchCenter({
 
   const match =
     selectableMatches.find((item) => item.id === selectedId) ?? null;
+  const matchRaceTo = match ? getMatchRaceTo(match, tournament.raceTo) : tournament.raceTo;
 
   function hasActiveDependent(sourceMatchId: string) {
     const visited = new Set<string>();
@@ -200,8 +202,8 @@ export function LiveMatchCenter({
       void recordMatchStarted(tournament, match).catch(() => undefined);
     }
     const finishesMatch = player === 1
-      ? (match.score1 ?? 0) + 1 >= tournament.raceTo
-      : (match.score2 ?? 0) + 1 >= tournament.raceTo;
+      ? (match.score1 ?? 0) + 1 >= matchRaceTo
+      : (match.score2 ?? 0) + 1 >= matchRaceTo;
     updateMatch((target) => {
       if (target.completed) return;
       if (target.status !== "live") {
@@ -220,19 +222,19 @@ export function LiveMatchCenter({
 
       if (player === 1) {
         target.score1 = Math.min(
-          tournament.raceTo,
+          matchRaceTo,
           (target.score1 ?? 0) + 1,
         );
       } else {
         target.score2 = Math.min(
-          tournament.raceTo,
+          matchRaceTo,
           (target.score2 ?? 0) + 1,
         );
       }
 
       const score1 = target.score1 ?? 0;
       const score2 = target.score2 ?? 0;
-      if (score1 === tournament.raceTo || score2 === tournament.raceTo) {
+      if (score1 === matchRaceTo || score2 === matchRaceTo) {
         target.completed = true;
         target.status = "finished";
         target.endedAt = new Date().toISOString();
@@ -400,7 +402,7 @@ export function LiveMatchCenter({
             Race to
           </p>
           <p className="mt-1 text-xl font-black text-white">
-            {tournament.raceTo}
+            {matchRaceTo}
           </p>
         </div>
         <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">

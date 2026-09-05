@@ -21,6 +21,7 @@ import {
   numberBracketMatches,
   spectatorSourceLabel,
 } from "@/lib/bracket/spectator";
+import { getMatchRaceTo } from "@/lib/tournament-races";
 
 type SingleBracketView = "flowchart" | "list";
 const SPECTATOR_VIEW_KEY = "cuebracket:spectator-bracket-view:v2";
@@ -124,8 +125,8 @@ function Section({
 }) {
   const colors = toneClass[tone];
   const maxMatches = Math.max(1, ...rounds.map((round) => round.matches.length));
-  const matchHeight = 145;
-  const matchPitch = 162;
+  const matchHeight = 122;
+  const matchPitch = 138;
   const bracketBodyHeight = matchHeight + (maxMatches - 1) * matchPitch;
   const balancedCenters = balancedGeometry
     ? buildBalancedCenters(rounds, maxMatches)
@@ -154,7 +155,7 @@ function Section({
       <BracketViewport label={title}>
         <div
           ref={contentRef}
-          className="relative isolate flex min-w-max snap-x snap-mandatory items-start gap-14 pb-4 pr-12"
+          className="relative isolate flex min-w-max snap-x snap-mandatory items-start gap-11 pb-4 pr-10"
         >
           <BracketConnections
             rounds={rounds}
@@ -164,12 +165,12 @@ function Section({
           />
           {rounds.map((round) => {
             const ratio = Math.max(1, Math.floor(maxMatches / Math.max(1, round.matches.length)));
-            const topPadding = ratio > 1 ? Math.min(96, (ratio - 1) * 28) : 0;
-            const gap = ratio > 1 ? Math.min(120, ratio * 30) : 18;
+            const topPadding = ratio > 1 ? Math.min(78, (ratio - 1) * 23) : 0;
+            const gap = ratio > 1 ? Math.min(96, ratio * 24) : 14;
 
             return (
-              <div key={`${title}-${round.round}`} className="w-56 shrink-0 snap-start">
-                <p className="mb-4 text-[11px] font-black uppercase tracking-[0.17em] text-[#dce8f4]">{round.name}</p>
+              <div key={`${title}-${round.round}`} className="w-48 shrink-0 snap-start">
+                <p className="mb-3 text-[10px] font-black uppercase tracking-[0.16em] text-[#dce8f4]">{round.name}</p>
                 <div
                   style={
                     balancedGeometry
@@ -178,6 +179,7 @@ function Section({
                   }
                 >
                   {round.matches.map((match) => {
+                    const matchRaceTo = getMatchRaceTo(match, raceTo);
                     const automaticAdvance = isAutomaticAdvance(match);
                     const advancingPlayer = match.player1 ?? match.player2 ?? match.winner;
                     const matchNumber = sectionMatchNumbers.get(match.id) ?? match.position + 1;
@@ -208,14 +210,14 @@ function Section({
                               <span className="text-[10px] font-black uppercase tracking-[0.16em] text-[#e3dcff]">Automatic BYE</span>
                               <span className="rounded-full bg-[#a78bfa]/18 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] text-[#ede9fe]">Advanced</span>
                             </div>
-                            <div className="flex min-h-10 items-center gap-3 border-b border-[#a78bfa]/30 px-3 py-1.5">
+                            <div className="flex min-h-8 items-center gap-2 border-b border-[#a78bfa]/30 px-3 py-1">
                               <span className="min-w-0 flex-1 truncate text-sm font-black text-[#fafcff]">{advancingPlayer}</span>
                               <span className="text-sm font-black text-[#ddd6fe]">✓</span>
                             </div>
-                            <div className="flex min-h-10 items-center border-b border-[#a78bfa]/30 px-3 py-1.5 text-sm font-extrabold text-[#b8c7dc]">
+                            <div className="flex min-h-8 items-center border-b border-[#a78bfa]/30 px-3 py-1 text-xs font-extrabold text-[#b8c7dc]">
                               No opponent
                             </div>
-                            <div className="flex min-h-9 items-center px-3 py-1.5 text-[11px] font-bold text-[#e3dcff]">
+                            <div className="flex min-h-7 items-center px-3 py-1 text-[10px] font-bold text-[#e3dcff]">
                               Automatic advance
                             </div>
                           </article>
@@ -234,14 +236,14 @@ function Section({
                               const placeholder = playerPlaceholders?.[index]
                                 ?? spectatorSourceLabel(source, sectionMatchNumbers);
                               return (
-                                <div key={index} className={`flex min-h-10 items-center gap-3 border-b border-[#2a5680] px-3 py-1.5 last:border-b-0 ${winner ? "bg-[#78c69b]/12" : ""}`}>
-                                  <span className={`min-w-0 flex-1 truncate text-sm font-extrabold ${winner ? "text-[#b9e7ca]" : player ? "text-[#fafcff]" : playerPlaceholders ? "text-[#e3dcff]" : "text-[#b8c7dc]"}`}>{player ?? placeholder}</span>
-                                  <span className="text-sm font-black tabular-nums text-[#52d3ee]">{score ?? "—"}</span>
+                                <div key={index} className={`flex min-h-8 items-center gap-2 border-b border-[#2a5680] px-3 py-1 last:border-b-0 ${winner ? "bg-[#78c69b]/12" : ""}`}>
+                                  <span className={`min-w-0 flex-1 truncate text-xs font-extrabold ${winner ? "text-[#b9e7ca]" : player ? "text-[#fafcff]" : playerPlaceholders ? "text-[#e3dcff]" : "text-[#b8c7dc]"}`}>{player ?? placeholder}</span>
+                                  <span className="text-xs font-black tabular-nums text-[#52d3ee]">{score ?? "—"}</span>
                                 </div>
                               );
                             })}
-                            <div className="flex min-h-9 items-center justify-between gap-2 px-3 py-1.5 text-[11px] font-bold text-[#d2dfec]">
-                              <span>Race to {raceTo}</span>
+                            <div className="flex min-h-7 items-center justify-between gap-2 px-3 py-1 text-[10px] font-bold text-[#d2dfec]">
+                              <span>Race to {matchRaceTo}</span>
                               <span>{match.startedAt ? formatDuration((match.endedAt ? new Date(match.endedAt).getTime() : now) - new Date(match.startedAt).getTime()) : ""}</span>
                             </div>
                           </article>
