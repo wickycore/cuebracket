@@ -8,6 +8,7 @@ import { buildTournamentPlayerCard } from "@/lib/bracket/player-card";
 import { normalizeParticipantName, participantProfilePath } from "@/lib/cloud/public-participants";
 import { getPublicTournamentParticipants, getPublicTournamentSnapshot } from "@/lib/cloud/public-tournaments.server";
 import { createClient } from "@/lib/supabase/server";
+import type { PlayerProfileClaimStatus } from "@/lib/cloud/profile-claims";
 import type { BracketRound } from "@/lib/tournaments";
 
 type Props = { params: Promise<{ id: string; name: string }> };
@@ -66,6 +67,28 @@ export default async function TournamentGuestPlayerPage({ params }: Props) {
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
+  const { data: registration } = await supabase.from("event_registrations")
+    .select("id, profile_id")
+    .eq("tournament_id", id)
+    .eq("display_name", canonicalName)
+    .in("status", ["approved", "checked_in"])
+    .limit(1)
+    .maybeSingle();
+
+  if (user && registration?.profile_id === user.id) redirect(`/players/${user.id}`);
+
+  let claimStatus: PlayerProfileClaimStatus | null = null;
+  if (user && registration?.id && !registration.profile_id) {
+    const { data: claim } = await supabase.from("player_profile_claims")
+      .select("status")
+      .eq("tournament_id", id)
+      .eq("registration_id", registration.id)
+      .eq("claimant_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    claimStatus = (claim?.status as PlayerProfileClaimStatus | undefined) ?? null;
+  }
   let isOrganizer = tournament.owner_id === user?.id;
   if (user && !isOrganizer) {
     const [{ data: collaborator }, { data: clubMember }] = await Promise.all([
@@ -123,7 +146,7 @@ export default async function TournamentGuestPlayerPage({ params }: Props) {
             <div className="mt-7 rounded-2xl border border-[#2e69a0] bg-[#102744] p-5 text-center">
               <h2 className="text-lg font-black">{isOrganizer ? `Bring ${card.name} onto CueBracket` : "Is this you?"}</h2>
               <p className="mt-2 text-sm leading-6 text-[#9fb4ca]">{isOrganizer ? "Share a signup link so this player can create a profile and keep future records." : "Create or open your profile, then ask the organizer to verify and link this tournament entry. Guest records are never merged by name alone."}</p>
-              <div className="mt-5"><GuestPlayerAction playerName={card.name} tournamentName={tournament.name} returnPath={returnPath} isOrganizer={isOrganizer} isSignedIn={Boolean(user)} /></div>
+              <div className="mt-5"><GuestPlayerAction playerName={card.name} tournamentName={tournament.name} returnPath={returnPath} isOrganizer={isOrganizer} isSignedIn={Boolean(user)} tournamentId={id} registrationId={registration?.id ?? null} initialClaimStatus={claimStatus} claimable={Boolean(registration?.id && !registration.profile_id)} /></div>
             </div>
           </div>
         </section>

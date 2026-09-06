@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
 
+import { TournamentProfileClaims } from "@/components/TournamentProfileClaims";
+
 import {
   changeRegistrationStatus,
   getOrganizerRegistrations,
@@ -331,6 +333,7 @@ export function TournamentRegistrationManager({ tournament, onTournamentChange }
           </div>
         </div>
       ) : null}
+      {settings ? <TournamentProfileClaims tournamentId={tournament.id} /> : null}
     </section>
   );
 }
