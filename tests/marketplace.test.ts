@@ -1,0 +1,10 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import test from "node:test";
+import { availableQuantity, marketplaceAvailability } from "../lib/marketplace.ts";
+const migration=readFileSync("supabase/migrations/20260906231500_add_marketplace.sql","utf8");
+const directory=readFileSync("components/MarketplaceDirectory.tsx","utf8");
+const actions=readFileSync("components/MarketplaceActions.tsx","utf8");
+test("availability counts move from three to one to sold out",()=>{assert.equal(marketplaceAvailability({quantity_total:3,quantity_sold:0}),"3 available · 0 sold");assert.equal(marketplaceAvailability({quantity_total:3,quantity_sold:2}),"1 available · 2 sold");assert.equal(availableQuantity({quantity_total:3,quantity_sold:3}),0);assert.match(migration,/quantity_sold >= new\.quantity_total then 'sold_out'/)});
+test("marketplace ownership, chat, reports and photos are row secured",()=>{assert.match(migration,/alter table public\.marketplace_listings enable row level security/);assert.match(migration,/seller_user_id = \(select auth\.uid\(\)\)/);assert.match(migration,/Participants read listing threads/);assert.match(migration,/Users report marketplace listings/);assert.match(migration,/marketplace-photos/);assert.match(migration,/cardinality\(photos\) <= 5/)});
+test("browse supports requested filters and listing-scoped contact",()=>{assert.match(directory,/Clubs you follow/);assert.match(directory,/Available only/);assert.match(directory,/minPrice/);assert.match(actions,/openListingThread/);assert.match(actions,/interested in/)});

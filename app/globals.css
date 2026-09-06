@@ -249,3 +249,11 @@ canvas {
     display: none !important;
   }
 }
+@layer components {
+  .market-input { min-height: 3rem; border-radius: .625rem; border: 1px solid #2a4a6f; background: #0a1628; padding: .75rem 1rem; color: #fff; font-size: .8125rem; outline: none; }
+  .market-input:focus { border-color: #4dd8c4; }
+  .market-input::placeholder { color: #6b8bab; }
+  .market-label { margin-bottom: .4rem; display: block; color: #9db4d1; font-size: .8125rem; font-weight: 600; }
+  .market-pill { min-height: 2.25rem; border-radius: .625rem; border: 1px solid #2a4a6f; background: transparent; padding: .4rem .75rem; color: #9db4d1; font-size: .75rem; font-weight: 700; }
+  .market-pill-active { border-color: rgba(77,216,196,.55); background: rgba(77,216,196,.1); color: #4dd8c4; }
+}

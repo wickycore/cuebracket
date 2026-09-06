@@ -10,6 +10,7 @@ import { NotificationBell } from "@/components/NotificationBell";
 const publicNavigation = [
   { href: "/events", label: "Discover" },
   { href: "/clubs", label: "Clubs" },
+  { href: "/marketplace", label: "Marketplace" },
   { href: "/rankings", label: "Rankings" },
   { href: "/hall-of-champions", label: "Champions" },
 ];
