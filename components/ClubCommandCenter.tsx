@@ -10,6 +10,7 @@ import { ClubCalendarBoard } from "@/components/ClubCalendarBoard";
 import { ClubCommunityPanel, type ClubMemberView } from "@/components/ClubCommunityPanel";
 import { ClubGallery } from "@/components/ClubGallery";
 import { ClubGuide } from "@/components/ClubGuide";
+import { ClubVerifiedBadge } from "@/components/ClubVerifiedBadge";
 import { ClubPracticeBoard } from "@/components/ClubPracticeBoard";
 import { ClubReportMemberButton } from "@/components/ClubReportMemberButton";
 import { LiveMatchFeed } from "@/components/LiveMatchFeed";
@@ -204,7 +205,8 @@ export function ClubCommandCenter(props: Props) {
                   <p className="cb-kicker">Club Command Center</p>
                   {isAdmin ? <span className="rounded-full border border-amber-300/20 bg-amber-300/10 px-2.5 py-1 text-xs font-black uppercase tracking-wider text-amber-200">Member page preview</span> : null}
                 </div>
-                <h1 className="mt-2 break-words text-4xl font-black tracking-[-0.05em] sm:text-6xl">{club.name}</h1>
+                <h1 className="mt-2 flex flex-wrap items-center gap-2 break-words text-4xl font-black tracking-[-0.05em] sm:text-6xl"><span>{club.name}</span>{club.is_verified ? <ClubVerifiedBadge /> : null}</h1>
+                {club.is_verified ? <div className="mt-2"><ClubVerifiedBadge labelled /></div> : null}
                 <p className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm font-bold text-slate-400"><span>{club.location ? `📍 ${club.location}` : "CueBracket pool club"}</span><span className="text-slate-400">/clubs/{club.slug}</span></p>
               </div>
             </div>

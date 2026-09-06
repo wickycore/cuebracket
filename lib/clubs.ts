@@ -47,6 +47,9 @@ export interface ClubRow {
   logo_url: string | null;
   location: string;
   is_public: boolean;
+  is_verified: boolean;
+  verified_at: string | null;
+  verified_by: string | null;
   created_at: string;
   updated_at: string;
 }
