@@ -200,8 +200,6 @@ export function RealtimeCloudTournament({
 
       {tournament.status === "draft" ? (
         <SpectatorStateCard icon="🗓️" title="Tournament not started yet" message="The organizer is preparing this event. This page will update automatically when the bracket goes live." />
-      ) : tournament.status === "completed" ? (
-        <div className="mb-5 rounded-2xl border border-emerald-300/20 bg-emerald-300/10 px-5 py-4 text-sm text-emerald-100 sm:mb-7"><strong className="font-black">Final results</strong> · This tournament has finished. The completed bracket and scores remain available below.</div>
       ) : null}
 
       {tournament.status !== "draft" ? (tournament.bracket ? <ReadOnlyBracket tournament={tournament} /> : tournament.competition ? <ReadOnlyCompetition tournament={tournament} /> : <SpectatorStateCard icon="⏳" title="Bracket is being prepared" message="The organizer has started the event, but fixtures have not been published yet." />) : null}

@@ -68,20 +68,19 @@ test("flowchart cards use feeder match labels for unresolved players", () => {
   assert.doesNotMatch(source, /playerPlaceholders\?\.\[index\] \?\? "TBD"/);
 });
 
-test("spectator match list keeps one visual match card per row", () => {
+test("spectator match list uses compact expandable one-line rows", () => {
   const source = readFileSync(
     new URL("../components/BracketMatchList.tsx", import.meta.url),
     "utf8",
   );
 
-  assert.match(source, /space-y-2\.5 border-t border-\[#263c54\]/);
+  assert.match(source, /grid min-h-14 w-full/);
   assert.doesNotMatch(source, /sm:grid-cols-2|xl:grid-cols-3/);
-  assert.match(source, /bg-\[linear-gradient\(110deg,#172a43/);
-  assert.match(source, /playerInitials/);
-  assert.match(source, /grid-cols-\[minmax\(0,1fr\)_2rem_1\.5rem_2rem_minmax\(0,1fr\)\]/);
-  assert.match(source, /break-words text-sm font-black/);
-  assert.doesNotMatch(source, /min-w-0 truncate/);
-  assert.match(source, /h-\[6\.875rem\].*sm:h-auto/);
+  assert.match(source, /function ChevronIcon/);
+  assert.match(source, /aria-expanded=\{expanded\}/);
+  assert.match(source, /<Score score=\{match\.score1\}/);
+  assert.doesNotMatch(source, /playerInitials|avatarStyles/);
+  assert.match(source, /selectedMatchId|expandedMatchId/);
   assert.match(source, /Race to \{matchRaceTo\}/);
   assert.doesNotMatch(source, /Best of/);
 });
@@ -100,7 +99,7 @@ test("cloud spectator view server-renders details and exposes recovery states", 
   assert.match(realtime, /You’re offline/);
   assert.match(realtime, /Retry connection/);
   assert.match(realtime, /Tournament not started yet/);
-  assert.match(realtime, /Final results/);
+  assert.doesNotMatch(realtime, /Final results/);
   assert.match(cloud, /\.eq\("is_public", true\)/);
   assert.match(realtime, /if \(!nextRow\.is_public\)/);
   assert.match(socialImage, /ImageResponse/);
@@ -111,34 +110,56 @@ test("spectator match cards use compact desktop geometry", () => {
   const list = readFileSync(new URL("../components/BracketMatchList.tsx", import.meta.url), "utf8");
   const flowchart = readFileSync(new URL("../components/ReadOnlyBracket.tsx", import.meta.url), "utf8");
 
-  assert.match(list, /sm:min-h-\[4\.75rem\]/);
-  assert.match(list, /sm:h-10 sm:w-10/);
-  assert.match(flowchart, /const matchHeight = 122/);
+  assert.match(list, /grid min-h-14 w-full/);
+  assert.match(list, /flex min-h-12 w-full/);
+  assert.match(flowchart, /const matchHeight = 94/);
+  assert.match(flowchart, /const matchPitch = 110/);
   assert.match(flowchart, /className="w-48 shrink-0 snap-start"/);
 });
 
-test("automatic advances use a dedicated BYE card", () => {
-  const source = readFileSync(
+test("automatic advances use one slim BYE line in list and flowchart views", () => {
+  const list = readFileSync(
     new URL("../components/BracketMatchList.tsx", import.meta.url),
     "utf8",
   );
+  const flowchart = readFileSync(
+    new URL("../components/ReadOnlyBracket.tsx", import.meta.url),
+    "utf8",
+  );
 
-  assert.match(source, /const advancingPlayer = match\.player1 \?\? match\.player2 \?\? match\.winner/);
-  assert.match(source, /BYE<\/strong> — No opponent/);
-  assert.match(source, /border-dashed border-\[#a873ee\]/);
-  assert.match(source, /h-\[7\.5rem\].*sm:h-auto/);
-  assert.match(source, /whitespace-nowrap.*Automatic advance<\/strong> · no match played/);
+  assert.match(list, /const advancingPlayer = match\.player1 \?\? match\.player2 \?\? match\.winner/);
+  assert.match(list, /\{advancingPlayer\}<\/span>[\s\S]*advances · BYE/);
+  assert.match(list, /advances · BYE/);
+  assert.match(list, /flex min-h-12 w-full/);
+  assert.doesNotMatch(list, /BYE<\/strong> — No opponent/);
+  assert.doesNotMatch(list, /Automatic advance<\/strong> · no match played/);
+  assert.match(flowchart, /\{advancingPlayer\} advances · BYE/);
+  assert.match(flowchart, /flex h-9 items-center justify-center/);
+  assert.doesNotMatch(flowchart, />Automatic BYE</);
+  assert.doesNotMatch(flowchart, />No opponent</);
 });
 
-test("round cards show resolved progress before their matches", () => {
+test("flowchart shows a shared race target once in each round heading", () => {
+  const source = readFileSync(
+    new URL("../components/ReadOnlyBracket.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(source, /const sharedRoundRace = roundRaceTargets\.length === 1/);
+  assert.match(source, /`RT\$\{sharedRoundRace\}`/);
+  assert.match(source, /aria-label=\{sharedRoundRace \? `Race to \$\{sharedRoundRace\}`/);
+  assert.match(source, /sharedRoundRace \? "" : `Race to \$\{matchRaceTo\}`/);
+});
+
+test("list view pins a concise round heading with playable progress", () => {
   const source = readFileSync(
     new URL("../components/BracketMatchList.tsx", import.meta.url),
     "utf8",
   );
 
-  assert.match(source, /const progress = round\.matches\.length/);
-  assert.match(source, /matches resolved/);
-  assert.match(source, /bg-\[#39d38f\]/);
+  assert.match(source, /sticky top-0 z-20/);
+  assert.match(source, /const playableMatches = round\.matches\.filter/);
+  assert.match(source, /\{completed\}\/\{playableMatches\.length\} done/);
 });
 
 test("player search finds every match containing the requested player", () => {
@@ -185,6 +206,8 @@ test("phone list uses a single edge-to-edge gutter and keeps CueBracket controls
   assert.match(source, /Jump to round/);
   assert.match(source, /\[scrollbar-width:none\]/);
   assert.match(source, /\[&::\-webkit-scrollbar\]:hidden/);
+  assert.match(source, /sticky bottom-0 z-20/);
+  assert.match(source, />Not started<|>Live<|>Finished<|>BYE</);
 });
 
 test("flowchart removes the bulky zoom toolbar but keeps gesture navigation", () => {
@@ -211,8 +234,8 @@ test("spectator list uses the match-card palette while the flowchart stays Royal
 
   assert.match(listSource, /bg-\[#08172a\]/);
   assert.match(listSource, /text-\[#f8fbff\]/);
-  assert.match(listSource, /bg-\[#39cbe8\] text-\[#071a2d\]/);
-  assert.match(listSource, /text-\[#dce8f4\]/);
+  assert.match(listSource, /bg-\[#102a49\]/);
+  assert.match(listSource, /bg-\[#39a8ff\]/);
   assert.match(bracketSource, /bg-\[#123763\]/);
   assert.doesNotMatch(bracketSource, /shadow-\[0_0_30px_rgba\(34,211,238/);
 });

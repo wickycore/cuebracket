@@ -5,83 +5,63 @@ import { useEffect, useMemo, useState } from "react";
 import {
   getActiveSpectatorRound,
   getSpectatorMatchState,
-  matchesSpectatorFilter,
   matchesSpectatorPlayer,
   numberBracketMatches,
   spectatorSourceLabel,
-  type SpectatorMatchFilter,
   type SpectatorMatchState,
 } from "@/lib/bracket/spectator";
 import { formatDuration, type BracketMatch, type BracketRound } from "@/lib/tournaments";
 import { getMatchRaceTo } from "@/lib/tournament-races";
 
-const filters: Array<{ key: SpectatorMatchFilter; label: string }> = [
-  { key: "all", label: "All" },
-  { key: "live", label: "Live" },
-  { key: "upcoming", label: "Upcoming" },
-  { key: "finished", label: "Finished" },
-];
-
-const statusStyles: Record<SpectatorMatchState, string> = {
-  advanced: "bg-[#5b318d]/20 text-[#d9bcff] ring-[#a873ee]/80",
-  finished: "bg-[#185843] text-[#9aebc6] ring-[#36b985]/35",
-  live: "bg-[#642c3b] text-[#ff7485] ring-[#a84255]/40",
-  ready: "bg-[#075968] text-[#67e7ed] ring-[#168798]/40",
-  waiting: "bg-[#21364d] text-[#c6d4e4] ring-[#3b536d]",
-};
-
 const rowAccentStyles: Record<SpectatorMatchState, string> = {
-  advanced: "bg-[#9b5de5]",
-  finished: "bg-[#3bd198]",
-  live: "bg-[#ff6075]",
-  ready: "bg-[#3bd198]",
-  waiting: "bg-[#5f7b99]",
+  advanced: "bg-[#9b7bea]",
+  finished: "bg-[#39d38f]",
+  live: "bg-[#39a8ff]",
+  ready: "bg-[#56d6ad]",
+  waiting: "bg-[#607d9d]",
 };
 
-const avatarStyles = [
-  "bg-[#b83e59]",
-  "bg-[#6b3fca]",
-  "bg-[#2f9d62]",
-  "bg-[#e89013]",
-  "bg-[#27aaa3]",
-  "bg-[#2f6fc9]",
-];
-
-const statusLabels: Record<SpectatorMatchState, string> = {
-  advanced: "Advanced",
+const detailStatusLabels: Record<SpectatorMatchState, string> = {
+  advanced: "Automatic BYE",
   finished: "Finished",
-  live: "● Live",
+  live: "Live now",
   ready: "Ready",
-  waiting: "Waiting",
+  waiting: "Not started",
 };
-
-function playerInitials(name: string) {
-  const words = name.trim().split(/\s+/).filter(Boolean);
-  if (!words.length) return "?";
-  if (words.length === 1) return words[0].slice(0, 2).toLowerCase();
-  return words.slice(0, 2).map((word) => word[0]).join("").toLowerCase();
-}
-
-function playerAvatarStyle(name: string) {
-  const colorIndex = Array.from(name).reduce((total, character) => total + character.charCodeAt(0), 0) % avatarStyles.length;
-  return avatarStyles[colorIndex];
-}
 
 function ClockIcon() {
   return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2">
       <circle cx="12" cy="12" r="9" />
       <path d="M12 7v5l3 2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 
-function UserPlusIcon() {
+function ChevronIcon({ open }: { open: boolean }) {
   return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="9" cy="8" r="3" />
-      <path d="M3.5 19c.5-4 2.4-6 5.5-6s5 2 5.5 6M18 7v6M15 10h6" strokeLinecap="round" strokeLinejoin="round" />
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 20 20"
+      className={`h-4 w-4 text-[#4aa8dc] transition-transform ${open ? "rotate-90" : ""}`}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <path d="m7 4 6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
+  );
+}
+
+function Score({ score, live }: { score: number | null; live: boolean }) {
+  if (score === null) {
+    return <span className="grid h-7 w-7 place-items-center rounded-lg border border-[#315878] text-sm font-bold text-[#96abc0]">−</span>;
+  }
+
+  return (
+    <span className={`text-base font-black tabular-nums ${live ? "text-[#57e6c1]" : "text-[#dff7ff]"}`}>
+      {score}
+    </span>
   );
 }
 
@@ -91,22 +71,22 @@ function MatchRow({
   matchNumbers,
   raceTo,
   now,
+  expanded,
+  onToggle,
 }: {
   match: BracketMatch;
   matchNumber: number;
   matchNumbers: Map<string, number>;
   raceTo: number;
   now: number;
+  expanded: boolean;
+  onToggle: () => void;
 }) {
   const state = getSpectatorMatchState(match);
   const matchRaceTo = getMatchRaceTo(match, raceTo);
   const automaticAdvance = state === "advanced";
-  const players = [
-    match.player1 ?? (automaticAdvance ? "No opponent" : spectatorSourceLabel(match.source1, matchNumbers)),
-    match.player2 ?? (automaticAdvance ? "No opponent" : spectatorSourceLabel(match.source2, matchNumbers)),
-  ];
-  const scores = [match.score1, match.score2];
-  const displayMatchNumber = String(matchNumber).padStart(2, "0");
+  const player1 = match.player1 ?? spectatorSourceLabel(match.source1, matchNumbers);
+  const player2 = match.player2 ?? spectatorSourceLabel(match.source2, matchNumbers);
   const elapsed = match.startedAt
     ? formatDuration(
         (match.endedAt ? new Date(match.endedAt).getTime() : now) -
@@ -114,173 +94,137 @@ function MatchRow({
       )
     : "";
 
-  function playerStyle(index: number) {
-    const player = players[index];
-    const isWinner = Boolean(match.completed && match.winner && player === match.winner);
-    const isPlaceholder = !(index === 0 ? match.player1 : match.player2);
-    if (isWinner) return "text-[#a9d9bd]";
-    if (!isPlaceholder) return "text-[#fafcff]";
-    return automaticAdvance ? "text-[#9fb4ca]" : "text-[#d2dfec]";
-  }
-
-  function playerIdentity(index: number) {
-    const player = players[index];
-    const hasPlayer = Boolean(index === 0 ? match.player1 : match.player2);
-
-    return (
-      <div className={`flex min-w-0 items-center gap-1.5 sm:gap-2.5 ${index === 1 ? "flex-row-reverse text-right" : "text-left"}`}>
-        {hasPlayer ? (
-          <span
-            aria-hidden="true"
-            className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-xs font-black lowercase text-white ring-1 ring-white/15 sm:h-10 sm:w-10 sm:text-sm ${playerAvatarStyle(player)}`}
-          >
-            {playerInitials(player)}
-          </span>
-        ) : null}
-        <span className={`min-w-0 break-words text-sm font-black leading-4 sm:text-base sm:leading-5 ${playerStyle(index)}`}>
-          {player}
-        </span>
-      </div>
-    );
-  }
-
   if (automaticAdvance) {
     const advancingPlayer = match.player1 ?? match.player2 ?? match.winner ?? "Advanced player";
 
     return (
-      <article className="relative h-[7.5rem] overflow-hidden rounded-xl border border-[#3b3b61] bg-[linear-gradient(110deg,#17263f_0%,#18233b_52%,#151d34_100%)] shadow-[0_10px_30px_rgba(0,0,0,0.14)] sm:h-auto">
-        <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-1.5 ${rowAccentStyles[state]}`} />
-        <div className="flex h-7 items-center justify-between gap-3 px-3 sm:h-auto sm:px-5 sm:pt-3">
-          <span className="text-xs font-black uppercase tracking-[0.08em] text-[#c1d0e2] sm:text-xs">
-            {match.tableNumber ? `Table ${match.tableNumber} · ` : ""}Match {displayMatchNumber}
-          </span>
-          <span className={`rounded-full px-2.5 py-1 text-[0.66rem] font-black uppercase tracking-[0.06em] ring-1 sm:text-xs ${statusStyles[state]}`}>
-            {statusLabels[state]}
-          </span>
-        </div>
-
-        <div className="grid h-16 grid-cols-[minmax(0,1fr)_2rem_minmax(0,1.35fr)] items-center gap-1.5 px-3 py-1 sm:h-auto sm:min-h-[4.75rem] sm:grid-cols-[minmax(0,1fr)_2.5rem_minmax(0,1.2fr)] sm:px-5 sm:py-2.5">
-          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-            <span aria-hidden="true" className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-xs font-black uppercase text-white ring-1 ring-[#b17aff]/50 sm:h-10 sm:w-10 sm:text-sm ${playerAvatarStyle(advancingPlayer)}`}>
-              {playerInitials(advancingPlayer)}
-            </span>
-            <span className="min-w-0 break-words text-sm font-black leading-4 text-[#fafcff] sm:text-base sm:leading-5">{advancingPlayer}</span>
+      <article className="relative overflow-hidden bg-[#0b192c]">
+        <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-1 ${rowAccentStyles[state]}`} />
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={expanded}
+          className="flex min-h-12 w-full items-center gap-2 px-4 py-2 text-left"
+        >
+          <span className="min-w-0 flex-1 truncate text-sm font-black text-[#9da9ba]">{advancingPlayer}</span>
+          <span className="shrink-0 text-xs font-bold text-[#a99bd2]">advances · BYE</span>
+          <ChevronIcon open={expanded} />
+        </button>
+        {expanded ? (
+          <div className="border-t border-[#203750] bg-[#101f34] px-4 py-2 text-xs font-bold text-[#aebed0]">
+            Automatic advance · no match played
           </div>
-
-          <span className="text-center text-lg font-black text-[#b9b5ca] sm:text-xl">VS.</span>
-
-          <div className="flex min-h-10 min-w-0 items-center justify-center gap-1 rounded-xl border border-dashed border-[#a873ee] bg-[#281d42]/45 px-1.5 py-1 text-center text-xs font-bold leading-3.5 text-[#d9cfee] sm:min-h-12 sm:gap-2 sm:px-3 sm:py-2 sm:text-sm sm:leading-4" aria-label="Bye — no opponent">
-            <span className="text-[#b17aff]"><UserPlusIcon /></span>
-            <span><strong className="text-[#c798ff]">BYE</strong> — No opponent</span>
-          </div>
-        </div>
-
-        <p className="flex h-7 items-center justify-center border-t border-[#3b3b61] px-3 text-center text-xs font-bold text-[#d8b8ff] sm:block sm:h-auto sm:px-5 sm:py-2 sm:text-xs">
-          <span className="whitespace-nowrap"><strong className="text-[#bd8cff]">Automatic advance</strong> · no match played</span>
-        </p>
+        ) : null}
       </article>
     );
   }
 
+  const live = state === "live";
+  const player1Winner = Boolean(match.completed && match.winner === match.player1);
+  const player2Winner = Boolean(match.completed && match.winner === match.player2);
+
   return (
-    <article className="relative h-[6.875rem] overflow-hidden rounded-xl border border-[#2c425a] bg-[linear-gradient(110deg,#172a43_0%,#152940_52%,#11243a_100%)] shadow-[0_10px_30px_rgba(0,0,0,0.14)] transition hover:border-[#3c5875] hover:bg-[linear-gradient(110deg,#1b314d_0%,#193049_52%,#152b44_100%)] sm:h-auto">
-      <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-1.5 ${rowAccentStyles[state]}`} />
-      <div className="grid h-7 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 px-3 sm:h-auto sm:px-5 sm:pt-3">
-        <span className="text-xs font-black uppercase tracking-[0.08em] text-[#c1d0e2] sm:text-xs">
-          {match.tableNumber ? `Table ${match.tableNumber} · ` : ""}Match {displayMatchNumber}
+    <article className={`relative overflow-hidden transition-colors ${live ? "bg-[#102a49]" : "bg-[#0b1c31]"}`}>
+      <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-1 ${rowAccentStyles[state]}`} />
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={expanded}
+        className="grid min-h-14 w-full grid-cols-[minmax(0,1fr)_2rem_3.5rem_2rem_minmax(0,1fr)_1rem] items-center gap-1 px-4 py-2 text-left"
+      >
+        <span className={`min-w-0 truncate text-sm font-black ${player1Winner ? "text-[#8be0b1]" : match.player1 ? "text-[#f8fbff]" : "text-[#94a9be]"}`} title={player1}>
+          {player1}
         </span>
-        <span className="flex items-center justify-center gap-1 text-xs font-black tabular-nums text-[#c4d2e3] sm:text-sm">
-          {elapsed ? <><ClockIcon />{elapsed}</> : null}
+        <Score score={match.score1} live={live} />
+        <span className={`text-center text-[11px] font-black ${live ? "text-[#55d7ff]" : "text-[#95acc3]"}`}>
+          {live ? "● live" : "vs"}
         </span>
-        <div className="flex items-center justify-end">
-          <span className={`rounded-full px-2.5 py-1 text-[0.66rem] font-black uppercase tracking-[0.06em] ring-1 sm:text-xs ${statusStyles[state]}`}>
-            {statusLabels[state]}
-          </span>
+        <Score score={match.score2} live={live} />
+        <span className={`min-w-0 truncate text-right text-sm font-black ${player2Winner ? "text-[#8be0b1]" : match.player2 ? "text-[#f8fbff]" : "text-[#94a9be]"}`} title={player2}>
+          {player2}
+        </span>
+        <ChevronIcon open={expanded} />
+      </button>
+      {expanded ? (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-[#24415e] bg-[#10233b] px-4 py-2 text-xs font-bold text-[#b9c9d9]">
+          <span>Match #{matchNumber}</span>
+          {match.tableNumber ? <span>Table {match.tableNumber}</span> : null}
+          <span>Race to {matchRaceTo}</span>
+          <span className={live ? "text-[#63ddff]" : "text-[#a9bdd0]"}>{detailStatusLabels[state]}</span>
+          {elapsed ? <span className="flex items-center gap-1"><ClockIcon />{elapsed}</span> : null}
         </div>
-      </div>
-
-      <div className="grid h-[3.375rem] grid-cols-[minmax(0,1fr)_2rem_1.5rem_2rem_minmax(0,1fr)] items-center gap-1 px-3 py-1 sm:h-auto sm:min-h-[4.75rem] sm:grid-cols-[minmax(0,1fr)_3rem_1.5rem_3rem_minmax(0,1fr)] sm:gap-2 sm:px-5 sm:py-2">
-        {playerIdentity(0)}
-        <span className="text-center text-3xl font-black tabular-nums text-[#f8fbff] sm:text-3xl">{scores[0] ?? "—"}</span>
-        <span className="text-center text-base font-black uppercase text-[#aebdd0] sm:text-lg">vs</span>
-        <span className="text-center text-3xl font-black tabular-nums text-[#f8fbff] sm:text-3xl">{scores[1] ?? "—"}</span>
-        {playerIdentity(1)}
-      </div>
-
-      <p className="grid h-7 place-items-center border-t border-[#2c425a] px-3 text-center text-xs font-medium text-[#b9c8da] sm:block sm:h-auto sm:px-5 sm:py-1.5 sm:text-xs">Race to {matchRaceTo}</p>
+      ) : null}
     </article>
   );
 }
 
-function RoundGroup({
+function RoundPanel({
   round,
   raceTo,
   matchNumbers,
   now,
-  open,
-  forceOpen,
-  onOpenChange,
+  query,
+  expandedMatchId,
+  onToggleMatch,
 }: {
   round: BracketRound;
   raceTo: number;
   matchNumbers: Map<string, number>;
   now: number;
-  open: boolean;
-  forceOpen: boolean;
-  onOpenChange: (open: boolean) => void;
+  query: string;
+  expandedMatchId: string;
+  onToggleMatch: (matchId: string) => void;
 }) {
-  const completed = round.matches.filter((match) => match.completed).length;
-  const progress = round.matches.length ? (completed / round.matches.length) * 100 : 0;
-  const roundRaceTo = getMatchRaceTo(round.matches[0], raceTo);
+  const matches = round.matches.filter((match) => matchesSpectatorPlayer(match, query));
+  const playableMatches = round.matches.filter((match) => getSpectatorMatchState(match) !== "advanced");
+  const completed = playableMatches.filter((match) => getSpectatorMatchState(match) === "finished").length;
+  const roundRaceTargets = Array.from(new Set(round.matches.map((match) => getMatchRaceTo(match, raceTo))));
+  const roundRaceLabel = roundRaceTargets.length === 1 ? `Race to ${roundRaceTargets[0]}` : "Variable races";
 
   return (
-    <details
-      id={`spectator-round-${round.round}`}
-      open={forceOpen || open}
-      onToggle={(event) => {
-        if (!forceOpen) onOpenChange(event.currentTarget.open);
-      }}
-      className="group scroll-mt-24 overflow-hidden border-y border-[#263c54] bg-[#09192d] sm:rounded-2xl sm:border"
-    >
-      <summary className="flex cursor-pointer list-none items-start justify-between gap-3 px-4 py-4 sm:px-7 sm:py-6">
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-            <h3 className="text-xl font-black text-[#f8fbff] sm:text-2xl">{round.name}</h3>
-            <span className="rounded-lg border border-[#2d435c] bg-[#1b2d45] px-2.5 py-1 text-xs font-black text-[#cbd8e7] shadow-inner sm:text-sm">Race to {roundRaceTo}</span>
-          </div>
-          <p className="mt-2 text-sm font-bold text-[#c7d5e4] sm:text-base">{completed} / {round.matches.length} matches resolved</p>
-          <span className="mt-2 block h-2 w-full max-w-sm overflow-hidden rounded-full bg-[#2b3c52]" aria-hidden="true">
-            <span className="block h-full rounded-full bg-[#39d38f] transition-[width] duration-500" style={{ width: `${progress}%` }} />
-          </span>
+    <section id={`spectator-round-${round.round}`}>
+      <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-y border-[#274866] bg-[#102744]/95 px-4 py-3 backdrop-blur">
+        <h3 className="min-w-0 truncate text-base font-black text-[#ffffff]">{round.name}</h3>
+        <p className="shrink-0 text-xs font-bold text-[#9bc8e8]">
+          {roundRaceLabel} · {completed}/{playableMatches.length} done
+        </p>
+      </header>
+      {matches.length ? (
+        <div className="divide-y divide-[#203a54]">
+          {matches.map((match) => (
+            <MatchRow
+              key={match.id}
+              match={match}
+              matchNumber={matchNumbers.get(match.id) ?? match.position + 1}
+              matchNumbers={matchNumbers}
+              raceTo={raceTo}
+              now={now}
+              expanded={expandedMatchId === match.id}
+              onToggle={() => onToggleMatch(match.id)}
+            />
+          ))}
         </div>
-        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-[#2d435c] bg-[#17283d] text-xl text-[#edf5ff] shadow-inner transition group-open:rotate-180 sm:h-12 sm:w-12">⌄</span>
-      </summary>
-      <div className="space-y-2.5 border-t border-[#263c54] px-3 py-3 sm:space-y-3 sm:px-5 sm:py-5">
-        {round.matches.map((match) => (
-          <MatchRow
-            key={match.id}
-            match={match}
-            matchNumber={matchNumbers.get(match.id) ?? match.position + 1}
-            matchNumbers={matchNumbers}
-            raceTo={raceTo}
-            now={now}
-          />
-        ))}
-      </div>
-    </details>
+      ) : (
+        <div className="px-6 py-14 text-center text-sm font-bold text-[#afc0d2]">
+          No matches found for “{query.trim()}” in this round.
+        </div>
+      )}
+    </section>
   );
 }
 
 export function BracketMatchList({ rounds, raceTo }: { rounds: BracketRound[]; raceTo: number }) {
-  const [filter, setFilter] = useState<SpectatorMatchFilter>("all");
+  const activeRound = useMemo(() => getActiveSpectatorRound(rounds), [rounds]);
+  const [selectedRoundOverride, setSelectedRoundOverride] = useState<number | null>(null);
+  const [expandedMatchId, setExpandedMatchId] = useState("");
   const [query, setQuery] = useState("");
   const [now, setNow] = useState(() => Date.now());
   const allMatches = useMemo(() => rounds.flatMap((round) => round.matches), [rounds]);
   const matchNumbers = useMemo(() => numberBracketMatches(rounds), [rounds]);
-  const activeRound = useMemo(() => getActiveSpectatorRound(rounds), [rounds]);
-  const [roundOpenOverrides, setRoundOpenOverrides] = useState<Map<number, boolean>>(
-    () => new Map(),
-  );
+  const selectedRound = selectedRoundOverride && rounds.some((round) => round.round === selectedRoundOverride)
+    ? selectedRoundOverride
+    : activeRound || rounds[0]?.round || 1;
+  const selectedRoundData = rounds.find((round) => round.round === selectedRound) ?? rounds[0];
   const hasLiveMatches = allMatches.some((match) => getSpectatorMatchState(match) === "live");
 
   useEffect(() => {
@@ -289,108 +233,65 @@ export function BracketMatchList({ rounds, raceTo }: { rounds: BracketRound[]; r
     return () => window.clearInterval(timer);
   }, [hasLiveMatches]);
 
-  const counts = useMemo(() => Object.fromEntries(
-    filters.map(({ key }) => [key, allMatches.filter((match) => matchesSpectatorFilter(match, key)).length]),
-  ) as Record<SpectatorMatchFilter, number>, [allMatches]);
-  const visibleRounds = rounds
-    .map((round) => ({
-      ...round,
-      matches: round.matches.filter(
-        (match) => matchesSpectatorFilter(match, filter) && matchesSpectatorPlayer(match, query),
-      ),
-    }))
-    .filter((round) => round.matches.length);
-  const visibleMatchCount = visibleRounds.reduce((total, round) => total + round.matches.length, 0);
-  const forceRoundsOpen = Boolean(query.trim()) || filter !== "all";
-
-  function jumpToRound(roundNumber: number) {
-    setRoundOpenOverrides((current) => new Map(current).set(roundNumber, true));
-    window.requestAnimationFrame(() => {
-      document.getElementById(`spectator-round-${roundNumber}`)?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    });
-  }
-
-  function toggleRound(roundNumber: number, open: boolean) {
-    setRoundOpenOverrides((current) => new Map(current).set(roundNumber, open));
+  function selectRound(roundNumber: number) {
+    setSelectedRoundOverride(roundNumber);
+    setExpandedMatchId("");
   }
 
   return (
     <section className="-mx-3 mt-3 overflow-hidden border-y border-[#263c54] bg-[#08172a] sm:mx-0 sm:mt-6 sm:rounded-[1.75rem] sm:border">
-      <header className="border-b border-[#263c54] bg-[#0a1b30] px-3 py-4 sm:px-7 sm:py-6">
-        {counts.live ? <span className="mb-3 block w-fit rounded-full bg-rose-400/15 px-3 py-1.5 text-xs font-black text-rose-300 ring-1 ring-rose-400/25">● {counts.live} live now</span> : null}
-
-        <div className="relative mt-3">
+      <header className="border-b border-[#263c54] bg-[#0a1b30] px-3 py-4 sm:px-6 sm:py-5">
+        <div className="relative">
           <label htmlFor="spectator-player-search" className="sr-only">Find a player</label>
-          <span aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-lg text-[#9fb4ca]">⌕</span>
+          <span aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-lg text-[#7fa7c5]">⌕</span>
           <input
             id="spectator-player-search"
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Find a player — e.g. Wicky"
-            className="min-h-11 w-full rounded-xl border border-[#2d435c] bg-[#111f33] pl-10 pr-10 text-base font-bold text-[#f8fbff] outline-none placeholder:text-[#8fa2b8] focus:border-[#39cbe8] focus:ring-2 focus:ring-[#39cbe8]/20"
+            className="min-h-11 w-full rounded-xl border border-[#2d5374] bg-[#10233d] pl-10 pr-10 text-base font-bold text-[#f8fbff] outline-none placeholder:text-[#829ab2] focus:border-[#39cbe8] focus:ring-2 focus:ring-[#39cbe8]/20"
           />
           {query ? <button type="button" onClick={() => setQuery("")} aria-label="Clear player search" className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-lg text-[#c7d5e4] hover:bg-[#1b2d45] hover:text-white">×</button> : null}
         </div>
-        {query.trim() ? <p className="mt-2 text-xs font-bold text-[#52d3ee]">{visibleMatchCount} {visibleMatchCount === 1 ? "match" : "matches"} found</p> : null}
 
-        <div className="mt-3">
-          <p className="text-xs font-black uppercase tracking-[0.16em] text-[#dce8f4]">Jump to round</p>
-          <div className="mt-1.5 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {rounds.map((round) => (
-              <button
-                key={round.round}
-                type="button"
-                onClick={() => jumpToRound(round.round)}
-                className={`min-h-9 shrink-0 rounded-lg px-3 text-xs font-black ring-1 transition ${round.round === activeRound ? "bg-[#12566a] text-[#75e6ee] ring-[#238499]" : "bg-[#17283d] text-[#c7d5e4] ring-[#2d435c] hover:text-white"}`}
-              >
-                {round.name}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="mt-3 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="tablist" aria-label="Filter tournament matches">
-          {filters.map(({ key, label }) => (
+        <p className="sr-only">Jump to round</p>
+        <div className="mt-3 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="tablist" aria-label="Tournament rounds">
+          {rounds.map((round) => (
             <button
-              key={key}
+              key={round.round}
               type="button"
               role="tab"
-              aria-selected={filter === key}
-              onClick={() => setFilter(key)}
-              className={`min-h-10 shrink-0 rounded-xl px-3.5 py-2 text-sm font-black transition ${filter === key ? "bg-[#39cbe8] text-[#071a2d]" : "bg-[#17283d] text-[#c7d5e4] ring-1 ring-[#2d435c] hover:text-white"}`}
+              aria-selected={round.round === selectedRound}
+              onClick={() => selectRound(round.round)}
+              className={`min-h-9 shrink-0 rounded-lg px-3 text-xs font-black ring-1 transition ${round.round === selectedRound ? "bg-[#125b83] text-[#8cecff] ring-[#36a5d3]" : "bg-[#11243b] text-[#b7c8d9] ring-[#2b4a67] hover:text-white"}`}
             >
-              {label} <span className={filter === key ? "text-[#17455a]" : "text-[#8fa2b8]"}>{counts[key]}</span>
+              {round.name}
             </button>
           ))}
         </div>
       </header>
 
-      {visibleRounds.length ? (
-        <div className="space-y-2 py-2 sm:space-y-4 sm:p-5">
-          {visibleRounds.map((round) => (
-            <RoundGroup
-              key={`${filter}-${round.round}`}
-              round={round}
-              raceTo={raceTo}
-              matchNumbers={matchNumbers}
-              now={now}
-              open={roundOpenOverrides.get(round.round) ?? round.round === activeRound}
-              forceOpen={forceRoundsOpen}
-              onOpenChange={(open) => toggleRound(round.round, open)}
-            />
-          ))}
-        </div>
+      {selectedRoundData ? (
+        <RoundPanel
+          round={selectedRoundData}
+          raceTo={raceTo}
+          matchNumbers={matchNumbers}
+          now={now}
+          query={query}
+          expandedMatchId={expandedMatchId}
+          onToggleMatch={(matchId) => setExpandedMatchId((current) => current === matchId ? "" : matchId)}
+        />
       ) : (
-        <div className="px-6 py-16 text-center">
-          <p className="text-3xl">🎱</p>
-          <p className="mt-3 font-black text-[#fafcff]">{query.trim() ? `No matches found for “${query.trim()}”.` : `No ${filter} matches right now.`}</p>
-          <button type="button" onClick={() => { setFilter("all"); setQuery(""); }} className="mt-3 text-sm font-black text-[#52d3ee]">Show every match</button>
-        </div>
+        <div className="px-6 py-16 text-center font-bold text-[#afc0d2]">No bracket rounds are available yet.</div>
       )}
+
+      <footer className="sticky bottom-0 z-20 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-[#284966] bg-[#102744]/95 px-4 py-3 text-[11px] font-bold text-[#9fc2df] backdrop-blur">
+        <span className="flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-sm bg-[#607d9d]" />Not started</span>
+        <span className="flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-sm bg-[#39a8ff]" />Live</span>
+        <span className="flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-sm bg-[#56d6ad]" />Ready</span>
+        <span className="flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-sm bg-[#9b7bea]" />BYE</span>
+      </footer>
     </section>
   );
 }

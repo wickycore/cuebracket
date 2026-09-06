@@ -125,8 +125,8 @@ function Section({
 }) {
   const colors = toneClass[tone];
   const maxMatches = Math.max(1, ...rounds.map((round) => round.matches.length));
-  const matchHeight = 122;
-  const matchPitch = 138;
+  const matchHeight = 94;
+  const matchPitch = 110;
   const bracketBodyHeight = matchHeight + (maxMatches - 1) * matchPitch;
   const balancedCenters = balancedGeometry
     ? buildBalancedCenters(rounds, maxMatches)
@@ -167,10 +167,23 @@ function Section({
             const ratio = Math.max(1, Math.floor(maxMatches / Math.max(1, round.matches.length)));
             const topPadding = ratio > 1 ? Math.min(78, (ratio - 1) * 23) : 0;
             const gap = ratio > 1 ? Math.min(96, ratio * 24) : 14;
+            const roundRaceTargets = Array.from(
+              new Set(round.matches.map((match) => getMatchRaceTo(match, raceTo))),
+            );
+            const sharedRoundRace = roundRaceTargets.length === 1 ? roundRaceTargets[0] : null;
 
             return (
               <div key={`${title}-${round.round}`} className="w-48 shrink-0 snap-start">
-                <p className="mb-3 text-[10px] font-black uppercase tracking-[0.16em] text-[#dce8f4]">{round.name}</p>
+                <p className="mb-3 flex items-center justify-between gap-2 text-[9px] font-black uppercase tracking-[0.1em] text-[#dce8f4]">
+                  <span className="min-w-0 whitespace-nowrap">{round.name}</span>
+                  <span
+                    className="shrink-0 rounded bg-[#1a5275] px-1.5 py-0.5 tracking-normal text-[#8ce8f7]"
+                    aria-label={sharedRoundRace ? `Race to ${sharedRoundRace}` : "Variable race targets"}
+                    title={sharedRoundRace ? `Race to ${sharedRoundRace}` : "Variable race targets"}
+                  >
+                    {sharedRoundRace ? `RT${sharedRoundRace}` : "VAR"}
+                  </span>
+                </p>
                 <div
                   style={
                     balancedGeometry
@@ -205,21 +218,11 @@ function Section({
                         }
                       >
                         {automaticAdvance ? (
-                          <article data-bracket-card className="relative z-10 overflow-hidden rounded-xl border border-[#a78bfa]/45 bg-[#30295d] shadow-[0_10px_24px_rgba(0,0,0,.18)]">
-                            <div className="flex items-center justify-between border-b border-[#a78bfa]/30 px-3 py-1.5">
-                              <span className="text-[10px] font-black uppercase tracking-[0.16em] text-[#e3dcff]">Automatic BYE</span>
-                              <span className="rounded-full bg-[#a78bfa]/18 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] text-[#ede9fe]">Advanced</span>
-                            </div>
-                            <div className="flex min-h-8 items-center gap-2 border-b border-[#a78bfa]/30 px-3 py-1">
-                              <span className="min-w-0 flex-1 truncate text-sm font-black text-[#fafcff]">{advancingPlayer}</span>
-                              <span className="text-sm font-black text-[#ddd6fe]">✓</span>
-                            </div>
-                            <div className="flex min-h-8 items-center border-b border-[#a78bfa]/30 px-3 py-1 text-xs font-extrabold text-[#b8c7dc]">
-                              No opponent
-                            </div>
-                            <div className="flex min-h-7 items-center px-3 py-1 text-[10px] font-bold text-[#e3dcff]">
-                              Automatic advance
-                            </div>
+                          <article data-bracket-card className="relative z-10 flex h-9 items-center justify-center overflow-hidden rounded-lg border border-[#a78bfa]/55 bg-[#30295d] px-3 shadow-[0_8px_18px_rgba(0,0,0,.16)]">
+                            <p className="min-w-0 truncate whitespace-nowrap text-center text-[9px] font-black tracking-normal text-[#ede9fe]">
+                              <span aria-hidden="true" className="mr-1.5 text-[#c4b5fd]">✓</span>
+                              {advancingPlayer} advances · BYE
+                            </p>
                           </article>
                         ) : (
                           <article data-bracket-card className={`group relative z-10 overflow-hidden rounded-xl border bg-[#123763] shadow-[0_10px_24px_rgba(0,0,0,.18)] transition-colors duration-200 ${match.completed ? "border-[#78c69b]/60" : match.status === "live" ? "border-[#ef8193]/65" : "border-[#356a98]"}`}>
@@ -242,10 +245,12 @@ function Section({
                                 </div>
                               );
                             })}
-                            <div className="flex min-h-7 items-center justify-between gap-2 px-3 py-1 text-[10px] font-bold text-[#d2dfec]">
-                              <span>Race to {matchRaceTo}</span>
-                              <span>{match.startedAt ? formatDuration((match.endedAt ? new Date(match.endedAt).getTime() : now) - new Date(match.startedAt).getTime()) : ""}</span>
-                            </div>
+                            {!sharedRoundRace || match.startedAt ? (
+                              <div className="flex min-h-7 items-center justify-between gap-2 px-3 py-1 text-[10px] font-bold text-[#d2dfec]">
+                                <span>{sharedRoundRace ? "" : `Race to ${matchRaceTo}`}</span>
+                                <span>{match.startedAt ? formatDuration((match.endedAt ? new Date(match.endedAt).getTime() : now) - new Date(match.startedAt).getTime()) : ""}</span>
+                              </div>
+                            ) : null}
                           </article>
                         )}
                       </div>
