@@ -2,6 +2,10 @@ import { createClient } from "@supabase/supabase-js";
 import { cache } from "react";
 
 import type { CloudTournamentRow } from "@/lib/cloud/tournaments";
+import {
+  loadPublicTournamentParticipants,
+  type PublicTournamentParticipant,
+} from "@/lib/cloud/public-participants";
 import { getSupabaseEnv } from "@/lib/supabase/env";
 
 export type PublicTournamentSnapshot =
@@ -52,3 +56,13 @@ const loadPublicTournamentSnapshot = async (
 };
 
 export const getPublicTournamentSnapshot = cache(loadPublicTournamentSnapshot);
+
+async function loadPublicParticipantSnapshot(id: string): Promise<PublicTournamentParticipant[]> {
+  try {
+    return await loadPublicTournamentParticipants(createPublicClient(), id);
+  } catch {
+    return [];
+  }
+}
+
+export const getPublicTournamentParticipants = cache(loadPublicParticipantSnapshot);

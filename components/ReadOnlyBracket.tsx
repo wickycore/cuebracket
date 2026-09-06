@@ -16,6 +16,7 @@ import {
 } from "@/components/BracketConnections";
 import { BracketViewport } from "@/components/BracketViewport";
 import { BracketMatchList } from "@/components/BracketMatchList";
+import type { PublicTournamentParticipant } from "@/lib/cloud/public-participants";
 import { ChampionCelebration } from "@/components/ChampionCelebration";
 import {
   numberBracketMatches,
@@ -270,10 +271,14 @@ export function ReadOnlyBracket({
   tournament,
   bracket: bracketOverride,
   showChampion = true,
+  publicParticipants = [],
+  enablePlayerCards = false,
 }: {
   tournament: Tournament;
   bracket?: TournamentBracket;
   showChampion?: boolean;
+  publicParticipants?: PublicTournamentParticipant[];
+  enablePlayerCards?: boolean;
 }) {
   const bracket = bracketOverride ?? tournament.bracket;
   const singleView = useSyncExternalStore(
@@ -430,7 +435,12 @@ export function ReadOnlyBracket({
           />
         </>
       ) : (
-        <BracketMatchList rounds={bracket.rounds} raceTo={tournament.raceTo} />
+        <BracketMatchList
+          rounds={bracket.rounds}
+          raceTo={tournament.raceTo}
+          tournamentId={enablePlayerCards ? tournament.id : undefined}
+          participants={publicParticipants}
+        />
       )}
     </div>
   );

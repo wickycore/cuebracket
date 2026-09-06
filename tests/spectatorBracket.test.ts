@@ -11,6 +11,8 @@ import {
   spectatorSourceLabel,
 } from "@/lib/bracket/spectator";
 import type { BracketMatch, BracketRound } from "@/lib/tournaments";
+import { buildTournamentPlayerCard, shortRoundName } from "@/lib/bracket/player-card";
+import { normalizeParticipantName, participantProfilePath } from "@/lib/cloud/public-participants";
 
 function match(overrides: Partial<BracketMatch> = {}): BracketMatch {
   return {
@@ -83,6 +85,48 @@ test("spectator match list uses compact expandable one-line rows", () => {
   assert.match(source, /selectedMatchId|expandedMatchId/);
   assert.match(source, /Race to \{matchRaceTo\}/);
   assert.doesNotMatch(source, /Best of/);
+});
+
+test("player rows resolve registered profiles while guests receive tournament-only cards", () => {
+  const rounds: BracketRound[] = [
+    {
+      round: 1,
+      name: "Round of 16",
+      matches: [match({ id: "m1", player1: "Sammy", player2: "Colo", score1: 5, score2: 3, completed: true, winner: "Sammy" })],
+    },
+    {
+      round: 2,
+      name: "Quarter Final",
+      matches: [match({ id: "m2", round: 2, player1: "Sammy", player2: "Ouma", status: "live", score1: 2, score2: 1 })],
+    },
+  ];
+  const card = buildTournamentPlayerCard(rounds, " sammy ");
+
+  assert.equal(card?.wins, 1);
+  assert.equal(card?.losses, 0);
+  assert.equal(card?.latestRound, "QF");
+  assert.deepEqual(card?.matches.map((item) => item.outcome), ["win", "live"]);
+  assert.equal(shortRoundName("Round of 32"), "R32");
+  assert.equal(normalizeParticipantName("  SAMMY   JOE "), "sammy joe");
+  assert.equal(participantProfilePath({ displayName: "Sammy", profileId: "abc", username: "sammy_8", avatarUrl: null }), "/players/sammy_8");
+});
+
+test("public spectator player navigation is privacy-safe and does not merge guests by name", () => {
+  const list = readFileSync(new URL("../components/BracketMatchList.tsx", import.meta.url), "utf8");
+  const guestPage = readFileSync(new URL("../app/cloud/live/[id]/players/[name]/page.tsx", import.meta.url), "utf8");
+  const migration = readFileSync(new URL("../supabase/migrations/20260906123000_public_participant_projection.sql", import.meta.url), "utf8");
+
+  assert.match(list, /participantProfilePath\(participant\)/);
+  assert.match(list, /\/cloud\/live\/\$\{encodeURIComponent\(tournamentId\)\}\/players\//);
+  assert.match(list, /onOpenPlayer\(match\.player1!\)/);
+  assert.match(guestPage, /Guest records are never merged by name alone/);
+  assert.match(guestPage, /Invite \{playerName\} to CueBracket|GuestPlayerAction/);
+  assert.match(migration, /enable row level security/);
+  assert.match(migration, /tournament\.is_public/);
+  assert.match(migration, /profile\.is_public/);
+  assert.match(migration, /registration\.status in \('approved', 'checked_in'\)/);
+  assert.match(migration, /revoke all on table public\.public_tournament_participants/);
+  assert.match(migration, /drop function if exists public\.get_public_tournament_participants/);
 });
 
 test("cloud spectator view server-renders details and exposes recovery states", () => {

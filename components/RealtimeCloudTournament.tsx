@@ -15,6 +15,10 @@ import {
   type CloudTournamentRow,
 } from "@/lib/cloud/tournaments";
 import { createClient } from "@/lib/supabase/client";
+import {
+  loadPublicTournamentParticipants,
+  type PublicTournamentParticipant,
+} from "@/lib/cloud/public-participants";
 
 type ConnectionState = "connecting" | "live" | "reconnecting";
 type LoadState = "ready" | "not_found" | "unavailable" | "loading";
@@ -24,10 +28,12 @@ export function RealtimeCloudTournament({
   id,
   initialRow,
   initialState,
+  initialParticipants,
 }: {
   id: string;
   initialRow: CloudTournamentRow | null;
   initialState: "ready" | "not_found" | "unavailable";
+  initialParticipants: PublicTournamentParticipant[];
 }) {
   const [row, setRow] = useState<CloudTournamentRow | null>(initialRow);
   const [loadState, setLoadState] = useState<LoadState>(
@@ -36,6 +42,7 @@ export function RealtimeCloudTournament({
   const [connection, setConnection] = useState<ConnectionState>("connecting");
   const [attempt, setAttempt] = useState(0);
   const [offline, setOffline] = useState(false);
+  const [participants, setParticipants] = useState(initialParticipants);
 
   const retry = useCallback(() => {
     setLoadState(row ? "ready" : "loading");
@@ -123,6 +130,32 @@ export function RealtimeCloudTournament({
     };
   }, [attempt, id, initialRow]);
 
+  useEffect(() => {
+    const supabase = createClient();
+    let active = true;
+
+    const refreshParticipants = () => {
+      void loadPublicTournamentParticipants(supabase, id).then((next) => {
+        if (active) setParticipants(next);
+      }).catch(() => undefined);
+    };
+
+    refreshParticipants();
+    const channel = supabase
+      .channel(`public-tournament-participants-${id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "event_registrations", filter: `tournament_id=eq.${id}` },
+        refreshParticipants,
+      )
+      .subscribe();
+
+    return () => {
+      active = false;
+      void supabase.removeChannel(channel);
+    };
+  }, [id]);
+
   if (offline && !row) {
     return (
       <SpectatorStateCard
@@ -202,7 +235,7 @@ export function RealtimeCloudTournament({
         <SpectatorStateCard icon="🗓️" title="Tournament not started yet" message="The organizer is preparing this event. This page will update automatically when the bracket goes live." />
       ) : null}
 
-      {tournament.status !== "draft" ? (tournament.bracket ? <ReadOnlyBracket tournament={tournament} /> : tournament.competition ? <ReadOnlyCompetition tournament={tournament} /> : <SpectatorStateCard icon="⏳" title="Bracket is being prepared" message="The organizer has started the event, but fixtures have not been published yet." />) : null}
+      {tournament.status !== "draft" ? (tournament.bracket ? <ReadOnlyBracket tournament={tournament} publicParticipants={participants} enablePlayerCards /> : tournament.competition ? <ReadOnlyCompetition tournament={tournament} /> : <SpectatorStateCard icon="⏳" title="Bracket is being prepared" message="The organizer has started the event, but fixtures have not been published yet." />) : null}
     </>
   );
 }

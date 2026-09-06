@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { RealtimeCloudTournament } from "@/components/RealtimeCloudTournament";
 import { SpectatorAuthNav } from "@/components/SpectatorAuthNav";
-import { getPublicTournamentSnapshot } from "@/lib/cloud/public-tournaments.server";
+import { getPublicTournamentParticipants, getPublicTournamentSnapshot } from "@/lib/cloud/public-tournaments.server";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -41,7 +41,10 @@ export default async function CloudLivePage({
   params,
 }: Props) {
   const { id } = await params;
-  const snapshot = await getPublicTournamentSnapshot(id);
+  const [snapshot, participants] = await Promise.all([
+    getPublicTournamentSnapshot(id),
+    getPublicTournamentParticipants(id),
+  ]);
 
   return (
     <main className="min-h-screen bg-[#071a35] text-[#fafcff]">
@@ -64,6 +67,7 @@ export default async function CloudLivePage({
           id={id}
           initialRow={snapshot.row}
           initialState={snapshot.state}
+          initialParticipants={participants}
         />
       </div>
     </main>

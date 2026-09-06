@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import {
   getActiveSpectatorRound,
@@ -12,6 +13,11 @@ import {
 } from "@/lib/bracket/spectator";
 import { formatDuration, type BracketMatch, type BracketRound } from "@/lib/tournaments";
 import { getMatchRaceTo } from "@/lib/tournament-races";
+import {
+  normalizeParticipantName,
+  participantProfilePath,
+  type PublicTournamentParticipant,
+} from "@/lib/cloud/public-participants";
 
 const rowAccentStyles: Record<SpectatorMatchState, string> = {
   advanced: "bg-[#9b7bea]",
@@ -73,6 +79,7 @@ function MatchRow({
   now,
   expanded,
   onToggle,
+  onOpenPlayer,
 }: {
   match: BracketMatch;
   matchNumber: number;
@@ -81,6 +88,7 @@ function MatchRow({
   now: number;
   expanded: boolean;
   onToggle: () => void;
+  onOpenPlayer?: (player: string) => void;
 }) {
   const state = getSpectatorMatchState(match);
   const matchRaceTo = getMatchRaceTo(match, raceTo);
@@ -100,16 +108,14 @@ function MatchRow({
     return (
       <article className="relative overflow-hidden bg-[#0b192c]">
         <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-1 ${rowAccentStyles[state]}`} />
-        <button
-          type="button"
-          onClick={onToggle}
-          aria-expanded={expanded}
-          className="flex min-h-12 w-full items-center gap-2 px-4 py-2 text-left"
-        >
-          <span className="min-w-0 flex-1 truncate text-sm font-black text-[#9da9ba]">{advancingPlayer}</span>
+        <div className="flex min-h-12 w-full items-center gap-2 px-4 py-2 text-left">
+          <button type="button" onClick={() => onOpenPlayer?.(advancingPlayer)} disabled={!onOpenPlayer} className="group flex min-w-0 flex-1 items-center gap-1 text-left disabled:cursor-default">
+            <span className="min-w-0 truncate text-sm font-black text-[#9da9ba] group-enabled:group-hover:text-white">{advancingPlayer}</span>
+            {onOpenPlayer ? <span aria-hidden="true" className="shrink-0 text-[#4aa8dc]">›</span> : null}
+          </button>
           <span className="shrink-0 text-xs font-bold text-[#a99bd2]">advances · BYE</span>
-          <ChevronIcon open={expanded} />
-        </button>
+          <button type="button" onClick={onToggle} aria-expanded={expanded} aria-label={`Show Match #${matchNumber} details`} className="grid h-9 w-8 shrink-0 place-items-center rounded-lg hover:bg-white/5"><ChevronIcon open={expanded} /></button>
+        </div>
         {expanded ? (
           <div className="border-t border-[#203750] bg-[#101f34] px-4 py-2 text-xs font-bold text-[#aebed0]">
             Automatic advance · no match played
@@ -126,25 +132,18 @@ function MatchRow({
   return (
     <article className={`relative overflow-hidden transition-colors ${live ? "bg-[#102a49]" : "bg-[#0b1c31]"}`}>
       <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-1 ${rowAccentStyles[state]}`} />
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-expanded={expanded}
+      <div
         className="grid min-h-14 w-full grid-cols-[minmax(0,1fr)_2rem_3.5rem_2rem_minmax(0,1fr)_1rem] items-center gap-1 px-4 py-2 text-left"
       >
-        <span className={`min-w-0 truncate text-sm font-black ${player1Winner ? "text-[#8be0b1]" : match.player1 ? "text-[#f8fbff]" : "text-[#94a9be]"}`} title={player1}>
-          {player1}
-        </span>
+        {match.player1 && onOpenPlayer ? <button type="button" onClick={() => onOpenPlayer(match.player1!)} className={`group flex min-w-0 items-center gap-1 truncate text-left text-sm font-black ${player1Winner ? "text-[#8be0b1]" : "text-[#f8fbff]"}`} title={`View ${player1}`}><span className="truncate group-hover:text-[#8cecff]">{player1}</span><span aria-hidden="true" className="shrink-0 text-[#4aa8dc]">›</span></button> : <span className={`min-w-0 truncate text-sm font-black ${player1Winner ? "text-[#8be0b1]" : match.player1 ? "text-[#f8fbff]" : "text-[#94a9be]"}`} title={player1}>{player1}</span>}
         <Score score={match.score1} live={live} />
         <span className={`text-center text-[11px] font-black ${live ? "text-[#55d7ff]" : "text-[#95acc3]"}`}>
           {live ? "● live" : "vs"}
         </span>
         <Score score={match.score2} live={live} />
-        <span className={`min-w-0 truncate text-right text-sm font-black ${player2Winner ? "text-[#8be0b1]" : match.player2 ? "text-[#f8fbff]" : "text-[#94a9be]"}`} title={player2}>
-          {player2}
-        </span>
-        <ChevronIcon open={expanded} />
-      </button>
+        {match.player2 && onOpenPlayer ? <button type="button" onClick={() => onOpenPlayer(match.player2!)} className={`group flex min-w-0 items-center justify-end gap-1 truncate text-right text-sm font-black ${player2Winner ? "text-[#8be0b1]" : "text-[#f8fbff]"}`} title={`View ${player2}`}><span className="truncate group-hover:text-[#8cecff]">{player2}</span><span aria-hidden="true" className="shrink-0 text-[#4aa8dc]">›</span></button> : <span className={`min-w-0 truncate text-right text-sm font-black ${player2Winner ? "text-[#8be0b1]" : match.player2 ? "text-[#f8fbff]" : "text-[#94a9be]"}`} title={player2}>{player2}</span>}
+        <button type="button" onClick={onToggle} aria-expanded={expanded} aria-label={`Show Match #${matchNumber} details`} className="grid h-9 w-7 place-items-center rounded-lg hover:bg-white/5"><ChevronIcon open={expanded} /></button>
+      </div>
       {expanded ? (
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-[#24415e] bg-[#10233b] px-4 py-2 text-xs font-bold text-[#b9c9d9]">
           <span>Match #{matchNumber}</span>
@@ -166,6 +165,7 @@ function RoundPanel({
   query,
   expandedMatchId,
   onToggleMatch,
+  onOpenPlayer,
 }: {
   round: BracketRound;
   raceTo: number;
@@ -174,6 +174,7 @@ function RoundPanel({
   query: string;
   expandedMatchId: string;
   onToggleMatch: (matchId: string) => void;
+  onOpenPlayer?: (player: string) => void;
 }) {
   const matches = round.matches.filter((match) => matchesSpectatorPlayer(match, query));
   const playableMatches = round.matches.filter((match) => getSpectatorMatchState(match) !== "advanced");
@@ -201,6 +202,7 @@ function RoundPanel({
               now={now}
               expanded={expandedMatchId === match.id}
               onToggle={() => onToggleMatch(match.id)}
+              onOpenPlayer={onOpenPlayer}
             />
           ))}
         </div>
@@ -213,7 +215,8 @@ function RoundPanel({
   );
 }
 
-export function BracketMatchList({ rounds, raceTo }: { rounds: BracketRound[]; raceTo: number }) {
+export function BracketMatchList({ rounds, raceTo, tournamentId, participants = [] }: { rounds: BracketRound[]; raceTo: number; tournamentId?: string; participants?: PublicTournamentParticipant[] }) {
+  const router = useRouter();
   const activeRound = useMemo(() => getActiveSpectatorRound(rounds), [rounds]);
   const [selectedRoundOverride, setSelectedRoundOverride] = useState<number | null>(null);
   const [expandedMatchId, setExpandedMatchId] = useState("");
@@ -226,6 +229,9 @@ export function BracketMatchList({ rounds, raceTo }: { rounds: BracketRound[]; r
     : activeRound || rounds[0]?.round || 1;
   const selectedRoundData = rounds.find((round) => round.round === selectedRound) ?? rounds[0];
   const hasLiveMatches = allMatches.some((match) => getSpectatorMatchState(match) === "live");
+  const participantProfiles = useMemo(() => new Map(
+    participants.map((participant) => [normalizeParticipantName(participant.displayName), participant]),
+  ), [participants]);
 
   useEffect(() => {
     if (!hasLiveMatches) return;
@@ -236,6 +242,15 @@ export function BracketMatchList({ rounds, raceTo }: { rounds: BracketRound[]; r
   function selectRound(roundNumber: number) {
     setSelectedRoundOverride(roundNumber);
     setExpandedMatchId("");
+  }
+
+  function openPlayer(playerName: string) {
+    if (!tournamentId) return;
+    const participant = participantProfiles.get(normalizeParticipantName(playerName));
+    router.push(participant
+      ? participantProfilePath(participant)
+      : `/cloud/live/${encodeURIComponent(tournamentId)}/players/${encodeURIComponent(playerName)}`,
+    );
   }
 
   return (
@@ -281,6 +296,7 @@ export function BracketMatchList({ rounds, raceTo }: { rounds: BracketRound[]; r
           query={query}
           expandedMatchId={expandedMatchId}
           onToggleMatch={(matchId) => setExpandedMatchId((current) => current === matchId ? "" : matchId)}
+          onOpenPlayer={tournamentId ? openPlayer : undefined}
         />
       ) : (
         <div className="px-6 py-16 text-center font-bold text-[#afc0d2]">No bracket rounds are available yet.</div>
