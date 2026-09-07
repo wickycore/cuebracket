@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 
 import { PublicLandingHeader } from "@/components/PublicLandingHeader";
@@ -22,6 +23,8 @@ const discovery = [
 ];
 
 function Icon({ name }: { name: string }) {
+  if (name === "home") return <svg viewBox="0 0 24 24" className="h-6 w-6" aria-hidden="true"><path d="m3 11 9-8 9 8v9h-6v-6H9v6H3Z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/></svg>;
+  if (name === "clubs") return <svg viewBox="0 0 24 24" className="h-6 w-6" aria-hidden="true"><circle cx="9" cy="8" r="3" fill="none" stroke="currentColor" strokeWidth="1.8"/><circle cx="17" cy="9" r="2.2" fill="none" stroke="currentColor" strokeWidth="1.8"/><path d="M3.5 20v-2.2A4.8 4.8 0 0 1 8.3 13h1.4a4.8 4.8 0 0 1 4.8 4.8V20m.5-6h.8a4 4 0 0 1 4 4v2" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>;
   if (name === "calendar") return <svg viewBox="0 0 24 24" className="h-6 w-6" aria-hidden="true"><rect x="4" y="6" width="16" height="14" rx="2" fill="none" stroke="currentColor" strokeWidth="1.8"/><path d="M8 3v5m8-5v5M4 10h16" fill="none" stroke="currentColor" strokeWidth="1.8"/></svg>;
   if (name === "pin") return <svg viewBox="0 0 24 24" className="h-6 w-6" aria-hidden="true"><path d="M12 21s7-6.1 7-12a7 7 0 1 0-14 0c0 5.9 7 12 7 12Z" fill="none" stroke="currentColor" strokeWidth="1.8"/><circle cx="12" cy="9" r="2.3" fill="none" stroke="currentColor" strokeWidth="1.8"/></svg>;
   if (name === "cart") return <svg viewBox="0 0 24 24" className="h-6 w-6" aria-hidden="true"><path d="M3 4h2l2 11h10l3-8H6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><circle cx="9" cy="19" r="1.2"/><circle cx="17" cy="19" r="1.2"/></svg>;
@@ -54,7 +57,8 @@ export default async function Home() {
       <PublicLandingHeader signedIn={Boolean(user)} />
       <main>
         <section className="relative overflow-hidden border-b border-white/10">
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_78%_45%,rgba(34,211,238,.12),transparent_28rem)]" />
+          <Image src="/cuebracket-player-hero.png" alt="Pool player lining up a shot" fill priority sizes="100vw" className="pointer-events-none object-cover object-[68%_center] opacity-45 sm:object-[72%_center] lg:opacity-60" />
+          <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,#071426_0%,rgba(7,20,38,.96)_38%,rgba(7,20,38,.48)_70%,rgba(7,20,38,.42)_100%),linear-gradient(0deg,#071426_0%,transparent_55%)] lg:bg-[linear-gradient(90deg,#071426_0%,rgba(7,20,38,.96)_40%,rgba(7,20,38,.38)_74%,rgba(7,20,38,.3)_100%),linear-gradient(0deg,#071426_0%,transparent_45%)]" />
           <div className="cb-shell relative grid gap-7 py-9 sm:py-12 lg:grid-cols-[minmax(0,1.05fr)_minmax(24rem,.95fr)] lg:items-center lg:gap-14 lg:py-16">
             <div>
               <p className="text-xs font-black uppercase tracking-[.25em] text-sky-300">The home of every pool player</p>
@@ -96,7 +100,7 @@ export default async function Home() {
       </main>
 
       <nav aria-label="Mobile public navigation" className="cb-safe-bottom fixed inset-x-0 bottom-0 z-[110] grid grid-cols-4 border-t border-[#1e3a5f] bg-[#071426]/95 px-2 py-2 backdrop-blur-xl md:hidden">
-        {[["Home","/"],["Live","/events"],["Clubs","/clubs"],["Market","/marketplace"]].map(([label,href])=><Link key={label} href={href} className={`flex min-h-11 flex-col items-center justify-center text-xs font-bold ${href === "/" ? "text-cyan-300" : "text-slate-400"}`}>{label}</Link>)}
+        {[["Home","/","home"],["Live","/events","live"],["Clubs","/clubs","clubs"],["Market","/marketplace","cart"]].map(([label,href,icon])=><Link key={label} href={href} className={`flex min-h-16 flex-col items-center justify-center gap-1.5 rounded-xl text-sm font-black ${href === "/" ? "bg-cyan-300/10 text-cyan-300" : "text-slate-300"}`}><span className="[&>svg]:h-7 [&>svg]:w-7"><Icon name={icon}/></span><span>{label}</span></Link>)}
       </nav>
     </div>
   );
