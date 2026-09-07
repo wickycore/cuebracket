@@ -129,6 +129,15 @@ test("public spectator player navigation is privacy-safe and does not merge gues
   assert.match(migration, /drop function if exists public\.get_public_tournament_participants/);
 });
 
+test("flowchart player names and BYE chevrons open the same registered or guest profiles as list view",()=>{
+  const source=readFileSync(new URL("../components/ReadOnlyBracket.tsx",import.meta.url),"utf8");
+  assert.match(source,/participantProfilePath\(participant\)/);
+  assert.match(source,/cloud\/live\/\$\{encodeURIComponent\(tournamentId\)\}\/players/);
+  assert.match(source,/Open \$\{player\} player profile/);
+  assert.match(source,/Open \$\{advancingPlayer\} player profile/);
+  assert.match(source,/participants=\{publicParticipants\}/);
+});
+
 test("cloud spectator view server-renders details and exposes recovery states", () => {
   const page = readFileSync(new URL("../app/cloud/live/[id]/page.tsx", import.meta.url), "utf8");
   const realtime = readFileSync(new URL("../components/RealtimeCloudTournament.tsx", import.meta.url), "utf8");

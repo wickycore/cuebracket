@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
   BracketMatch,
@@ -16,7 +17,7 @@ import {
 } from "@/components/BracketConnections";
 import { BracketViewport } from "@/components/BracketViewport";
 import { BracketMatchList } from "@/components/BracketMatchList";
-import type { PublicTournamentParticipant } from "@/lib/cloud/public-participants";
+import { normalizeParticipantName,participantProfilePath,type PublicTournamentParticipant } from "@/lib/cloud/public-participants";
 import { ChampionCelebration } from "@/components/ChampionCelebration";
 import {
   numberBracketMatches,
@@ -112,6 +113,8 @@ function Section({
   matchNumbers,
   showHeader = true,
   edgeToEdge = false,
+  tournamentId,
+  participants = [],
 }: {
   title: string;
   subtitle?: string;
@@ -123,6 +126,8 @@ function Section({
   matchNumbers?: Map<string, number>;
   showHeader?: boolean;
   edgeToEdge?: boolean;
+  tournamentId?: string;
+  participants?: PublicTournamentParticipant[];
 }) {
   const colors = toneClass[tone];
   const maxMatches = Math.max(1, ...rounds.map((round) => round.matches.length));
@@ -139,6 +144,8 @@ function Section({
     round.matches.some((match) => match.startedAt && !match.endedAt),
   );
   const [now, setNow] = useState(() => Date.now());
+  const participantProfiles = new Map(participants.map((participant) => [normalizeParticipantName(participant.displayName), participant]));
+  function playerHref(player:string){if(!tournamentId)return null;const participant=participantProfiles.get(normalizeParticipantName(player));return participant?participantProfilePath(participant):`/cloud/live/${encodeURIComponent(tournamentId)}/players/${encodeURIComponent(player)}`}
 
   useEffect(() => {
     if (!hasLiveTimer) return;
@@ -220,10 +227,10 @@ function Section({
                       >
                         {automaticAdvance ? (
                           <article data-bracket-card className="relative z-10 flex h-9 items-center justify-center overflow-hidden rounded-lg border border-[#a78bfa]/55 bg-[#30295d] px-3 shadow-[0_8px_18px_rgba(0,0,0,.16)]">
-                            <p className="min-w-0 truncate whitespace-nowrap text-center text-[9px] font-black tracking-normal text-[#ede9fe]">
+                            {advancingPlayer&&playerHref(advancingPlayer)?<Link href={playerHref(advancingPlayer)!} aria-label={`Open ${advancingPlayer} player profile`} className="flex min-w-0 flex-1 items-center justify-center gap-1 rounded-md py-1 hover:bg-white/5"><span className="truncate whitespace-nowrap text-center text-[9px] font-black tracking-normal text-[#ede9fe]"><span aria-hidden="true" className="mr-1.5 text-[#c4b5fd]">✓</span>{advancingPlayer} advances · BYE</span><span aria-hidden="true" className="text-sm text-[#c4b5fd]">›</span></Link>:<p className="min-w-0 truncate whitespace-nowrap text-center text-[9px] font-black tracking-normal text-[#ede9fe]">
                               <span aria-hidden="true" className="mr-1.5 text-[#c4b5fd]">✓</span>
                               {advancingPlayer} advances · BYE
-                            </p>
+                            </p>}
                           </article>
                         ) : (
                           <article data-bracket-card className={`group relative z-10 overflow-hidden rounded-xl border bg-[#123763] shadow-[0_10px_24px_rgba(0,0,0,.18)] transition-colors duration-200 ${match.completed ? "border-[#78c69b]/60" : match.status === "live" ? "border-[#ef8193]/65" : "border-[#356a98]"}`}>
@@ -241,7 +248,7 @@ function Section({
                                 ?? spectatorSourceLabel(source, sectionMatchNumbers);
                               return (
                                 <div key={index} className={`flex min-h-8 items-center gap-2 border-b border-[#2a5680] px-3 py-1 last:border-b-0 ${winner ? "bg-[#78c69b]/12" : ""}`}>
-                                  <span className={`min-w-0 flex-1 truncate text-xs font-extrabold ${winner ? "text-[#b9e7ca]" : player ? "text-[#fafcff]" : playerPlaceholders ? "text-[#e3dcff]" : "text-[#b8c7dc]"}`}>{player ?? placeholder}</span>
+                                  {player&&playerHref(player)?<Link href={playerHref(player)!} aria-label={`Open ${player} player profile`} className={`flex min-w-0 flex-1 items-center gap-1 rounded py-0.5 text-xs font-extrabold hover:bg-white/5 ${winner?"text-[#b9e7ca]":"text-[#fafcff]"}`}><span className="min-w-0 flex-1 truncate">{player}</span><span aria-hidden="true" className="text-sm text-[#7ce8fb]">›</span></Link>:<span className={`min-w-0 flex-1 truncate text-xs font-extrabold ${winner ? "text-[#b9e7ca]" : player ? "text-[#fafcff]" : playerPlaceholders ? "text-[#e3dcff]" : "text-[#b8c7dc]"}`}>{player ?? placeholder}</span>}
                                   <span className="text-xs font-black tabular-nums text-[#52d3ee]">{score ?? "—"}</span>
                                 </div>
                               );
@@ -348,6 +355,8 @@ export function ReadOnlyBracket({
           tone="cyan"
           balancedGeometry
           matchNumbers={matchNumbers}
+          tournamentId={enablePlayerCards?tournament.id:undefined}
+          participants={publicParticipants}
         />
         <Section
           title="Losers Bracket"
@@ -357,6 +366,8 @@ export function ReadOnlyBracket({
           tone="rose"
           balancedGeometry
           matchNumbers={matchNumbers}
+          tournamentId={enablePlayerCards?tournament.id:undefined}
+          participants={publicParticipants}
         />
         <Section
           title="Grand Final"
@@ -376,6 +387,8 @@ export function ReadOnlyBracket({
             "Winners bracket winner",
             "Losers bracket winner",
           ]}
+          tournamentId={enablePlayerCards?tournament.id:undefined}
+          participants={publicParticipants}
         />
       </div>
     );
@@ -432,6 +445,8 @@ export function ReadOnlyBracket({
             showHeader={false}
             edgeToEdge
             matchNumbers={numberBracketMatches(bracket.rounds)}
+            tournamentId={enablePlayerCards?tournament.id:undefined}
+            participants={publicParticipants}
           />
         </>
       ) : (
