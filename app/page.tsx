@@ -1,340 +1,103 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { AppHeader } from "@/components/AppHeader";
+import { PublicLandingHeader } from "@/components/PublicLandingHeader";
+import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
+  title: "Play, compete and follow pool",
+  description: "Discover live pool matches, local tournaments, clubs, players and pool gear on CueBracket.",
   alternates: { canonical: "/" },
 };
 
-const platformFeatures = [
-  {
-    number: "01",
-    title: "Tournament engine",
-    text: "Single elimination, double elimination, Round Robin, Swiss, Free For All and groups-to-finals.",
-  },
-  {
-    number: "02",
-    title: "Live match control",
-    text: "Score races, assign tables, track match time and keep the whole room informed.",
-  },
-  {
-    number: "03",
-    title: "Cloud spectators",
-    text: "Publish a public link so players can follow brackets, standings and champions anywhere.",
-  },
-  {
-    number: "04",
-    title: "Venue operations",
-    text: "Manage active tables, waiting players and the next-match queue from one control room.",
-  },
+type LiveTournament = { id: string; name: string; venue: string; race_to: number; players: string[] };
+type UpcomingEvent = { tournament_id: string; event_name: string; venue: string; scheduled_at: string | null };
+type Listing = { id: string; title: string; price: number; currency: string; location: string };
+
+const discovery = [
+  { title: "Live now", detail: "Watch matches as they happen", href: "/events", icon: "live", tone: "text-cyan-300" },
+  { title: "Upcoming events", detail: "Find tournaments near you", href: "/events", icon: "calendar", tone: "text-sky-300" },
+  { title: "Find a club", detail: "Discover your local pool scene", href: "/clubs", icon: "pin", tone: "text-emerald-300" },
+  { title: "Marketplace", detail: "Buy and sell pool gear", href: "/marketplace", icon: "cart", tone: "text-amber-300" },
 ];
 
-const poolFeatures = [
-  ["Table queue", "Reduce dead time and keep every available table moving."],
-  ["Hill-hill alerts", "Highlight deciding frames when the pressure is highest."],
-  ["TV mode", "Turn a venue television into a live tournament board."],
-  ["Hall of champions", "Preserve winners and tournament history automatically."],
-  ["League management", "Create fixtures, enter scores and calculate standings."],
-  ["Cloud backup", "Keep tournament changes protected beyond one browser."],
-];
+function Icon({ name }: { name: string }) {
+  if (name === "calendar") return <svg viewBox="0 0 24 24" className="h-6 w-6" aria-hidden="true"><rect x="4" y="6" width="16" height="14" rx="2" fill="none" stroke="currentColor" strokeWidth="1.8"/><path d="M8 3v5m8-5v5M4 10h16" fill="none" stroke="currentColor" strokeWidth="1.8"/></svg>;
+  if (name === "pin") return <svg viewBox="0 0 24 24" className="h-6 w-6" aria-hidden="true"><path d="M12 21s7-6.1 7-12a7 7 0 1 0-14 0c0 5.9 7 12 7 12Z" fill="none" stroke="currentColor" strokeWidth="1.8"/><circle cx="12" cy="9" r="2.3" fill="none" stroke="currentColor" strokeWidth="1.8"/></svg>;
+  if (name === "cart") return <svg viewBox="0 0 24 24" className="h-6 w-6" aria-hidden="true"><path d="M3 4h2l2 11h10l3-8H6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><circle cx="9" cy="19" r="1.2"/><circle cx="17" cy="19" r="1.2"/></svg>;
+  return <svg viewBox="0 0 24 24" className="h-6 w-6" aria-hidden="true"><circle cx="12" cy="12" r="3" fill="currentColor"/><path d="M5.6 5.6a9 9 0 0 0 0 12.8m12.8-12.8a9 9 0 0 1 0 12.8M8.5 8.5a5 5 0 0 0 0 7m7-7a5 5 0 0 1 0 7" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/></svg>;
+}
 
-const workflow = [
-  ["01", "Build the field", "Choose the format and add your players."],
-  ["02", "Run the room", "Generate the bracket, assign tables and score every race."],
-  ["03", "Share the action", "Open the public link on phones, TVs and projector screens."],
-  ["04", "Crown the champion", "Finish the event and save the winner in history."],
-];
+function formatPrice(listing: Listing) {
+  return new Intl.NumberFormat("en-KE", { style: "currency", currency: listing.currency || "KES", maximumFractionDigits: 0 }).format(listing.price);
+}
 
-export default function Home() {
+function eventDate(value: string | null) {
+  if (!value) return "Date to be announced";
+  return new Intl.DateTimeFormat("en-KE", { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone: "Africa/Nairobi" }).format(new Date(value));
+}
+
+export default async function Home() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const [liveResult, eventResult, listingResult] = await Promise.all([
+    supabase.from("cloud_tournaments").select("id,name,venue,race_to,players").eq("is_public", true).eq("status", "live").order("updated_at", { ascending: false }).limit(1).maybeSingle(),
+    supabase.from("event_registration_settings").select("tournament_id,event_name,venue,scheduled_at").eq("registration_open", true).order("scheduled_at", { ascending: true, nullsFirst: false }).limit(1).maybeSingle(),
+    supabase.from("marketplace_listings").select("id,title,price,currency,location").eq("status", "active").order("created_at", { ascending: false }).limit(1).maybeSingle(),
+  ]);
+  const live = liveResult.data as LiveTournament | null;
+  const upcoming = eventResult.data as UpcomingEvent | null;
+  const listing = listingResult.data as Listing | null;
+
   return (
-    <div className="min-h-screen overflow-x-clip bg-[#020617] text-white">
-      <AppHeader />
-
+    <div className="min-h-dvh overflow-x-clip bg-[#071426] pb-20 text-white md:pb-0">
+      <PublicLandingHeader signedIn={Boolean(user)} />
       <main>
         <section className="relative overflow-hidden border-b border-white/10">
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_12%,rgba(34,211,238,0.15),transparent_28rem),radial-gradient(circle_at_88%_6%,rgba(59,130,246,0.14),transparent_26rem)]" />
-
-          <div className="cb-shell relative grid items-center gap-10 py-12 sm:py-16 lg:grid-cols-[1.03fr_.97fr] lg:gap-16 lg:py-24">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_78%_45%,rgba(34,211,238,.12),transparent_28rem)]" />
+          <div className="cb-shell relative grid gap-7 py-9 sm:py-12 lg:grid-cols-[minmax(0,1.05fr)_minmax(24rem,.95fr)] lg:items-center lg:gap-14 lg:py-16">
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/[0.07] px-3 py-2 text-xs font-black uppercase tracking-[0.2em] text-emerald-300">
-                <span className="cb-live-dot" />
-                Built for real pool nights
+              <p className="text-xs font-black uppercase tracking-[.25em] text-sky-300">The home of every pool player</p>
+              <h1 className="mt-4 max-w-4xl text-[clamp(2.7rem,7vw,5.25rem)] font-black leading-[.96] tracking-[-.055em]">Play. Compete.<br/><span className="text-cyan-300">Follow the game.</span></h1>
+              <p className="mt-5 max-w-2xl text-base leading-7 text-slate-300 sm:text-lg">Discover live matches, local tournaments, clubs, players and pool gear—all in one place.</p>
+              <div className="mt-7 flex flex-wrap gap-3">
+                <Link href="/events" className="inline-flex min-h-12 items-center justify-center rounded-xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950 hover:bg-cyan-300">▶ Explore live matches</Link>
+                <Link href={user ? "/dashboard" : "/auth/signup"} className="inline-flex min-h-12 items-center justify-center rounded-xl border border-[#2a4a6f] px-5 py-3 text-sm font-black text-slate-100 hover:bg-white/5">{user ? "Open my home" : "Create free account"} →</Link>
               </div>
-
-              <h1 className="mt-6 max-w-4xl text-[clamp(2.65rem,11vw,5.6rem)] font-black leading-[0.94] tracking-[-0.055em]">
-                Run the table.
-                <span className="mt-1 block cb-text-gradient">
-                  We run the tournament.
-                </span>
-              </h1>
-
-              <p className="mt-6 max-w-2xl text-base leading-7 text-slate-400 sm:text-lg">
-                One mobile-friendly control room for brackets, live scores,
-                venue tables, leagues and cloud spectators.
-              </p>
-
-              <div className="mt-8 grid grid-cols-1 gap-3 min-[390px]:grid-cols-2 sm:flex">
-                <Link
-                  href="/tournaments/new"
-                  className="flex min-h-13 items-center justify-center rounded-2xl bg-cyan-400 px-6 py-3.5 text-sm font-black text-slate-950 shadow-xl shadow-cyan-500/15 transition hover:bg-cyan-300"
-                >
-                  Create a tournament →
-                </Link>
-                <Link
-                  href="/events"
-                  className="flex min-h-13 items-center justify-center rounded-2xl border border-cyan-400/20 bg-cyan-400/[0.06] px-6 py-3.5 text-sm font-black text-cyan-200 transition hover:bg-cyan-400/10"
-                >
-                  Discover events
-                </Link>
-                <Link
-                  href="/dashboard"
-                  className="flex min-h-13 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.045] px-6 py-3.5 text-sm font-black text-white transition hover:bg-white/[0.08]"
-                >
-                  Open control room
-                </Link>
-              </div>
-
-              <div className="mt-8 grid grid-cols-3 divide-x divide-white/10 rounded-2xl border border-white/10 bg-white/[0.025] p-4">
-                {[
-                  ["6+", "Formats"],
-                  ["Live", "Scoring"],
-                  ["Cloud", "Viewing"],
-                ].map(([value, label]) => (
-                  <div key={label} className="px-2 text-center">
-                    <p className="text-lg font-black text-white sm:text-xl">{value}</p>
-                    <p className="mt-1 text-xs font-bold uppercase tracking-[0.12em] text-slate-400 sm:text-xs">
-                      {label}
-                    </p>
-                  </div>
-                ))}
-              </div>
+              <div className="mt-7 flex flex-wrap gap-x-6 gap-y-3 text-xs font-bold text-slate-400"><span>● Players and fans</span><span>◆ Clubs and organizers</span><span>◇ Local marketplace</span></div>
             </div>
 
-            <div className="mx-auto w-full max-w-xl">
-              <div className="cb-card overflow-hidden rounded-[1.75rem] p-4 sm:p-6">
-                <div className="flex items-start justify-between gap-3 border-b border-white/10 pb-4">
-                  <div>
-                    <p className="cb-kicker">Live control room</p>
-                    <h2 className="mt-1 text-lg font-black sm:text-xl">
-                      Kasarani Open · Race to 4
-                    </h2>
-                  </div>
-                  <span className="inline-flex items-center gap-2 rounded-full bg-emerald-400/10 px-3 py-1.5 text-xs font-black uppercase text-emerald-300">
-                    <span className="cb-live-dot" />
-                    Live
-                  </span>
-                </div>
-
-                <div className="mt-4 rounded-2xl border border-cyan-400/15 bg-cyan-400/[0.045] p-4">
-                  <div className="flex items-center justify-between text-[0.63rem] font-black uppercase tracking-[0.16em] text-slate-400">
-                    <span>Table 3</span>
-                    <span className="text-cyan-300">Winners semi-final</span>
-                  </div>
-
-                  <div className="mt-4 space-y-2">
-                    {[["GM", "Gm", "3"], ["SK", "SK", "2"]].map(
-                      ([initials, name, score], index) => (
-                        <div
-                          key={name}
-                          className="flex min-h-14 items-center gap-3 rounded-xl bg-slate-950/65 px-3"
-                        >
-                          <span className="grid h-9 w-9 place-items-center rounded-xl bg-cyan-400/10 text-xs font-black text-cyan-200">
-                            {initials}
-                          </span>
-                          <strong className="flex-1 text-sm">{name}</strong>
-                          <span
-                            className={`grid h-10 w-10 place-items-center rounded-xl text-lg font-black ${
-                              index === 0
-                                ? "bg-cyan-400 text-slate-950"
-                                : "bg-white/[0.06] text-white"
-                            }`}
-                          >
-                            {score}
-                          </span>
-                        </div>
-                      ),
-                    )}
-                  </div>
-
-                  <div className="mt-3 flex items-center justify-between rounded-xl border border-amber-300/10 bg-amber-300/[0.055] px-3 py-2 text-xs text-amber-200">
-                    <span>GM is on the hill</span>
-                    <span className="text-slate-400">18:42</span>
-                  </div>
-                </div>
-
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-2xl border border-white/10 bg-slate-950/45 p-4">
-                    <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
-                      Table queue
-                    </p>
-                    <div className="mt-3 space-y-3 text-xs">
-                      {[
-                        ["1", "Ben vs Sam", "Playing"],
-                        ["2", "Wicky vs Sez", "Next"],
-                        ["4", "Available", "Free"],
-                      ].map(([table, match, status]) => (
-                        <div key={table} className="flex items-center gap-3">
-                          <span className="grid h-7 w-7 place-items-center rounded-lg bg-white/[0.05] font-black">
-                            {table}
-                          </span>
-                          <span className="flex-1 font-bold text-slate-300">
-                            {match}
-                          </span>
-                          <span className="text-xs font-black uppercase tracking-wider text-cyan-300">
-                            {status}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="rounded-2xl border border-white/10 bg-slate-950/45 p-4">
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
-                        Progress
-                      </p>
-                      <strong className="text-cyan-200">68%</strong>
-                    </div>
-                    <div className="mt-5 h-2 overflow-hidden rounded-full bg-slate-900">
-                      <div className="h-full w-[68%] rounded-full bg-gradient-to-r from-cyan-400 to-blue-500" />
-                    </div>
-                    <p className="mt-3 text-xs text-slate-400">
-                      13 of 19 matches completed
-                    </p>
-                  </div>
-                </div>
-              </div>
+            <div className="relative min-h-64 overflow-hidden rounded-3xl border border-[#1e3a5f] bg-[#0d1f38] p-5 shadow-2xl shadow-black/30 sm:p-6">
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 opacity-45" style={{backgroundImage:"linear-gradient(90deg,transparent 49.5%,rgba(77,216,196,.25) 50%,transparent 50.5%),linear-gradient(rgba(77,216,196,.12) 1px,transparent 1px)",backgroundSize:"100% 100%,100% 28px"}} />
+              <div className="relative flex items-center justify-between gap-3"><span className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-wider text-emerald-300"><span className="h-2 w-2 rounded-full bg-emerald-300"/> {live ? "Live now" : "CueBracket Live"}</span><span className="text-xs text-slate-400">Public spectator view</span></div>
+              <h2 className="relative mt-6 text-2xl font-black">{live?.name || "Follow every shot live"}</h2>
+              <p className="relative mt-2 text-sm text-slate-400">{live ? `${live.venue || "Venue TBA"} · Race to ${live.race_to}` : "Live brackets, scores and match progress—right from your phone."}</p>
+              {live?.players?.length ? <div className="relative mt-5 flex items-center gap-3 text-sm font-black"><span className="rounded-xl bg-white/5 px-3 py-2">{live.players[0]}</span><span className="text-slate-500">vs</span><span className="rounded-xl bg-white/5 px-3 py-2">{live.players[1] || "Next opponent"}</span></div> : null}
+              <Link href={live ? `/cloud/live/${live.id}` : "/events"} className="relative mt-7 flex min-h-12 w-full items-center justify-center rounded-xl border border-cyan-300/50 text-sm font-black text-cyan-100 hover:bg-cyan-300/10">{live ? "Watch bracket" : "See live matches"} →</Link>
             </div>
           </div>
         </section>
 
-        <section className="border-b border-white/10 py-14 sm:py-20">
-          <div className="cb-shell">
-            <p className="cb-kicker">One tournament operating system</p>
-            <h2 className="mt-3 max-w-4xl text-3xl font-black tracking-[-0.035em] sm:text-5xl">
-              More than a bracket generator.
-            </h2>
-            <p className="mt-4 max-w-3xl leading-7 text-slate-400">
-              CueBracket connects the organizer, players, venue and spectators
-              so every part of the pool night moves together.
-            </p>
+        <section className="cb-shell py-7 sm:py-9">
+          <Link href="/events" className="mx-auto flex min-h-14 max-w-3xl items-center gap-3 rounded-2xl border border-[#2a4a6f] bg-[#0d1f38] px-4 text-slate-400 transition hover:border-cyan-300/40 hover:text-white sm:px-5"><svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0" aria-hidden="true"><circle cx="11" cy="11" r="6" fill="none" stroke="currentColor" strokeWidth="2"/><path d="m16 16 4 4" stroke="currentColor" strokeWidth="2"/></svg><span className="truncate">Search players, tournaments, clubs or gear</span><span className="ml-auto text-cyan-300">→</span></Link>
+          <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+            {discovery.map((item) => <Link key={item.title} href={item.href} className="group flex min-h-24 items-center gap-3 rounded-2xl border border-[#1e3a5f] bg-[#0d1f38] p-4 transition hover:border-cyan-300/40"><span className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white/[.035] ${item.tone}`}><Icon name={item.icon}/></span><span className="min-w-0"><span className="block text-sm font-black sm:text-base">{item.title}</span><span className="mt-1 block text-xs leading-5 text-slate-400">{item.detail}</span></span><span className="ml-auto text-slate-500 group-hover:text-cyan-300">›</span></Link>)}
+          </div>
 
-            <div className="mt-8 grid gap-3 sm:grid-cols-2">
-              {platformFeatures.map((feature) => (
-                <article
-                  key={feature.number}
-                  className="cb-card rounded-3xl p-5 sm:p-6"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <span className="grid h-10 w-10 place-items-center rounded-xl bg-cyan-400/10 text-xs font-black text-cyan-300">
-                      {feature.number}
-                    </span>
-                    <span className="text-slate-400">↗</span>
-                  </div>
-                  <h3 className="mt-5 text-xl font-black">{feature.title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-slate-400">
-                    {feature.text}
-                  </p>
-                </article>
-              ))}
-            </div>
+          <div className="mt-9 flex items-end justify-between"><div><p className="text-xs font-black uppercase tracking-[.2em] text-cyan-300">Discover CueBracket</p><h2 className="mt-2 text-2xl font-black sm:text-3xl">Happening now</h2></div><Link href="/events" className="text-sm font-black text-cyan-300">View more →</Link></div>
+          <div className="mt-5 grid gap-3 md:grid-cols-3">
+            <Link href={live ? `/cloud/live/${live.id}` : "/events"} className="rounded-2xl border border-[#1e3a5f] bg-[#0d1f38] p-5 hover:border-cyan-300/40"><span className="rounded-lg bg-rose-400/10 px-2.5 py-1 text-xs font-black uppercase text-rose-300">● Live</span><h3 className="mt-4 text-lg font-black">{live?.name || "Public live brackets"}</h3><p className="mt-2 text-sm text-slate-400">{live ? live.venue || "Venue TBA" : "Watch tournament scores update in real time."}</p><span className="mt-5 block text-sm font-black text-cyan-300">Watch now →</span></Link>
+            <Link href={upcoming ? `/register/${upcoming.tournament_id}` : "/events"} className="rounded-2xl border border-[#1e3a5f] bg-[#0d1f38] p-5 hover:border-cyan-300/40"><span className="rounded-lg bg-sky-400/10 px-2.5 py-1 text-xs font-black uppercase text-sky-300">Upcoming</span><h3 className="mt-4 text-lg font-black">{upcoming?.event_name || "Find your next tournament"}</h3><p className="mt-2 text-sm text-slate-400">{upcoming ? `${eventDate(upcoming.scheduled_at)} · ${upcoming.venue || "Venue TBA"}` : "Browse open registrations near you."}</p><span className="mt-5 block text-sm font-black text-cyan-300">Explore events →</span></Link>
+            <Link href={listing ? `/marketplace/${listing.id}` : "/marketplace"} className="rounded-2xl border border-[#1e3a5f] bg-[#0d1f38] p-5 hover:border-cyan-300/40"><span className="rounded-lg bg-emerald-400/10 px-2.5 py-1 text-xs font-black uppercase text-emerald-300">Marketplace</span><h3 className="mt-4 text-lg font-black">{listing?.title || "Pool gear from the community"}</h3><p className="mt-2 text-sm text-slate-400">{listing ? `${formatPrice(listing)} · ${listing.location}` : "Buy and sell cues, cases, tables and accessories."}</p><span className="mt-5 block text-sm font-black text-cyan-300">Browse gear →</span></Link>
           </div>
         </section>
 
-        <section className="border-b border-white/10 py-14 sm:py-20">
-          <div className="cb-shell">
-            <p className="cb-kicker">Made specifically for cue sports</p>
-            <h2 className="mt-3 max-w-4xl text-3xl font-black tracking-[-0.035em] sm:text-5xl">
-              Details generic tournament apps miss.
-            </h2>
-
-            <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {poolFeatures.map(([title, text], index) => (
-                <article
-                  key={title}
-                  className="rounded-3xl border border-white/10 bg-white/[0.025] p-5"
-                >
-                  <span className="text-xs font-black text-cyan-300">
-                    {String(index + 1).padStart(2, "0")}
-                  </span>
-                  <h3 className="mt-5 text-lg font-black">{title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-slate-400">{text}</p>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="py-14 sm:py-20">
-          <div className="cb-shell">
-            <div className="text-center">
-              <p className="cb-kicker">From draw to trophy</p>
-              <h2 className="mt-3 text-3xl font-black tracking-[-0.035em] sm:text-5xl">
-                Four steps. One smooth pool night.
-              </h2>
-            </div>
-
-            <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {workflow.map(([step, title, text]) => (
-                <article
-                  key={step}
-                  className="rounded-3xl border border-white/10 bg-white/[0.025] p-5"
-                >
-                  <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-300">
-                    Step {step}
-                  </p>
-                  <h3 className="mt-5 text-lg font-black">{title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-slate-400">{text}</p>
-                </article>
-              ))}
-            </div>
-
-            <div className="mt-12 rounded-[2rem] border border-cyan-400/15 bg-gradient-to-br from-cyan-400/[0.08] to-blue-500/[0.04] px-5 py-10 text-center sm:px-10 sm:py-14">
-              <p className="cb-kicker">Ready when the players are</p>
-              <h2 className="mx-auto mt-3 max-w-3xl text-3xl font-black tracking-[-0.04em] sm:text-5xl">
-                Your next tournament deserves a better control room.
-              </h2>
-              <p className="mx-auto mt-4 max-w-xl leading-7 text-slate-400">
-                Create the field, start scoring and share the live bracket in minutes.
-              </p>
-              <div className="mx-auto mt-7 grid max-w-xl gap-3 min-[390px]:grid-cols-2">
-                <Link
-                  href="/tournaments/new"
-                  className="flex min-h-13 items-center justify-center rounded-2xl bg-cyan-400 px-5 py-3.5 text-sm font-black text-slate-950"
-                >
-                  Start a tournament
-                </Link>
-                <Link
-                  href="/auth/signup"
-                  className="flex min-h-13 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.045] px-5 py-3.5 text-sm font-black"
-                >
-                  Create organizer account
-                </Link>
-              </div>
-            </div>
-          </div>
-        </section>
+        <section className="border-y border-white/10 bg-[#0a192d] py-9"><div className="cb-shell grid gap-5 text-center sm:grid-cols-3"><div><p className="font-black">For every pool player</p><p className="mt-1 text-sm text-slate-400">Play, follow and build your record.</p></div><div><p className="font-black">For clubs and organizers</p><p className="mt-1 text-sm text-slate-400">Run events without crowding the public experience.</p></div><div><p className="font-black">For the whole community</p><p className="mt-1 text-sm text-slate-400">Discover people, places and gear.</p></div></div></section>
       </main>
 
-      <footer className="border-t border-white/10 py-8">
-        <div className="cb-shell flex flex-col gap-5 text-sm text-slate-400 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2">
-            <span className="grid h-8 w-8 place-items-center rounded-lg bg-cyan-400 text-xs font-black text-slate-950">
-              8
-            </span>
-            <span>
-              <strong className="text-white">CueBracket Pro</strong> · Built for better pool nights.
-            </span>
-          </div>
-          <div className="grid grid-cols-2 gap-x-6 gap-y-3 min-[390px]:flex">
-            <Link href="/tournaments" className="hover:text-white">Tournaments</Link>
-            <Link href="/leagues" className="hover:text-white">Leagues</Link>
-            <Link href="/cloud" className="hover:text-white">Cloud</Link>
-            <Link href="/auth/login" className="hover:text-white">Sign in</Link>
-          </div>
-        </div>
-      </footer>
+      <nav aria-label="Mobile public navigation" className="cb-safe-bottom fixed inset-x-0 bottom-0 z-[110] grid grid-cols-4 border-t border-[#1e3a5f] bg-[#071426]/95 px-2 py-2 backdrop-blur-xl md:hidden">
+        {[["Home","/"],["Live","/events"],["Clubs","/clubs"],["Market","/marketplace"]].map(([label,href])=><Link key={label} href={href} className={`flex min-h-11 flex-col items-center justify-center text-xs font-bold ${href === "/" ? "text-cyan-300" : "text-slate-400"}`}>{label}</Link>)}
+      </nav>
     </div>
   );
 }

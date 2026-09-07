@@ -36,3 +36,15 @@ test("CueBracket has branded route recovery and sharing metadata", () => {
   assert.match(read("../app/layout.tsx"), /openGraph/);
   assert.match(read("../app/opengraph-image.tsx"), /ImageResponse/);
 });
+
+test("the public front door serves the whole pool community without organizer clutter", () => {
+  const page = read("../app/page.tsx");
+  const header = read("../components/PublicLandingHeader.tsx");
+  assert.match(page, /Play\. Compete\./);
+  assert.match(page, /Search players, tournaments, clubs or gear/);
+  assert.match(page, /cloud_tournaments/);
+  assert.match(page, /marketplace_listings/);
+  assert.match(header, /Live/);
+  assert.match(header, /Marketplace/);
+  assert.doesNotMatch(header, /Manage|New event|My tables|Cloud backup/);
+});
