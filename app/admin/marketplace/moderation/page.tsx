@@ -1,0 +1,6 @@
+import { redirect } from "next/navigation";
+import { AppHeader } from "@/components/AppHeader";
+import { MarketplaceModerationAdmin,type MarketplaceModerationItem } from "@/components/MarketplaceModerationAdmin";
+import { createClient } from "@/lib/supabase/server";
+export const metadata={title:"Marketplace moderation · CueBracket Admin",robots:{index:false,follow:false}};
+export default async function MarketplaceModerationPage(){const supabase=await createClient();const {data:{user}}=await supabase.auth.getUser();if(!user)redirect("/auth/login?next=/admin/marketplace/moderation");const {data,error}=await supabase.rpc("list_marketplace_moderation_queue");if(error)redirect("/dashboard");return <main className="min-h-dvh bg-[#0a1628] text-white"><AppHeader/><div className="mx-auto max-w-4xl px-4 py-10"><p className="text-xs font-black uppercase tracking-[.22em] text-[#4dd8c4]">Platform administration</p><h1 className="mt-3 text-4xl font-black">Marketplace moderation</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-[#9db4d1]">Review listing reports and buyer requests. Removing a review recalculates the seller’s rating automatically.</p><div className="mt-7"><MarketplaceModerationAdmin initial={(data??[]) as MarketplaceModerationItem[]}/></div></div></main>}
