@@ -5,6 +5,10 @@ import { FollowPlayerButton, PlayerFollowingProvider } from "@/components/Player
 import { LiveMatchFeed } from "@/components/LiveMatchFeed";
 import { RemoteMedia } from "@/components/RemoteMedia";
 import { AppHeader } from "@/components/AppHeader";
+import { MarketplaceCard } from "@/components/MarketplaceCard";
+import { MarketplaceRating } from "@/components/MarketplaceRating";
+import { MarketplaceReviewRemoval } from "@/components/MarketplaceReviewRemoval";
+import type { MarketplaceListing, MarketplaceReview } from "@/lib/marketplace";
 import { placementLabel, type PlayerStatisticsRow, type PlayerTournamentHistoryRow } from "@/lib/rankings";
 import { createClient } from "@/lib/supabase/server";
 
@@ -18,7 +22,7 @@ async function getProfile(identifier: string) {
   const supabase = await createClient();
   const query = supabase
     .from("profiles")
-    .select("id, display_name, username, tournament_name, bio, avatar_url, created_at, is_public");
+    .select("id, display_name, username, tournament_name, bio, avatar_url, created_at, is_public, seller_avg_rating, seller_review_count");
   const { data } = await (UUID_PATTERN.test(identifier)
     ? query.eq("id", identifier)
     : query.eq("username", identifier.toLowerCase())
@@ -48,13 +52,18 @@ export default async function PlayerProfilePage({ params }: PlayerProfilePagePro
   if (!profile) notFound();
 
   const supabase = await createClient();
-  const [{ data: statisticsData }, { data: historyData }, { data: followerCountData }] = await Promise.all([
+  const [{ data: statisticsData }, { data: historyData }, { data: followerCountData }, { data: listingsData }, { data: reviewsData }, {data:{user}}] = await Promise.all([
     supabase.from("player_statistics").select("*").eq("profile_id", profile.id).maybeSingle(),
     supabase.from("player_tournament_history").select("*").eq("profile_id", profile.id).order("played_at", { ascending: false }).limit(20),
     supabase.from("player_follower_counts").select("follower_count").eq("player_id", profile.id).maybeSingle(),
+    supabase.from("marketplace_listings").select("*,club:clubs(name,slug,is_verified),seller:profiles!marketplace_listings_seller_profile_fkey(display_name,username,avatar_url,seller_avg_rating,seller_review_count)").eq("seller_user_id",profile.id).eq("status","active").order("created_at",{ascending:false}),
+    supabase.from("marketplace_reviews").select("*,buyer:profiles!marketplace_reviews_buyer_user_id_fkey(display_name,username)").eq("seller_user_id",profile.id).order("created_at",{ascending:false}).limit(20),
+    supabase.auth.getUser(),
   ]);
   const statistics = statisticsData as PlayerStatisticsRow | null;
   const history = (historyData ?? []) as PlayerTournamentHistoryRow[];
+  const listings=(listingsData??[]) as MarketplaceListing[];const reviews=(reviewsData??[]) as MarketplaceReview[];
+  const {data:saved}=user&&listings.length?await supabase.from("marketplace_saved_listings").select("listing_id").in("listing_id",listings.map(x=>x.id)):{data:[]};
 
   const initial = profile.display_name.trim().charAt(0).toUpperCase() || "C";
 
@@ -167,6 +176,10 @@ export default async function PlayerProfilePage({ params }: PlayerProfilePagePro
             <p className="mt-5 rounded-2xl border border-dashed border-white/10 px-5 py-7 text-center text-sm leading-6 text-slate-400">No verified results yet. Results appear when this profile registers for and plays in a cloud-synced tournament.</p>
           )}
         </section>
+
+        {listings.length ? <section className="mt-6 rounded-[2rem] border border-white/10 bg-slate-900/60 p-5 sm:p-7"><div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">Selling</p><h2 className="mt-2 text-2xl font-black">Marketplace listings</h2></div><MarketplaceRating average={Number(profile.seller_avg_rating)} count={profile.seller_review_count}/></div><div className="mt-5 grid gap-4 sm:grid-cols-2">{listings.map(item=><MarketplaceCard key={item.id} listing={item} signedIn={!!user} saved={(saved??[]).some(x=>x.listing_id===item.id)}/>)}</div></section>:null}
+
+        {reviews.length ? <section className="mt-6 rounded-[2rem] border border-white/10 bg-slate-900/60 p-5 sm:p-7"><p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">Seller reviews</p><h2 className="mt-2 text-2xl font-black">What buyers say</h2><div className="mt-5 space-y-3">{reviews.map(review=><article key={review.id} className="rounded-2xl border border-white/10 bg-slate-950/55 p-4"><div className="flex items-center justify-between gap-3"><p className="font-bold">{review.buyer?.display_name??"CueBracket buyer"}</p><span className="text-[#d4af37]">{"★★★★★".slice(0,review.rating)}</span></div>{review.comment?<p className="mt-2 text-sm leading-6 text-slate-300">{review.comment}</p>:null}<div className="mt-2 flex items-center justify-between gap-3"><p className="text-xs text-slate-400">{new Date(review.created_at).toLocaleDateString("en",{dateStyle:"medium"})}</p>{user?.id===review.buyer_user_id?<MarketplaceReviewRemoval reviewId={review.id} requested={!!review.removal_requested_at}/>:null}</div></article>)}</div></section>:null}
       </div>
     </main>
   );

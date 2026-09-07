@@ -1,0 +1,9 @@
+/* eslint-disable @next/next/no-html-link-for-pages */
+import { redirect } from "next/navigation";
+import { AppHeader } from "@/components/AppHeader";
+import { MarketplaceCard } from "@/components/MarketplaceCard";
+import { createClient } from "@/lib/supabase/server";
+import type { MarketplaceListing } from "@/lib/marketplace";
+
+export const metadata={title:"Saved Marketplace listings · CueBracket"};
+export default async function SavedListingsPage(){const supabase=await createClient();const {data:{user}}=await supabase.auth.getUser();if(!user)redirect("/auth/login?next=/marketplace/saved");const {data:saves}=await supabase.from("marketplace_saved_listings").select("listing_id").eq("user_id",user.id).order("created_at",{ascending:false});const ids=(saves??[]).map(x=>x.listing_id);const {data}=ids.length?await supabase.from("marketplace_listings").select("*,club:clubs(name,slug,is_verified),seller:profiles!marketplace_listings_seller_profile_fkey(display_name,username,avatar_url,seller_avg_rating,seller_review_count)").in("id",ids):{data:[]};const map=new Map(((data??[]) as MarketplaceListing[]).map(x=>[x.id,x]));const listings=ids.flatMap(id=>map.get(id)?[map.get(id)!]:[]);return <main className="min-h-dvh bg-[#0a1628] text-white"><AppHeader/><div className="mx-auto max-w-7xl px-4 py-8"><a href="/marketplace" className="text-sm font-bold text-[#7fc9ff]">← Marketplace</a><h1 className="mt-3 text-3xl font-black">Saved listings</h1><p className="mt-2 text-sm text-[#9db4d1]">Keep an eye on gear you like. We’ll notify you about price drops and restocks.</p>{listings.length?<div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{listings.map(item=><MarketplaceCard key={item.id} listing={item} saved signedIn/>)}</div>:<div className="mt-6 rounded-[14px] border border-dashed border-[#1e3a5f] bg-[#0d1f38] p-10 text-center text-sm text-[#9db4d1]">Nothing saved yet — tap the heart on any listing you want to revisit.</div>}</div></main>}

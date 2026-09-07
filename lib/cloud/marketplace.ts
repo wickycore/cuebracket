@@ -34,3 +34,6 @@ export async function openListingThread(listingId:string, body:string){
   return threadId;
 }
 export async function sendMarketplaceMessage(threadId:string,body:string){ const {error}=await createClient().from("marketplace_messages").insert({thread_id:threadId,body}); if(error) throw error; }
+export async function toggleSavedListing(listingId:string,save:boolean){const supabase=createClient();const {error}=save?await supabase.from("marketplace_saved_listings").insert({listing_id:listingId}):await supabase.from("marketplace_saved_listings").delete().eq("listing_id",listingId);if(error)throw error;}
+export async function submitMarketplaceReview(listingId:string,rating:number,comment:string){const {error}=await createClient().from("marketplace_reviews").insert({listing_id:listingId,rating,comment:comment.trim()||null});if(error)throw error;}
+export async function requestMarketplaceReviewRemoval(reviewId:string){const {error}=await createClient().from("marketplace_reviews").update({removal_requested_at:new Date().toISOString()}).eq("id",reviewId);if(error)throw error;}

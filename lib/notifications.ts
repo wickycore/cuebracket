@@ -1,4 +1,4 @@
-export type NotificationType = "club_event" | "registration_status" | "membership_status" | "match_live" | "table_assignment" | "followed_player_live" | "delivery_test" | "club_message" | "club_reminder";
+export type NotificationType = "club_event" | "registration_status" | "membership_status" | "match_live" | "table_assignment" | "followed_player_live" | "delivery_test" | "club_message" | "club_reminder" | "marketplace_price_drop" | "marketplace_restock";
 
 export interface NotificationRow {
   id: string;
@@ -37,5 +37,7 @@ export function notificationIcon(type: NotificationType) {
   if (type === "membership_status") return "👥";
   if (type === "club_message") return "📣";
   if (type === "club_reminder") return "📅";
+  if (type === "marketplace_price_drop") return "🏷️";
+  if (type === "marketplace_restock") return "🛍️";
   return "🎱";
 }

@@ -21,6 +21,7 @@ export function pushAllowed(type: string, preferences: { club_events?: boolean; 
   if (type === "match_live" || type === "table_assignment") return preferences?.match_alerts !== false;
   if (type === "followed_player_live") return preferences?.followed_player_alerts !== false;
   if (type === "club_message" || type === "club_reminder") return preferences?.club_messages !== false;
+  if (type === "marketplace_price_drop" || type === "marketplace_restock") return true;
   if (type === "delivery_test") return true;
   return false;
 }
