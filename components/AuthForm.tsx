@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/client";
+import { authErrorMessage } from "@/lib/auth/error-message";
 import { safeNextPath } from "@/lib/auth/next-path";
 
 function callbackUrl(next: string) {
@@ -53,7 +54,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         });
 
         if (error) {
-          setMessage(error.message);
+          setMessage(authErrorMessage(error));
         } else {
           setSuccess(true);
           setMessage("Account created. Check your email to confirm your account.");
@@ -65,7 +66,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         });
 
         if (error) {
-          setMessage(error.message);
+          setMessage(authErrorMessage(error));
         } else {
           router.push(next);
           router.refresh();
