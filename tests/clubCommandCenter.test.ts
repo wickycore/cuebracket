@@ -137,6 +137,17 @@ test("clubhouse chat is member-only, moderated and realtime", () => {
   assert.match(clubhouse, /subscribeToClubChat/);
 });
 
+test("clubhouse chat supports private attachments, emoji and stickers", () => {
+  const migration = readFileSync(new URL("../supabase/migrations/20260908193000_clubhouse_chat_rich_messages.sql", import.meta.url), "utf8");
+  const chat = readFileSync(new URL("../components/ClubhouseChat.tsx", import.meta.url), "utf8");
+  assert.match(migration, /'club-chat', 'club-chat', false/);
+  assert.match(migration, /file_size_limit/);
+  assert.match(migration, /Club members read chat attachments/);
+  assert.match(chat, /Emoji/);
+  assert.match(chat, /Stickers/);
+  assert.match(chat, /type="file"/);
+});
+
 test("community tables use RLS, narrow grants, membership checks and serialized responses", () => {
   for (const table of ["club_calendar_events", "club_calendar_rsvps", "club_challenges"]) {
     assert.match(communityMigration, new RegExp(`alter table public\\.${table} enable row level security`));

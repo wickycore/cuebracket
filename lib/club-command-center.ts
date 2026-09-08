@@ -181,6 +181,11 @@ export interface ClubChatMessageRow {
   club_id: string;
   author_id: string;
   body: string;
+  attachment_path: string | null;
+  attachment_name: string | null;
+  attachment_type: string | null;
+  attachment_size: number | null;
+  sticker: string | null;
   created_at: string;
 }
 

@@ -5,13 +5,19 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "re
 import { RemoteMedia } from "@/components/RemoteMedia";
 import type { ClubMemberView } from "@/components/ClubCommunityPanel";
 import type { ClubChatMessageRow } from "@/lib/club-command-center";
-import { deleteClubChatMessage, loadClubChatMessages, sendClubChatMessage, subscribeToClubChat } from "@/lib/cloud/club-chat";
+import { deleteClubChatMessage, getClubChatFileUrl, loadClubChatMessages, sendClubChatMessage, subscribeToClubChat, uploadClubChatFile } from "@/lib/cloud/club-chat";
+
+const emojis = ["😀", "😂", "🔥", "👏", "🎱", "🏆", "💪", "❤️", "👍", "🤝", "😎", "🥳"];
+const stickers = ["🎱🔥", "🏆👑", "NICE SHOT! 🎯", "GAME ON! ⚡", "GG 🤝", "LET'S GO! 🚀"];
 
 export function ClubhouseChat({ clubId, userId, isAdmin, isMuted, members, initialMessages }: { clubId: string; userId: string; isAdmin: boolean; isMuted: boolean; members: ClubMemberView[]; initialMessages: ClubChatMessageRow[] }) {
   const [messages, setMessages] = useState(initialMessages);
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [tray, setTray] = useState<"emoji" | "sticker" | null>(null);
+  const [fileUrls, setFileUrls] = useState<Record<string, string>>({});
   const endRef = useRef<HTMLDivElement>(null);
   const memberMap = useMemo(() => new Map(members.map((member) => [member.userId, member])), [members]);
 
@@ -22,22 +28,33 @@ export function ClubhouseChat({ clubId, userId, isAdmin, isMuted, members, initi
 
   useEffect(() => subscribeToClubChat(clubId, () => void refresh()), [clubId, refresh]);
   useEffect(() => { endRef.current?.scrollIntoView({ block: "nearest" }); }, [messages.length]);
+  useEffect(() => { messages.filter((item) => item.attachment_path && !fileUrls[item.id]).forEach((item) => { void getClubChatFileUrl(item.attachment_path!).then((url) => setFileUrls((current) => ({ ...current, [item.id]: url }))).catch(() => undefined); }); }, [messages, fileUrls]);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (!body.trim() || busy || isMuted) return;
+    if ((!body.trim() && !file) || busy || isMuted) return;
     setBusy(true); setNotice("");
     try {
-      const message = await sendClubChatMessage(clubId, body);
+      const attachment = file ? await uploadClubChatFile(clubId, file) : {};
+      const message = await sendClubChatMessage(clubId, body, attachment);
       setMessages((current) => current.some((item) => item.id === message.id) ? current : [...current, message]);
       setBody("");
+      setFile(null);
     } catch (error) { setNotice(error instanceof Error ? error.message : "Message could not be sent."); }
+    finally { setBusy(false); }
+  }
+
+  async function sendSticker(sticker: string) {
+    if (busy || isMuted) return;
+    setBusy(true); setNotice("");
+    try { const message = await sendClubChatMessage(clubId, "", { sticker }); setMessages((current) => [...current, message]); setTray(null); }
+    catch (error) { setNotice(error instanceof Error ? error.message : "Sticker could not be sent."); }
     finally { setBusy(false); }
   }
 
   async function remove(message: ClubChatMessageRow) {
     if (!window.confirm("Delete this message?")) return;
-    try { await deleteClubChatMessage(message.id); setMessages((current) => current.filter((item) => item.id !== message.id)); }
+    try { await deleteClubChatMessage(message.id, message.attachment_path); setMessages((current) => current.filter((item) => item.id !== message.id)); }
     catch (error) { setNotice(error instanceof Error ? error.message : "Message could not be deleted."); }
   }
 
@@ -53,14 +70,17 @@ export function ClubhouseChat({ clubId, userId, isAdmin, isMuted, members, initi
           const mine = message.author_id === userId;
           return <div key={message.id} className={`flex gap-3 ${mine ? "flex-row-reverse" : ""}`}>
             <span className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-xl border border-white/10 bg-cyan-300/10 text-sm font-black text-cyan-100">{author?.avatarUrl ? <RemoteMedia src={author.avatarUrl} alt="" width={72} height={72} sizes="36px" /> : (author?.name ?? "M").charAt(0).toUpperCase()}</span>
-            <div className={`max-w-[82%] ${mine ? "text-right" : ""}`}><div className={`rounded-2xl px-4 py-3 text-left ${mine ? "rounded-tr-sm bg-cyan-400 text-slate-950" : "rounded-tl-sm border border-white/10 bg-slate-950/65 text-white"}`}><p className="whitespace-pre-wrap break-words text-sm font-semibold leading-6">{message.body}</p></div><div className={`mt-1 flex items-center gap-2 text-[11px] text-slate-500 ${mine ? "justify-end" : ""}`}><span className="font-bold">{mine ? "You" : author?.name ?? "Club member"}</span><time dateTime={message.created_at}>{new Intl.DateTimeFormat("en-KE", { hour: "numeric", minute: "2-digit", day: "numeric", month: "short" }).format(new Date(message.created_at))}</time>{mine || isAdmin ? <button type="button" onClick={() => void remove(message)} className="font-bold text-rose-300 hover:text-rose-200">Delete</button> : null}</div></div>
+            <div className={`max-w-[82%] ${mine ? "text-right" : ""}`}><div className={`rounded-2xl px-4 py-3 text-left ${mine ? "rounded-tr-sm bg-cyan-400 text-slate-950" : "rounded-tl-sm border border-white/10 bg-slate-950/65 text-white"}`}>{message.sticker ? <p className="py-2 text-center text-2xl font-black">{message.sticker}</p> : null}{message.attachment_path ? <div className="mb-2">{message.attachment_type?.startsWith("image/") && fileUrls[message.id] ? <RemoteMedia src={fileUrls[message.id]} alt={message.attachment_name ?? "Chat attachment"} width={640} height={480} sizes="(max-width: 640px) 70vw, 28rem" className="max-h-64 w-auto rounded-xl object-contain" /> : null}<a href={fileUrls[message.id] ?? "#"} target="_blank" rel="noreferrer" className="mt-2 block max-w-xs truncate rounded-xl border border-current/20 bg-black/10 px-3 py-2 text-sm font-black">📎 {message.attachment_name ?? "Open attachment"}</a></div> : null}{message.body ? <p className="whitespace-pre-wrap break-words text-sm font-semibold leading-6">{message.body}</p> : null}</div><div className={`mt-1 flex items-center gap-2 text-[11px] text-slate-500 ${mine ? "justify-end" : ""}`}><span className="font-bold">{mine ? "You" : author?.name ?? "Club member"}</span><time dateTime={message.created_at}>{new Intl.DateTimeFormat("en-KE", { hour: "numeric", minute: "2-digit", day: "numeric", month: "short" }).format(new Date(message.created_at))}</time>{mine || isAdmin ? <button type="button" onClick={() => void remove(message)} className="font-bold text-rose-300 hover:text-rose-200">Delete</button> : null}</div></div>
           </div>;
         }) : <div className="grid min-h-64 place-items-center text-center"><div><p className="text-3xl">💬</p><p className="mt-3 font-black text-white">Start the club conversation</p><p className="mt-1 text-sm text-slate-400">Say hello, arrange practice or talk about the next tournament.</p></div></div>}
         <div ref={endRef} />
       </div>
       <form onSubmit={submit} className="border-t border-white/10 bg-slate-950/45 p-4 sm:p-5">
         {notice ? <p className="mb-3 text-sm font-bold text-amber-200">{notice}</p> : null}
-        <div className="flex items-end gap-3"><label className="sr-only" htmlFor="club-chat-message">Message the club</label><textarea id="club-chat-message" value={body} onChange={(event) => setBody(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} disabled={isMuted || busy} maxLength={1000} rows={2} placeholder={isMuted ? "Your posting access is muted" : "Message the clubhouse…"} className="min-h-12 flex-1 resize-none rounded-2xl border border-white/10 bg-slate-950/75 px-4 py-3 text-sm font-semibold text-white outline-none placeholder:text-slate-500 focus:border-cyan-300/50 disabled:opacity-60" /><button type="submit" disabled={isMuted || busy || !body.trim()} className="min-h-12 rounded-2xl bg-cyan-400 px-5 font-black text-slate-950 disabled:cursor-not-allowed disabled:opacity-40">{busy ? "…" : "Send"}</button></div>
+        {tray ? <div className="mb-3 grid grid-cols-4 gap-2 rounded-2xl border border-white/10 bg-slate-900 p-3 sm:grid-cols-6">{(tray === "emoji" ? emojis : stickers).map((item) => <button key={item} type="button" onClick={() => tray === "emoji" ? (setBody((current) => current + item), setTray(null)) : void sendSticker(item)} className={`rounded-xl bg-white/5 p-2 hover:bg-white/10 ${tray === "emoji" ? "text-2xl" : "text-xs font-black"}`}>{item}</button>)}</div> : null}
+        {file ? <div className="mb-3 flex items-center justify-between rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-3 py-2 text-sm font-bold text-cyan-100"><span className="truncate">📎 {file.name}</span><button type="button" onClick={() => setFile(null)}>×</button></div> : null}
+        <div className="mb-2 flex gap-2"><label className="cursor-pointer rounded-xl border border-white/10 px-3 py-2 text-sm font-black text-slate-300 hover:bg-white/5">📎 File<input type="file" className="sr-only" accept="image/jpeg,image/png,image/webp,image/gif,application/pdf,text/plain,.doc,.docx,.xls,.xlsx" onChange={(event) => setFile(event.target.files?.[0] ?? null)} /></label><button type="button" onClick={() => setTray(tray === "emoji" ? null : "emoji")} className="rounded-xl border border-white/10 px-3 py-2 text-sm font-black text-slate-300">😊 Emoji</button><button type="button" onClick={() => setTray(tray === "sticker" ? null : "sticker")} className="rounded-xl border border-white/10 px-3 py-2 text-sm font-black text-slate-300">✨ Stickers</button></div>
+        <div className="flex items-end gap-3"><label className="sr-only" htmlFor="club-chat-message">Message the club</label><textarea id="club-chat-message" value={body} onChange={(event) => setBody(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} disabled={isMuted || busy} maxLength={1000} rows={2} placeholder={isMuted ? "Your posting access is muted" : "Message the clubhouse…"} className="min-h-12 flex-1 resize-none rounded-2xl border border-white/10 bg-slate-950/75 px-4 py-3 text-sm font-semibold text-white outline-none placeholder:text-slate-500 focus:border-cyan-300/50 disabled:opacity-60" /><button type="submit" disabled={isMuted || busy || (!body.trim() && !file)} className="min-h-12 rounded-2xl bg-cyan-400 px-5 font-black text-slate-950 disabled:cursor-not-allowed disabled:opacity-40">{busy ? "…" : "Send"}</button></div>
       </form>
     </section>
   );
