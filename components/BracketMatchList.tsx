@@ -137,8 +137,11 @@ function MatchRow({
       >
         {match.player1 && onOpenPlayer ? <button type="button" onClick={() => onOpenPlayer(match.player1!)} className={`group flex min-w-0 items-center gap-1 truncate text-left text-sm font-black ${player1Winner ? "text-[#8be0b1]" : "text-[#f8fbff]"}`} title={`View ${player1}`}><span className="truncate group-hover:text-[#8cecff]">{player1}</span><span aria-hidden="true" className="shrink-0 text-[#4aa8dc]">›</span></button> : <span className={`min-w-0 truncate text-sm font-black ${player1Winner ? "text-[#8be0b1]" : match.player1 ? "text-[#f8fbff]" : "text-[#94a9be]"}`} title={player1}>{player1}</span>}
         <Score score={match.score1} live={live} />
-        <span className={`text-center text-[11px] font-black ${live ? "text-[#55d7ff]" : "text-[#95acc3]"}`}>
-          {live ? "● live" : "vs"}
+        <span className="flex flex-col items-center justify-center leading-none">
+          <span className="text-[9px] font-black uppercase tracking-[0.08em] text-[#7fa7c5]">M#{matchNumber}</span>
+          <span className={`mt-1 text-[11px] font-black ${live ? "text-[#55d7ff]" : "text-[#95acc3]"}`}>
+            {live ? "● live" : "vs"}
+          </span>
         </span>
         <Score score={match.score2} live={live} />
         {match.player2 && onOpenPlayer ? <button type="button" onClick={() => onOpenPlayer(match.player2!)} className={`group flex min-w-0 items-center justify-end gap-1 truncate text-right text-sm font-black ${player2Winner ? "text-[#8be0b1]" : "text-[#f8fbff]"}`} title={`View ${player2}`}><span className="truncate group-hover:text-[#8cecff]">{player2}</span><span aria-hidden="true" className="shrink-0 text-[#4aa8dc]">›</span></button> : <span className={`min-w-0 truncate text-right text-sm font-black ${player2Winner ? "text-[#8be0b1]" : match.player2 ? "text-[#f8fbff]" : "text-[#94a9be]"}`} title={player2}>{player2}</span>}
