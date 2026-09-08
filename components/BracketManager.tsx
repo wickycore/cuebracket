@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 
 import { DoubleEliminationManager } from "@/components/DoubleEliminationManager";
 import { LateEntryPanel } from "@/components/LateEntryPanel";
-import { OrganizerMatchQueue } from "@/components/OrganizerMatchQueue";
 import { PlayerNameEditor } from "@/components/PlayerNameEditor";
 import {
   buildSingleEliminationBracket,
@@ -143,12 +142,11 @@ function SingleEliminationManager({ tournament, onTournamentChange, selectedMatc
       ) : null}
       {message ? <p className="rounded-xl border border-rose-400/20 bg-rose-400/10 px-4 py-3 text-sm font-bold text-rose-200">{message}</p> : null}
 
-      <OrganizerMatchQueue
-        sections={[{ name: "Bracket", tone: "cyan", rounds: bracket.rounds }]}
-        selectedMatchId={selectedMatchId}
-        onSelectMatch={onSelectMatch}
-        publicUrl={`/cloud/live/${tournament.id}`}
-      />
+      <div className="flex justify-end">
+        <a data-cb-hard-navigation="true" href={`/cloud/live/${tournament.id}`} target="_blank" rel="noreferrer" className="rounded-xl border border-cyan-400/20 bg-cyan-400/10 px-4 py-2.5 text-sm font-black text-cyan-200 hover:bg-cyan-400/15">
+          View full bracket ↗
+        </a>
+      </div>
 
       <details className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5">
         <summary className="cursor-pointer list-none font-black text-slate-200">

@@ -63,8 +63,8 @@ test("share panel generates QR codes locally and never calls an external QR serv
 
 test("completed elimination matches retain a visible correction action", () => {
   const source = readFileSync(
-    new URL("../components/OrganizerMatchQueue.tsx", import.meta.url),
+    new URL("../components/LiveMatchCenter.tsx", import.meta.url),
     "utf8",
   );
-  assert.match(source, /Correct result/);
+  assert.match(source, /Undo final point & reopen|Clear result & reopen/);
 });
