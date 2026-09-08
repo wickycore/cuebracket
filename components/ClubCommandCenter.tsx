@@ -10,6 +10,7 @@ import { ClubCalendarBoard } from "@/components/ClubCalendarBoard";
 import { ClubCommunityPanel, type ClubMemberView } from "@/components/ClubCommunityPanel";
 import { ClubGallery } from "@/components/ClubGallery";
 import { ClubGuide } from "@/components/ClubGuide";
+import { ClubhouseChat } from "@/components/ClubhouseChat";
 import { ClubVerifiedBadge } from "@/components/ClubVerifiedBadge";
 import { ClubPracticeBoard } from "@/components/ClubPracticeBoard";
 import { ClubReportMemberButton } from "@/components/ClubReportMemberButton";
@@ -27,6 +28,7 @@ import {
   type ClubCalendarEventRow,
   type ClubCalendarRsvpRow,
   type ClubChallengeRow,
+  type ClubChatMessageRow,
   type ClubGalleryItemRow,
   type ClubLeagueSummary,
   type ClubRegistrationCount,
@@ -60,6 +62,7 @@ interface Props {
   leagues: ClubLeagueSummary[];
   rankings: ClubPlayerRankingRow[];
   announcements: ClubAnnouncementRow[];
+  chatMessages: ClubChatMessageRow[];
   calendarEvents: ClubCalendarEventRow[];
   calendarRsvps: ClubCalendarRsvpRow[];
   challenges: ClubChallengeRow[];
@@ -105,7 +108,7 @@ export function ClubCommandCenter(props: Props) {
   const {
     club, userId, isAdmin, isFollowing, ownRole, ownRequest, isMember, isSuspended, isMuted,
     members, defaultRequestName, tournaments, registrationSettings,
-    registrationCounts, leagues, rankings, announcements, calendarEvents,
+    registrationCounts, leagues, rankings, announcements, chatMessages, calendarEvents,
     calendarRsvps, challenges, achievements, galleryItems, ownProfile, ownRegistrationIds, followedPlayerIds, guide,
   } = props;
   const [activeTab, setActiveTab] = useState<ClubTab>(() => tabs.find((tab) => tab.id === props.initialTab)?.id ?? "home");
@@ -303,7 +306,8 @@ export function ClubCommandCenter(props: Props) {
 
         {activeTab === "clubhouse" && isMember ? (
           <div className="space-y-6">
-            <div><p className="cb-kicker">Inside the clubhouse</p><h2 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">Practice, news & venue</h2><p className="mt-2 text-sm text-slate-400">Everything that keeps the club moving between tournament days.</p></div>
+            <div><p className="cb-kicker">Inside the clubhouse</p><h2 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">Chat, practice, news & venue</h2><p className="mt-2 text-sm text-slate-400">Talk with members and keep the club moving between tournament days.</p></div>
+            {userId ? <ClubhouseChat clubId={club.id} userId={userId} isAdmin={isAdmin} isMuted={isMuted} members={members} initialMessages={chatMessages} /> : null}
             <ClubGuide clubId={club.id} isAdmin={false} location={club.location} />
             {isMuted ? <div className="rounded-2xl border border-violet-300/20 bg-violet-300/10 px-4 py-3 text-sm font-bold text-violet-100">Your posting access is muted. You can read club content, but you cannot create or accept practice challenges.</div> : null}
             <ClubPracticeBoard clubId={club.id} clubSlug={club.slug} userId={userId} isMember={!isMuted} isAdmin={false} memberNames={memberNames} initialChallenges={challenges} />

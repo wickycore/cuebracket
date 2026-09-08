@@ -32,7 +32,7 @@ export function BracketManager(props: BracketManagerProps) {
   return <SingleEliminationManager {...props} />;
 }
 
-function SingleEliminationManager({ tournament, onTournamentChange, selectedMatchId, onSelectMatch }: BracketManagerProps) {
+function SingleEliminationManager({ tournament, onTournamentChange }: BracketManagerProps) {
   const [message, setMessage] = useState("");
   const bracket = tournament.bracket?.type === "single" ? tournament.bracket : undefined;
   const canGenerate = tournament.players.length >= 2;

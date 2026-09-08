@@ -176,6 +176,14 @@ export interface ClubMemberBlockRow {
   created_at: string;
 }
 
+export interface ClubChatMessageRow {
+  id: string;
+  club_id: string;
+  author_id: string;
+  body: string;
+  created_at: string;
+}
+
 export interface ClubActivityItem {
   id: string;
   label: string;

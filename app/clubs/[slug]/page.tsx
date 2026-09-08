@@ -11,6 +11,7 @@ import type {
   ClubCalendarEventRow,
   ClubCalendarRsvpRow,
   ClubChallengeRow,
+  ClubChatMessageRow,
   ClubGalleryItemRow,
   ClubMemberRestrictionRow,
   ClubLeagueSummary,
@@ -78,7 +79,7 @@ export default async function ClubPage({ params, searchParams }: Props) {
   const currentTime = currentDate.toISOString();
   const calendarFloor = new Date(currentDate.getTime() - 30 * 86_400_000).toISOString();
 
-  const [profilesResult, followerCountsResult, guideResult, ownRequestResult, settingsResult, tournamentsResult, leaguesResult, rankingsResult, announcementsResult, calendarResult, challengesResult, achievementsResult, galleryResult, ownProfileResult, ownRegistrationsResult, playerFollowsResult] = await Promise.all([
+  const [profilesResult, followerCountsResult, guideResult, ownRequestResult, settingsResult, tournamentsResult, leaguesResult, rankingsResult, announcementsResult, chatMessagesResult, calendarResult, challengesResult, achievementsResult, galleryResult, ownProfileResult, ownRegistrationsResult, playerFollowsResult] = await Promise.all([
     memberIds.length ? supabase.from("profiles").select("id, display_name, username, tournament_name, avatar_url, is_public").in("id", memberIds) : Promise.resolve({ data: [] }),
     memberIds.length ? supabase.from("player_follower_counts").select("player_id,follower_count").in("player_id", memberIds) : Promise.resolve({ data: [] }),
     supabase.from("club_guides").select("club_id,opening_hours,rules,revision,updated_at").eq("club_id", club.id).maybeSingle(),
@@ -88,6 +89,7 @@ export default async function ClubPage({ params, searchParams }: Props) {
     supabase.from("cloud_leagues").select("id, name, season, payload, is_public, updated_at").eq("club_id", club.id).order("updated_at", { ascending: false }).limit(50),
     supabase.from("club_player_rankings").select("*").eq("club_id", club.id).order("club_rank").limit(100),
     isMember ? supabase.from("club_announcements").select("*").eq("club_id", club.id).order("is_pinned", { ascending: false }).order("published_at", { ascending: false }).limit(50) : Promise.resolve({ data: [], error: null }),
+    isMember ? supabase.from("club_chat_messages").select("*").eq("club_id", club.id).order("created_at", { ascending: false }).limit(100) : Promise.resolve({ data: [], error: null }),
     isMember ? supabase.from("club_calendar_events").select("*").eq("club_id", club.id).gte("starts_at", calendarFloor).order("starts_at", { ascending: true }).limit(100) : Promise.resolve({ data: [], error: null }),
     isMember ? supabase.from("club_challenges").select("*").eq("club_id", club.id).neq("status", "closed").gte("expires_at", currentTime).order("updated_at", { ascending: false }).limit(100) : Promise.resolve({ data: [], error: null }),
     supabase.from("club_achievements").select("*").eq("club_id", club.id).order("is_featured", { ascending: false }).order("awarded_on", { ascending: false }).order("created_at", { ascending: false }).limit(100),
@@ -97,7 +99,7 @@ export default async function ClubPage({ params, searchParams }: Props) {
     user ? supabase.from("player_followers").select("player_id").eq("user_id", user.id).limit(1000) : Promise.resolve({ data: [], error: null }),
   ]);
 
-  const sectionError = [profilesResult, followerCountsResult, guideResult, ownRequestResult, settingsResult, tournamentsResult, leaguesResult, rankingsResult, announcementsResult, calendarResult, challengesResult, achievementsResult, galleryResult, ownProfileResult, ownRegistrationsResult, playerFollowsResult]
+  const sectionError = [profilesResult, followerCountsResult, guideResult, ownRequestResult, settingsResult, tournamentsResult, leaguesResult, rankingsResult, announcementsResult, chatMessagesResult, calendarResult, challengesResult, achievementsResult, galleryResult, ownProfileResult, ownRegistrationsResult, playerFollowsResult]
     .find((result) => "error" in result && result.error);
   if (sectionError) throw new Error("Some club information could not be loaded.");
 
@@ -160,6 +162,7 @@ export default async function ClubPage({ params, searchParams }: Props) {
         leagues={(leaguesResult.data ?? []) as ClubLeagueSummary[]}
         rankings={(rankingsResult.data ?? []) as ClubPlayerRankingRow[]}
         announcements={(announcementsResult.data ?? []) as ClubAnnouncementRow[]}
+        chatMessages={((chatMessagesResult.data ?? []) as ClubChatMessageRow[]).reverse()}
         calendarEvents={calendarEvents}
         calendarRsvps={(ownRsvpsResult.data ?? []) as ClubCalendarRsvpRow[]}
         challenges={(challengesResult.data ?? []) as ClubChallengeRow[]}

@@ -27,8 +27,6 @@ function isAutomaticAdvance(match: DoubleEliminationBracket["winners"][number]["
 export function DoubleEliminationManager({
   tournament,
   onTournamentChange,
-  selectedMatchId,
-  onSelectMatch,
 }: Props) {
   const [message, setMessage] = useState("");
   const bracket = tournament.bracket?.type === "double" ? tournament.bracket : undefined;

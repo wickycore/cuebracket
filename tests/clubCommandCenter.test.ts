@@ -124,6 +124,19 @@ test("club activity merges community updates into newest-first order", () => {
   assert.equal(activity[0]?.tab, "events");
 });
 
+test("clubhouse chat is member-only, moderated and realtime", () => {
+  const migration = readFileSync(new URL("../supabase/migrations/20260908170000_add_clubhouse_chat.sql", import.meta.url), "utf8");
+  const clubhouse = readFileSync(new URL("../components/ClubhouseChat.tsx", import.meta.url), "utf8");
+  const clubPage = readFileSync(new URL("../app/clubs/[slug]/page.tsx", import.meta.url), "utf8");
+  assert.match(migration, /create table public\.club_chat_messages/);
+  assert.match(migration, /Approved members read clubhouse chat/);
+  assert.match(migration, /private\.is_club_member_muted/);
+  assert.match(migration, /Authors and admins remove clubhouse chat/);
+  assert.match(migration, /alter publication supabase_realtime add table public\.club_chat_messages/);
+  assert.match(clubPage, /isMember \? supabase\.from\("club_chat_messages"\)/);
+  assert.match(clubhouse, /subscribeToClubChat/);
+});
+
 test("community tables use RLS, narrow grants, membership checks and serialized responses", () => {
   for (const table of ["club_calendar_events", "club_calendar_rsvps", "club_challenges"]) {
     assert.match(communityMigration, new RegExp(`alter table public\\.${table} enable row level security`));
