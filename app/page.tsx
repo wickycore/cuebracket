@@ -57,8 +57,8 @@ export default async function Home() {
       <PublicLandingHeader signedIn={Boolean(user)} />
       <main>
         <section className="relative overflow-hidden border-b border-white/10">
-          <Image src="/cuebracket-player-hero.png" alt="Pool player lining up a shot" fill priority sizes="100vw" className="pointer-events-none object-cover object-[68%_center] opacity-45 sm:object-[72%_center] lg:opacity-60" />
-          <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,#071426_0%,rgba(7,20,38,.96)_38%,rgba(7,20,38,.48)_70%,rgba(7,20,38,.42)_100%),linear-gradient(0deg,#071426_0%,transparent_55%)] lg:bg-[linear-gradient(90deg,#071426_0%,rgba(7,20,38,.96)_40%,rgba(7,20,38,.38)_74%,rgba(7,20,38,.3)_100%),linear-gradient(0deg,#071426_0%,transparent_45%)]" />
+          <Image src="/cuebracket-player-hero.png" alt="Pool player lining up a shot" fill priority sizes="100vw" className="pointer-events-none origin-right scale-[.92] object-cover object-[82%_center] opacity-85 sm:scale-100 sm:object-[76%_center] sm:opacity-80 lg:opacity-85" />
+          <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,#071426_0%,rgba(7,20,38,.97)_40%,rgba(7,20,38,.38)_67%,rgba(7,20,38,.08)_100%),linear-gradient(0deg,#071426_0%,transparent_46%)] lg:bg-[linear-gradient(90deg,#071426_0%,rgba(7,20,38,.97)_39%,rgba(7,20,38,.28)_70%,rgba(7,20,38,.05)_100%),linear-gradient(0deg,#071426_0%,transparent_42%)]" />
           <div className="cb-shell relative grid gap-7 py-9 sm:py-12 lg:grid-cols-[minmax(0,1.05fr)_minmax(24rem,.95fr)] lg:items-center lg:gap-14 lg:py-16">
             <div>
               <p className="text-xs font-black uppercase tracking-[.25em] text-sky-300">The home of every pool player</p>

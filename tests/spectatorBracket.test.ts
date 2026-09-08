@@ -3,6 +3,8 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
+  compactSpectatorRounds,
+  getAutomaticAdvanceCount,
   getActiveSpectatorRound,
   getSpectatorMatchState,
   matchesSpectatorFilter,
@@ -43,6 +45,27 @@ test("spectator list separates live, upcoming, finished and automatic advances",
   assert.equal(matchesSpectatorFilter(ready, "upcoming"), true);
   assert.equal(matchesSpectatorFilter(finished, "finished"), true);
   assert.equal(matchesSpectatorFilter(advanced, "finished"), true);
+});
+
+test("spectator views compact repeated BYEs without changing bracket data", () => {
+  const opening: BracketRound = {
+    round: 1,
+    name: "Round of 64",
+    matches: [
+      match({ id: "bye-1", player1: "Sam", completed: true, winner: "Sam" }),
+      match({ id: "bye-2", position: 1, player1: "Peter", completed: true, winner: "Peter" }),
+      match({ id: "play-1", position: 2, player1: "Mike", player2: "Ben" }),
+    ],
+  };
+  const later: BracketRound = { round: 2, name: "Round of 32", matches: [match({ id: "next", round: 2 })] };
+  const rounds = [opening, later];
+  const compacted = compactSpectatorRounds(rounds);
+
+  assert.equal(getAutomaticAdvanceCount(opening), 2);
+  assert.deepEqual(compacted[0].matches.map((item) => item.id), ["play-1"]);
+  assert.equal(compacted[0].matches[0].position, 0);
+  assert.equal(compacted[1], later);
+  assert.equal(rounds[0].matches.length, 3);
 });
 
 test("future fixtures name their feeder match instead of showing only TBD", () => {

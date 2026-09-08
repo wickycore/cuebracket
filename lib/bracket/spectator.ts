@@ -53,6 +53,31 @@ export function numberBracketMatches(rounds: BracketRound[]) {
   );
 }
 
+export function getAutomaticAdvanceCount(round: BracketRound) {
+  return round.matches.filter((match) => getSpectatorMatchState(match) === "advanced").length;
+}
+
+/**
+ * Keeps the real bracket untouched while removing repeated BYE-only cards from
+ * the spectator flowchart. Re-indexing the remaining opening matches lets the
+ * visual layout use the space evenly instead of preserving empty seed slots.
+ */
+export function compactSpectatorRounds(rounds: BracketRound[]) {
+  return rounds.map((round) => {
+    const automaticAdvanceCount = getAutomaticAdvanceCount(round);
+    const playableMatches = round.matches.filter(
+      (match) => getSpectatorMatchState(match) !== "advanced",
+    );
+
+    if (automaticAdvanceCount < 2 || playableMatches.length === 0) return round;
+
+    return {
+      ...round,
+      matches: playableMatches.map((match, position) => ({ ...match, position })),
+    };
+  });
+}
+
 export function spectatorSourceLabel(
   source: MatchSource | undefined,
   matchNumbers: Map<string, number>,

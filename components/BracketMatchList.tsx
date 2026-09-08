@@ -176,7 +176,12 @@ function RoundPanel({
   onToggleMatch: (matchId: string) => void;
   onOpenPlayer?: (player: string) => void;
 }) {
-  const matches = round.matches.filter((match) => matchesSpectatorPlayer(match, query));
+  const [showAutomaticAdvances, setShowAutomaticAdvances] = useState(false);
+  const matchingMatches = round.matches.filter((match) => matchesSpectatorPlayer(match, query));
+  const automaticAdvances = matchingMatches.filter((match) => getSpectatorMatchState(match) === "advanced");
+  const playableMatchesToShow = matchingMatches.filter((match) => getSpectatorMatchState(match) !== "advanced");
+  const compactAutomaticAdvances = !query.trim() && automaticAdvances.length >= 2;
+  const matches = compactAutomaticAdvances ? playableMatchesToShow : matchingMatches;
   const playableMatches = round.matches.filter((match) => getSpectatorMatchState(match) !== "advanced");
   const completed = playableMatches.filter((match) => getSpectatorMatchState(match) === "finished").length;
   const roundRaceTargets = Array.from(new Set(round.matches.map((match) => getMatchRaceTo(match, raceTo))));
@@ -192,6 +197,24 @@ function RoundPanel({
       </header>
       {matches.length ? (
         <div className="divide-y divide-[#203a54]">
+          {compactAutomaticAdvances ? (
+            <div className="bg-[#0b192c]">
+              <button type="button" onClick={() => setShowAutomaticAdvances((current) => !current)} aria-expanded={showAutomaticAdvances} className="relative flex min-h-12 w-full items-center gap-3 px-4 py-2 text-left hover:bg-white/[.03]">
+                <span aria-hidden="true" className="absolute inset-y-0 left-0 w-1 bg-[#9b7bea]" />
+                <span className="min-w-0 flex-1 text-sm font-black text-[#d8cff7]">{automaticAdvances.length} players advanced automatically</span>
+                <span className="text-xs font-bold text-[#a99bd2]">View players</span>
+                <ChevronIcon open={showAutomaticAdvances} />
+              </button>
+              {showAutomaticAdvances ? (
+                <div className="grid grid-cols-2 gap-px border-t border-[#203750] bg-[#203750] sm:grid-cols-3">
+                  {automaticAdvances.map((match) => {
+                    const player = match.player1 ?? match.player2 ?? match.winner ?? "Advanced player";
+                    return <button key={match.id} type="button" onClick={() => onOpenPlayer?.(player)} disabled={!onOpenPlayer} className="flex min-h-10 items-center gap-1 bg-[#101f34] px-4 text-left text-xs font-bold text-[#c4b5fd] hover:bg-[#162944] disabled:cursor-default"><span className="truncate">{player}</span>{onOpenPlayer ? <span aria-hidden="true">›</span> : null}</button>;
+                  })}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
           {matches.map((match) => (
             <MatchRow
               key={match.id}
@@ -205,6 +228,10 @@ function RoundPanel({
               onOpenPlayer={onOpenPlayer}
             />
           ))}
+        </div>
+      ) : automaticAdvances.length ? (
+        <div className="divide-y divide-[#203a54]">
+          <button type="button" onClick={() => setShowAutomaticAdvances((current) => !current)} aria-expanded={showAutomaticAdvances} className="relative flex min-h-12 w-full items-center gap-3 px-4 py-2 text-left hover:bg-white/[.03]"><span aria-hidden="true" className="absolute inset-y-0 left-0 w-1 bg-[#9b7bea]" /><span className="min-w-0 flex-1 text-sm font-black text-[#d8cff7]">{automaticAdvances.length} players advanced automatically</span><span className="text-xs font-bold text-[#a99bd2]">View players</span><ChevronIcon open={showAutomaticAdvances} /></button>
         </div>
       ) : (
         <div className="px-6 py-14 text-center text-sm font-bold text-[#afc0d2]">

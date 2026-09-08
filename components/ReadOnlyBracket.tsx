@@ -20,6 +20,8 @@ import { BracketMatchList } from "@/components/BracketMatchList";
 import { normalizeParticipantName,participantProfilePath,type PublicTournamentParticipant } from "@/lib/cloud/public-participants";
 import { ChampionCelebration } from "@/components/ChampionCelebration";
 import {
+  compactSpectatorRounds,
+  getAutomaticAdvanceCount,
   numberBracketMatches,
   spectatorSourceLabel,
 } from "@/lib/bracket/spectator";
@@ -115,6 +117,7 @@ function Section({
   edgeToEdge = false,
   tournamentId,
   participants = [],
+  automaticAdvanceCounts,
 }: {
   title: string;
   subtitle?: string;
@@ -128,6 +131,7 @@ function Section({
   edgeToEdge?: boolean;
   tournamentId?: string;
   participants?: PublicTournamentParticipant[];
+  automaticAdvanceCounts?: Map<number, number>;
 }) {
   const colors = toneClass[tone];
   const maxMatches = Math.max(1, ...rounds.map((round) => round.matches.length));
@@ -179,19 +183,23 @@ function Section({
               new Set(round.matches.map((match) => getMatchRaceTo(match, raceTo))),
             );
             const sharedRoundRace = roundRaceTargets.length === 1 ? roundRaceTargets[0] : null;
+            const hiddenAutomaticAdvances = automaticAdvanceCounts?.get(round.round) ?? 0;
 
             return (
               <div key={`${title}-${round.round}`} className="w-48 shrink-0 snap-start">
-                <p className="mb-3 flex items-center justify-between gap-2 text-[9px] font-black uppercase tracking-[0.1em] text-[#dce8f4]">
-                  <span className="min-w-0 whitespace-nowrap">{round.name}</span>
-                  <span
+                <div className="mb-3">
+                  <p className="flex items-center justify-between gap-2 text-[9px] font-black uppercase tracking-[0.1em] text-[#dce8f4]">
+                    <span className="min-w-0 whitespace-nowrap">{round.name}</span>
+                    <span
                     className="shrink-0 rounded bg-[#1a5275] px-1.5 py-0.5 tracking-normal text-[#8ce8f7]"
                     aria-label={sharedRoundRace ? `Race to ${sharedRoundRace}` : "Variable race targets"}
                     title={sharedRoundRace ? `Race to ${sharedRoundRace}` : "Variable race targets"}
-                  >
-                    {sharedRoundRace ? `RT${sharedRoundRace}` : "VAR"}
-                  </span>
-                </p>
+                    >
+                      {sharedRoundRace ? `RT${sharedRoundRace}` : "VAR"}
+                    </span>
+                  </p>
+                  {hiddenAutomaticAdvances ? <p className="mt-1 whitespace-nowrap text-[8px] font-bold text-[#c4b5fd]">{round.matches.length} matches · {hiddenAutomaticAdvances} automatic advances</p> : null}
+                </div>
                 <div
                   style={
                     balancedGeometry
@@ -397,6 +405,12 @@ export function ReadOnlyBracket({
   const liveMatches = bracket.rounds.filter(Boolean).flatMap((round) => round.matches).filter(
     (match) => !match.completed && (match.status === "live" || Boolean(match.startedAt && !match.endedAt)),
   ).length;
+  const compactFlowchartRounds = compactSpectatorRounds(bracket.rounds);
+  const automaticAdvanceCounts = new Map(
+    bracket.rounds
+      .map((round) => [round.round, getAutomaticAdvanceCount(round)] as const)
+      .filter(([, count]) => count >= 2),
+  );
 
   return (
     <div>
@@ -438,7 +452,7 @@ export function ReadOnlyBracket({
           <p className="mt-3 text-center text-xs font-bold text-[#d2dfec] sm:hidden">Wide chart mode · drag sideways · pinch to zoom · double-tap to reset</p>
           <Section
             title="Single Elimination"
-            rounds={bracket.rounds}
+            rounds={compactFlowchartRounds}
             raceTo={tournament.raceTo}
             tone="cyan"
             balancedGeometry
@@ -447,6 +461,7 @@ export function ReadOnlyBracket({
             matchNumbers={numberBracketMatches(bracket.rounds)}
             tournamentId={enablePlayerCards?tournament.id:undefined}
             participants={publicParticipants}
+            automaticAdvanceCounts={automaticAdvanceCounts}
           />
         </>
       ) : (
