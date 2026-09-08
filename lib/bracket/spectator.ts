@@ -78,6 +78,19 @@ export function compactSpectatorRounds(rounds: BracketRound[]) {
   });
 }
 
+export function buildCompactSpectatorCenters(rounds: BracketRound[], maxMatches: number) {
+  const centers = new Map<string, number>();
+
+  rounds.forEach((round) => {
+    const span = maxMatches / Math.max(1, round.matches.length);
+    round.matches.forEach((match, index) => {
+      centers.set(match.id, index * span + (span - 1) / 2);
+    });
+  });
+
+  return centers;
+}
+
 export function spectatorSourceLabel(
   source: MatchSource | undefined,
   matchNumbers: Map<string, number>,

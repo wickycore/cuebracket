@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
+  buildCompactSpectatorCenters,
   compactSpectatorRounds,
   getAutomaticAdvanceCount,
   getActiveSpectatorRound,
@@ -66,6 +67,15 @@ test("spectator views compact repeated BYEs without changing bracket data", () =
   assert.equal(compacted[0].matches[0].position, 0);
   assert.equal(compacted[1], later);
   assert.equal(rounds[0].matches.length, 3);
+
+  const centers = buildCompactSpectatorCenters([
+    { ...opening, matches: Array.from({ length: 8 }, (_, position) => match({ id: `opening-${position}`, position })) },
+    { ...later, matches: Array.from({ length: 16 }, (_, position) => match({ id: `later-${position}`, round: 2, position })) },
+  ], 16);
+  assert.equal(centers.get("opening-0"), 0.5);
+  assert.equal(centers.get("opening-1"), 2.5);
+  assert.equal(centers.get("later-0"), 0);
+  assert.equal(centers.get("later-1"), 1);
 });
 
 test("future fixtures name their feeder match instead of showing only TBD", () => {

@@ -20,6 +20,7 @@ import { BracketMatchList } from "@/components/BracketMatchList";
 import { normalizeParticipantName,participantProfilePath,type PublicTournamentParticipant } from "@/lib/cloud/public-participants";
 import { ChampionCelebration } from "@/components/ChampionCelebration";
 import {
+  buildCompactSpectatorCenters,
   compactSpectatorRounds,
   getAutomaticAdvanceCount,
   numberBracketMatches,
@@ -118,6 +119,7 @@ function Section({
   tournamentId,
   participants = [],
   automaticAdvanceCounts,
+  compactGeometry = false,
 }: {
   title: string;
   subtitle?: string;
@@ -132,6 +134,7 @@ function Section({
   tournamentId?: string;
   participants?: PublicTournamentParticipant[];
   automaticAdvanceCounts?: Map<number, number>;
+  compactGeometry?: boolean;
 }) {
   const colors = toneClass[tone];
   const maxMatches = Math.max(1, ...rounds.map((round) => round.matches.length));
@@ -139,7 +142,9 @@ function Section({
   const matchPitch = 110;
   const bracketBodyHeight = matchHeight + (maxMatches - 1) * matchPitch;
   const balancedCenters = balancedGeometry
-    ? buildBalancedCenters(rounds, maxMatches)
+    ? compactGeometry
+      ? buildCompactSpectatorCenters(rounds, maxMatches)
+      : buildBalancedCenters(rounds, maxMatches)
     : new Map<string, number>();
   const sectionMatchNumbers = matchNumbers ?? numberBracketMatches(rounds);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -462,6 +467,7 @@ export function ReadOnlyBracket({
             tournamentId={enablePlayerCards?tournament.id:undefined}
             participants={publicParticipants}
             automaticAdvanceCounts={automaticAdvanceCounts}
+            compactGeometry
           />
         </>
       ) : (
