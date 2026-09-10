@@ -69,6 +69,7 @@ export function CloudAutoSyncProvider({ children }: { children: ReactNode }) {
     let applyingRemoteChange = false;
     let realtimeChannel: RealtimeChannel | null = null;
     let collaborationChannel: RealtimeChannel | null = null;
+    let realtimeInterrupted = false;
     let reconcileRun = 0;
     let authReconcileTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -388,7 +389,22 @@ export function CloudAutoSyncProvider({ children }: { children: ReactNode }) {
           },
         )
         .subscribe((status: REALTIME_SUBSCRIBE_STATES) => {
-          if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+          if (status === "SUBSCRIBED") {
+            const recovered = realtimeInterrupted;
+            realtimeInterrupted = false;
+            publishCloudSyncStatus({
+              state: recovered ? "queued" : "synced",
+              message: recovered
+                ? "Connection restored. Checking the latest cloud backup..."
+                : "Cloud backup is active on this device.",
+            });
+            if (recovered) void catchUpAfterReconnect();
+          } else if (
+            status === "CHANNEL_ERROR" ||
+            status === "TIMED_OUT" ||
+            status === "CLOSED"
+          ) {
+            realtimeInterrupted = true;
             publishCloudSyncStatus({
               state: "error",
               message: "Realtime connection interrupted. CueBracket will reconnect.",
@@ -409,6 +425,29 @@ export function CloudAutoSyncProvider({ children }: { children: ReactNode }) {
           () => void reconcile(),
         )
         .subscribe();
+    }
+
+    async function catchUpAfterReconnect() {
+      if (!active || !userId) return;
+      try {
+        const rows = await getMyCloudTournaments();
+        if (!active || !userId) return;
+        for (const row of rows) managedTournamentIds.add(row.id);
+        for (const row of rows) applyRemoteRow(row);
+        publishCloudSyncStatus({
+          state: "synced",
+          message: "Connection restored. Cloud backup is caught up.",
+        });
+      } catch (error) {
+        if (!active) return;
+        publishCloudSyncStatus({
+          state: "error",
+          message:
+            error instanceof Error
+              ? error.message
+              : "Connection returned, but CueBracket could not verify the latest backup.",
+        });
+      }
     }
 
     async function reconcile() {
@@ -523,8 +562,8 @@ export function CloudAutoSyncProvider({ children }: { children: ReactNode }) {
         if (!isCurrent()) return;
         startRealtime(user.id);
         publishCloudSyncStatus({
-          state: "synced",
-          message: "Cloud backup is active on this device.",
+          state: "queued",
+          message: "Connecting secure cloud backup...",
         });
       } catch (error) {
         if (!isCurrent()) return;

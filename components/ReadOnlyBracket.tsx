@@ -120,6 +120,7 @@ function Section({
   participants = [],
   automaticAdvanceCounts,
   compactGeometry = false,
+  sourceRounds,
 }: {
   title: string;
   subtitle?: string;
@@ -135,6 +136,7 @@ function Section({
   participants?: PublicTournamentParticipant[];
   automaticAdvanceCounts?: Map<number, number>;
   compactGeometry?: boolean;
+  sourceRounds?: BracketRound[];
 }) {
   const colors = toneClass[tone];
   const maxMatches = Math.max(1, ...rounds.map((round) => round.matches.length));
@@ -176,6 +178,7 @@ function Section({
         >
           <BracketConnections
             rounds={rounds}
+            sourceRounds={sourceRounds}
             containerRef={contentRef}
             matchRefs={matchRefs}
             tone={connectorTone[tone]}
@@ -260,7 +263,11 @@ function Section({
                               const placeholder = playerPlaceholders?.[index]
                                 ?? spectatorSourceLabel(source, sectionMatchNumbers);
                               return (
-                                <div key={index} className={`flex min-h-8 items-center gap-2 border-b border-[#2a5680] px-3 py-1 last:border-b-0 ${winner ? "bg-[#78c69b]/12" : ""}`}>
+                                <div
+                                  data-bracket-player-slot={index}
+                                  key={index}
+                                  className={`flex min-h-8 items-center gap-2 border-b border-[#2a5680] px-3 py-1 last:border-b-0 ${winner ? "bg-[#78c69b]/12" : ""}`}
+                                >
                                   {player&&playerHref(player)?<Link href={playerHref(player)!} aria-label={`Open ${player} player profile`} className={`flex min-w-0 flex-1 items-center gap-1 rounded py-0.5 text-xs font-extrabold hover:bg-white/5 ${winner?"text-[#b9e7ca]":"text-[#fafcff]"}`}><span className="min-w-0 truncate">{player}</span><span aria-hidden="true" className="shrink-0 text-sm text-[#7ce8fb]">›</span></Link>:<span className={`min-w-0 flex-1 truncate text-xs font-extrabold ${winner ? "text-[#b9e7ca]" : player ? "text-[#fafcff]" : playerPlaceholders ? "text-[#e3dcff]" : "text-[#b8c7dc]"}`}>{player ?? placeholder}</span>}
                                   <span className="text-xs font-black tabular-nums text-[#52d3ee]">{score ?? "—"}</span>
                                 </div>
@@ -468,6 +475,7 @@ export function ReadOnlyBracket({
             participants={publicParticipants}
             automaticAdvanceCounts={automaticAdvanceCounts}
             compactGeometry
+            sourceRounds={bracket.rounds}
           />
         </>
       ) : (

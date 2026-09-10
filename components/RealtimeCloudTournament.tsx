@@ -23,6 +23,7 @@ import {
 type ConnectionState = "connecting" | "live" | "reconnecting";
 type LoadState = "ready" | "not_found" | "unavailable" | "loading";
 const LOAD_TIMEOUT_MS = 8_000;
+const SAFETY_REFRESH_MS = 30_000;
 
 export function RealtimeCloudTournament({
   id,
@@ -41,7 +42,9 @@ export function RealtimeCloudTournament({
   );
   const [connection, setConnection] = useState<ConnectionState>("connecting");
   const [attempt, setAttempt] = useState(0);
-  const [offline, setOffline] = useState(false);
+  const [offline, setOffline] = useState(
+    () => typeof navigator !== "undefined" && !navigator.onLine,
+  );
   const [participants, setParticipants] = useState(initialParticipants);
 
   const retry = useCallback(() => {
@@ -53,36 +56,73 @@ export function RealtimeCloudTournament({
   useEffect(() => {
     const supabase = createClient();
     let active = true;
+    let hasLoadedRow = Boolean(initialRow);
     let timeout: ReturnType<typeof setTimeout> | undefined;
 
-    const updateOnlineState = () => setOffline(!window.navigator.onLine);
-    updateOnlineState();
-    window.addEventListener("online", updateOnlineState);
-    window.addEventListener("offline", updateOnlineState);
+    const applyFreshRow = (nextRow: CloudTournamentRow) => {
+      if (!active) return;
+      hasLoadedRow = true;
+      setRow((current) => {
+        if (!current) return nextRow;
+        const currentTime = Date.parse(current.updated_at);
+        const nextTime = Date.parse(nextRow.updated_at);
+        return !Number.isFinite(currentTime) ||
+          !Number.isFinite(nextTime) ||
+          nextTime >= currentTime
+          ? nextRow
+          : current;
+      });
+      setLoadState("ready");
+    };
 
-    if (!initialRow || attempt > 0) {
-      timeout = setTimeout(() => {
-        if (!active) return;
-        setLoadState("unavailable");
-        setConnection("reconnecting");
-      }, LOAD_TIMEOUT_MS);
-
-      getPublicCloudTournament(id)
-      .then((data) => {
-        if (!active) return;
+    const refreshFromCloud = async () => {
+      if (!active || !window.navigator.onLine) return;
+      try {
+        const nextRow = await getPublicCloudTournament(id);
         if (timeout) clearTimeout(timeout);
-        setRow(data);
-        setLoadState("ready");
-      })
-      .catch((requestError: unknown) => {
+        applyFreshRow(nextRow);
+      } catch (requestError: unknown) {
         if (!active) return;
         if (timeout) clearTimeout(timeout);
         const code = requestError && typeof requestError === "object" && "code" in requestError
           ? String(requestError.code)
           : "";
-        setLoadState(code === "PGRST116" ? "not_found" : "unavailable");
-      });
+        if (code === "PGRST116") {
+          hasLoadedRow = false;
+          setRow(null);
+          setLoadState("not_found");
+        } else if (!hasLoadedRow) {
+          setLoadState("unavailable");
+        }
+        setConnection("reconnecting");
+      }
+    };
+
+    if (!hasLoadedRow) {
+      timeout = setTimeout(() => {
+        if (!active) return;
+        setLoadState("unavailable");
+        setConnection("reconnecting");
+      }, LOAD_TIMEOUT_MS);
     }
+
+    const handleOnline = () => {
+      setOffline(false);
+      setConnection("connecting");
+      void refreshFromCloud();
+    };
+    const handleOffline = () => {
+      setOffline(true);
+      setConnection("reconnecting");
+    };
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") void refreshFromCloud();
+    };
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    document.addEventListener("visibilitychange", handleVisibility);
+    void refreshFromCloud();
 
     const channel = supabase
       .channel(`cloud-tournament-${id}`)
@@ -98,6 +138,7 @@ export function RealtimeCloudTournament({
           if (!active) return;
 
           if (payload.eventType === "DELETE") {
+            hasLoadedRow = false;
             setRow(null);
             setLoadState("not_found");
             return;
@@ -105,27 +146,42 @@ export function RealtimeCloudTournament({
 
           const nextRow = payload.new as unknown as CloudTournamentRow;
           if (!nextRow.is_public) {
+            hasLoadedRow = false;
             setRow(null);
             setLoadState("not_found");
             return;
           }
-          setRow(nextRow);
-          setLoadState("ready");
+          applyFreshRow(nextRow);
         },
       )
       .subscribe((status: REALTIME_SUBSCRIBE_STATES) => {
         if (!active) return;
-        if (status === "SUBSCRIBED") setConnection("live");
-        else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+        if (status === "SUBSCRIBED") {
+          setConnection("live");
+          // A fresh read after every (re)subscription recovers any update that
+          // happened while the WebSocket was unavailable.
+          void refreshFromCloud();
+        } else if (
+          status === "CHANNEL_ERROR" ||
+          status === "TIMED_OUT" ||
+          status === "CLOSED"
+        ) {
           setConnection("reconnecting");
+          void refreshFromCloud();
         }
       });
+
+    const safetyRefresh = window.setInterval(() => {
+      if (document.visibilityState === "visible") void refreshFromCloud();
+    }, SAFETY_REFRESH_MS);
 
     return () => {
       active = false;
       if (timeout) clearTimeout(timeout);
-      window.removeEventListener("online", updateOnlineState);
-      window.removeEventListener("offline", updateOnlineState);
+      window.clearInterval(safetyRefresh);
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+      document.removeEventListener("visibilitychange", handleVisibility);
       void supabase.removeChannel(channel);
     };
   }, [attempt, id, initialRow]);

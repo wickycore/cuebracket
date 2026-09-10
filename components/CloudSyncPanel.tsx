@@ -229,6 +229,7 @@ export function CloudSyncPanel() {
     () => new Map(cloud.map((row) => [row.id, row])),
     [cloud],
   );
+  const reconnecting = online && globalStatus?.state === "error";
 
   function createCurrentAccountCopy(tournament: Tournament) {
     const now = new Date().toISOString();
@@ -294,12 +295,16 @@ export function CloudSyncPanel() {
 
         <div
           className={`shrink-0 rounded-full border px-4 py-2 text-xs font-black uppercase tracking-wider ${
-            online
+            online && !reconnecting
               ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-300"
               : "border-amber-400/20 bg-amber-400/10 text-amber-300"
           }`}
         >
-          {online ? "● Auto-sync active" : "● Offline · queued"}
+          {reconnecting
+            ? "● Reconnecting"
+            : online
+              ? "● Auto-sync active"
+              : "● Offline · queued"}
         </div>
       </div>
 

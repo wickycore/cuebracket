@@ -81,12 +81,62 @@ export function compactSpectatorRounds(rounds: BracketRound[]) {
 export function buildCompactSpectatorCenters(rounds: BracketRound[], maxMatches: number) {
   const centers = new Map<string, number>();
 
-  rounds.forEach((round) => {
+  const anchorIndex = Math.max(
+    0,
+    rounds.findIndex((round) => round.matches.length === maxMatches),
+  );
+  const anchor = rounds[anchorIndex];
+  const anchorSpan = maxMatches / Math.max(1, anchor?.matches.length ?? 1);
+
+  anchor?.matches.forEach((match, index) => {
+    centers.set(match.id, index * anchorSpan + (anchorSpan - 1) / 2);
+  });
+
+  for (let roundIndex = anchorIndex - 1; roundIndex >= 0; roundIndex -= 1) {
+    const round = rounds[roundIndex];
+    const nextRound = rounds[roundIndex + 1];
     const span = maxMatches / Math.max(1, round.matches.length);
     round.matches.forEach((match, index) => {
-      centers.set(match.id, index * span + (span - 1) / 2);
+      const target = nextRound?.matches.find(
+        (candidate) =>
+          (candidate.source1?.kind !== "seed" &&
+            candidate.source1?.matchId === match.id) ||
+          (candidate.source2?.kind !== "seed" &&
+            candidate.source2?.matchId === match.id),
+      );
+      const targetCenter = target ? centers.get(target.id) : undefined;
+      if (target && targetCenter !== undefined) {
+        const targetSlot =
+          target.source2?.kind !== "seed" &&
+          target.source2?.matchId === match.id
+            ? 1
+            : 0;
+        centers.set(match.id, targetCenter + (targetSlot === 0 ? -0.15 : 0.15));
+      } else {
+        centers.set(match.id, index * span + (span - 1) / 2);
+      }
     });
-  });
+  }
+
+  for (let roundIndex = anchorIndex + 1; roundIndex < rounds.length; roundIndex += 1) {
+    const round = rounds[roundIndex];
+    const span = maxMatches / Math.max(1, round.matches.length);
+    round.matches.forEach((match, index) => {
+      const feederCenters = [match.source1, match.source2]
+        .flatMap((source) => {
+          if (!source || source.kind === "seed") return [];
+          const center = centers.get(source.matchId);
+          return center === undefined ? [] : [center];
+        });
+      centers.set(
+        match.id,
+        feederCenters.length
+          ? feederCenters.reduce((sum, center) => sum + center, 0) /
+              feederCenters.length
+          : index * span + (span - 1) / 2,
+      );
+    });
+  }
 
   return centers;
 }

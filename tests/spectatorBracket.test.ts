@@ -13,6 +13,7 @@ import {
   numberBracketMatches,
   spectatorSourceLabel,
 } from "@/lib/bracket/spectator";
+import { buildBracketConnectionPlan } from "@/lib/bracket/connections";
 import type { BracketMatch, BracketRound } from "@/lib/tournaments";
 import { buildTournamentPlayerCard, shortRoundName } from "@/lib/bracket/player-card";
 import { normalizeParticipantName, participantProfilePath } from "@/lib/cloud/public-participants";
@@ -76,6 +77,89 @@ test("spectator views compact repeated BYEs without changing bracket data", () =
   assert.equal(centers.get("opening-1"), 2.5);
   assert.equal(centers.get("later-0"), 0);
   assert.equal(centers.get("later-1"), 1);
+});
+
+test("compacted BYEs keep explicit entries and playable feeders connected", () => {
+  const opening: BracketRound = {
+    round: 1,
+    name: "Round of 64",
+    matches: [
+      match({ id: "bye-1", player1: "A", completed: true, winner: "A" }),
+      match({ id: "bye-2", position: 1, player1: "B", completed: true, winner: "B" }),
+      match({ id: "play-1", position: 2, player1: "C", player2: "D", completed: true, winner: "C" }),
+      match({ id: "play-2", position: 3, player1: "E", player2: "F", completed: true, winner: "E" }),
+    ],
+  };
+  const next: BracketRound = {
+    round: 2,
+    name: "Round of 32",
+    matches: [
+      match({
+        id: "next-byes",
+        round: 2,
+        player1: "A",
+        player2: "B",
+        source1: { kind: "winner", matchId: "bye-1" },
+        source2: { kind: "winner", matchId: "bye-2" },
+      }),
+      match({
+        id: "next-played",
+        round: 2,
+        position: 1,
+        player1: "C",
+        player2: "E",
+        source1: { kind: "winner", matchId: "play-1" },
+        source2: { kind: "winner", matchId: "play-2" },
+      }),
+    ],
+  };
+  const sourceRounds = [opening, next];
+  const visibleRounds = compactSpectatorRounds(sourceRounds);
+  const plan = buildBracketConnectionPlan(visibleRounds, sourceRounds);
+
+  assert.deepEqual(plan.entryStubs, [
+    { to: "next-byes", targetSlot: 0 },
+    { to: "next-byes", targetSlot: 1 },
+  ]);
+  assert.deepEqual(plan.connections, [
+    { from: "play-1", to: "next-played", targetSlot: 0 },
+    { from: "play-2", to: "next-played", targetSlot: 1 },
+  ]);
+});
+
+test("compact flowchart aligns playable opening matches with their actual destination", () => {
+  const opening: BracketRound = {
+    round: 1,
+    name: "Round of 64",
+    matches: [
+      match({ id: "play-1" }),
+      match({ id: "play-2", position: 1 }),
+    ],
+  };
+  const next: BracketRound = {
+    round: 2,
+    name: "Round of 32",
+    matches: Array.from({ length: 4 }, (_, position) =>
+      match({
+        id: `next-${position}`,
+        round: 2,
+        position,
+        source1:
+          position === 2
+            ? { kind: "winner", matchId: "play-1" }
+            : { kind: "seed", player: null },
+        source2:
+          position === 2
+            ? { kind: "winner", matchId: "play-2" }
+            : { kind: "seed", player: null },
+      }),
+    ),
+  };
+
+  const centers = buildCompactSpectatorCenters([opening, next], 4);
+  assert.equal(centers.get("next-2"), 2);
+  assert.equal(centers.get("play-1"), 1.85);
+  assert.equal(centers.get("play-2"), 2.15);
 });
 
 test("future fixtures name their feeder match instead of showing only TBD", () => {
@@ -181,6 +265,10 @@ test("cloud spectator view server-renders details and exposes recovery states", 
   assert.match(page, /generateMetadata/);
   assert.match(page, /initialRow=\{snapshot\.row\}/);
   assert.match(realtime, /LOAD_TIMEOUT_MS/);
+  assert.match(realtime, /SAFETY_REFRESH_MS/);
+  assert.match(realtime, /visibilitychange/);
+  assert.match(realtime, /void refreshFromCloud\(\)/);
+  assert.match(realtime, /status === "CLOSED"/);
   assert.match(realtime, /Tournament not found/);
   assert.match(realtime, /You’re offline/);
   assert.match(realtime, /Retry connection/);
@@ -190,6 +278,24 @@ test("cloud spectator view server-renders details and exposes recovery states", 
   assert.match(realtime, /if \(!nextRow\.is_public\)/);
   assert.match(socialImage, /ImageResponse/);
   assert.match(socialImage, /CUEBRACKET LIVE/);
+});
+
+test("organizer cloud sync catches up after realtime reconnects and reports it honestly", () => {
+  const provider = readFileSync(
+    new URL("../components/CloudAutoSyncProvider.tsx", import.meta.url),
+    "utf8",
+  );
+  const panel = readFileSync(
+    new URL("../components/CloudSyncPanel.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(provider, /status === "CLOSED"/);
+  assert.match(provider, /catchUpAfterReconnect/);
+  assert.match(provider, /await getMyCloudTournaments\(\)/);
+  assert.match(provider, /Checking the latest cloud backup/);
+  assert.match(panel, /globalStatus\?\.state === "error"/);
+  assert.match(panel, /● Reconnecting/);
 });
 
 test("spectator match cards use compact desktop geometry", () => {

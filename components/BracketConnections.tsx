@@ -12,17 +12,14 @@ import {
 } from "react";
 
 import type { BracketRound } from "@/lib/tournaments";
+import { buildBracketConnectionPlan } from "@/lib/bracket/connections";
 
 export type ConnectorTone = "cyan" | "rose" | "violet";
 
 type ConnectorPath = {
   id: string;
   d: string;
-};
-
-type ConnectorPair = {
-  from: string;
-  to: string;
+  kind: "match" | "entry";
 };
 
 type ElementBox = {
@@ -50,93 +47,6 @@ export function useBracketMatchRefs() {
   );
 
   return { matchRefs, registerMatch };
-}
-
-export function buildConnections(rounds: BracketRound[]): ConnectorPair[] {
-  const ids = new Set(
-    rounds.flatMap((round) => round.matches.map((match) => match.id)),
-  );
-
-  const pairs: ConnectorPair[] = [];
-  const seen = new Set<string>();
-  const incomingByTarget = new Map<string, Set<string>>();
-
-  const add = (from: string, to: string) => {
-    if (!ids.has(from) || !ids.has(to)) return;
-
-    const key = `${from}->${to}`;
-    if (seen.has(key)) return;
-
-    seen.add(key);
-    pairs.push({ from, to });
-    const incoming = incomingByTarget.get(to) ?? new Set<string>();
-    incoming.add(from);
-    incomingByTarget.set(to, incoming);
-  };
-
-  for (const round of rounds) {
-    for (const match of round.matches) {
-      for (const source of [match.source1, match.source2]) {
-        if (
-          source &&
-          (source.kind === "winner" || source.kind === "loser") &&
-          ids.has(source.matchId)
-        ) {
-          add(source.matchId, match.id);
-        }
-      }
-    }
-  }
-
-  // Public cloud rows can contain older bracket snapshots without complete
-  // source metadata. Reconstruct missing feeders from the players that were
-  // propagated into the next round. This also keeps completed brackets and
-  // brackets containing BYEs connected permanently.
-  for (let roundIndex = 1; roundIndex < rounds.length; roundIndex += 1) {
-    const previous = rounds[roundIndex - 1]?.matches ?? [];
-    const current = rounds[roundIndex]?.matches ?? [];
-
-    if (!current.length || !previous.length) continue;
-
-    current.forEach((target, position) => {
-      if ((incomingByTarget.get(target.id)?.size ?? 0) >= 2) return;
-
-      const targetPlayers = new Set(
-        [target.player1, target.player2].filter(
-          (player): player is string => Boolean(player),
-        ),
-      );
-
-      if (targetPlayers.size) {
-        for (const source of previous) {
-          const advancingPlayer =
-            source.winner ??
-            (source.completed && Boolean(source.player1) !== Boolean(source.player2)
-              ? source.player1 ?? source.player2
-              : null);
-
-          if (advancingPlayer && targetPlayers.has(advancingPlayer)) {
-            add(source.id, target.id);
-            if ((incomingByTarget.get(target.id)?.size ?? 0) >= 2) break;
-          }
-        }
-      }
-
-      if ((incomingByTarget.get(target.id)?.size ?? 0) >= 2) return;
-
-      // Final fallback for legacy snapshots that have neither sources nor
-      // populated participants yet. Standard elimination rounds are positional.
-      if (previous.length !== current.length * 2) return;
-
-      const first = previous[position * 2];
-      const second = previous[position * 2 + 1];
-
-      if (first) add(first.id, target.id);
-      if (second) add(second.id, target.id);
-    });
-  }
-
-  return pairs;
 }
 
 function getUnscaledBox(
@@ -183,6 +93,13 @@ function makePath(source: ElementBox, target: ElementBox) {
   return `M ${startX} ${startY} H ${middleX} V ${endY} H ${endX}`;
 }
 
+function makeEntryPath(target: ElementBox) {
+  const endX = target.left;
+  const endY = target.top + target.height / 2;
+  if (![endX, endY].every(Number.isFinite)) return null;
+  return `M ${Math.max(0, endX - 24)} ${endY} H ${endX}`;
+}
+
 function samePaths(current: ConnectorPath[], next: ConnectorPath[]) {
   if (current.length !== next.length) return false;
 
@@ -194,18 +111,23 @@ function samePaths(current: ConnectorPath[], next: ConnectorPath[]) {
 
 export function BracketConnections({
   rounds,
+  sourceRounds = rounds,
   containerRef,
   matchRefs,
   tone,
 }: {
   rounds: BracketRound[];
+  sourceRounds?: BracketRound[];
   containerRef: RefObject<HTMLDivElement | null>;
   matchRefs: MutableRefObject<Map<string, HTMLDivElement>>;
   tone: ConnectorTone;
 }) {
   const [paths, setPaths] = useState<ConnectorPath[]>([]);
   const [size, setSize] = useState({ width: 0, height: 0 });
-  const connections = useMemo(() => buildConnections(rounds), [rounds]);
+  const plan = useMemo(
+    () => buildBracketConnectionPlan(rounds, sourceRounds),
+    [rounds, sourceRounds],
+  );
   const rawId = useId();
   const filterId = `bracket-glow-${tone}-${rawId.replace(/:/g, "")}`;
 
@@ -223,32 +145,59 @@ export function BracketConnections({
         const width = Math.max(container.scrollWidth, container.clientWidth);
         const height = Math.max(container.scrollHeight, container.clientHeight);
 
-        const nextPaths = connections.flatMap(({ from, to }) => {
-          const source =
-            matchRefs.current.get(from) ??
-            container.querySelector<HTMLElement>(
-              `[data-bracket-match-id="${CSS.escape(from)}"]`,
+        const matchPaths = plan.connections.flatMap(
+          ({ from, to, targetSlot }) => {
+            const source =
+              matchRefs.current.get(from) ??
+              container.querySelector<HTMLElement>(
+                `[data-bracket-match-id="${CSS.escape(from)}"]`,
+              );
+            const target =
+              matchRefs.current.get(to) ??
+              container.querySelector<HTMLElement>(
+                `[data-bracket-match-id="${CSS.escape(to)}"]`,
+              );
+
+            if (!source || !target) return [];
+
+            const sourceCard =
+              source.querySelector<HTMLElement>("[data-bracket-card]") ?? source;
+            const targetSlotElement =
+              target.querySelector<HTMLElement>(
+                `[data-bracket-player-slot="${targetSlot}"]`,
+              ) ??
+              target.querySelector<HTMLElement>("[data-bracket-card]") ??
+              target;
+
+            const d = makePath(
+              getUnscaledBox(sourceCard, container),
+              getUnscaledBox(targetSlotElement, container),
             );
+
+            return d
+              ? [{ id: `${from}-${to}-${targetSlot}`, d, kind: "match" as const }]
+              : [];
+          },
+        );
+
+        const entryPaths = plan.entryStubs.flatMap(({ to, targetSlot }) => {
           const target =
             matchRefs.current.get(to) ??
             container.querySelector<HTMLElement>(
               `[data-bracket-match-id="${CSS.escape(to)}"]`,
             );
-
-          if (!source || !target) return [];
-
-          const sourceCard =
-            source.querySelector<HTMLElement>("[data-bracket-card]") ?? source;
-          const targetCard =
-            target.querySelector<HTMLElement>("[data-bracket-card]") ?? target;
-
-          const d = makePath(
-            getUnscaledBox(sourceCard, container),
-            getUnscaledBox(targetCard, container),
+          const targetSlotElement = target?.querySelector<HTMLElement>(
+            `[data-bracket-player-slot="${targetSlot}"]`,
           );
+          if (!targetSlotElement) return [];
 
-          return d ? [{ id: `${from}-${to}`, d }] : [];
+          const d = makeEntryPath(getUnscaledBox(targetSlotElement, container));
+          return d
+            ? [{ id: `entry-${to}-${targetSlot}`, d, kind: "entry" as const }]
+            : [];
         });
+
+        const nextPaths = [...matchPaths, ...entryPaths];
 
         setSize((current) =>
           current.width === width && current.height === height
@@ -292,7 +241,7 @@ export function BracketConnections({
       window.removeEventListener("resize", measure);
       window.removeEventListener("orientationchange", measure);
     };
-  }, [connections, containerRef, matchRefs]);
+  }, [containerRef, matchRefs, plan]);
 
   if (!paths.length || !size.width || !size.height) return null;
 
@@ -300,7 +249,7 @@ export function BracketConnections({
 
   return (
     <svg
-      data-bracket-connectors-version="0.10.2"
+      data-bracket-connectors-version="0.11.0"
       aria-hidden="true"
       className="pointer-events-none absolute left-0 top-0 z-[1] overflow-visible"
       width={size.width}
@@ -337,8 +286,8 @@ export function BracketConnections({
             d={path.d}
             fill="none"
             stroke={stroke}
-            strokeOpacity="0.12"
-            strokeWidth="5"
+            strokeOpacity={path.kind === "entry" ? "0.18" : "0.16"}
+            strokeWidth={path.kind === "entry" ? "4" : "6"}
             strokeLinecap="round"
             strokeLinejoin="round"
             filter={`url(#${filterId})`}
@@ -348,8 +297,9 @@ export function BracketConnections({
             d={path.d}
             fill="none"
             stroke={stroke}
-            strokeOpacity="0.86"
-            strokeWidth="2.25"
+            strokeOpacity={path.kind === "entry" ? "0.95" : "0.94"}
+            strokeWidth={path.kind === "entry" ? "2" : "2.5"}
+            strokeDasharray={path.kind === "entry" ? "4 3" : undefined}
             strokeLinecap="round"
             strokeLinejoin="round"
             vectorEffect="non-scaling-stroke"
