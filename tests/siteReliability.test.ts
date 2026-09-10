@@ -52,3 +52,16 @@ test("the public front door serves the whole pool community without organizer cl
   assert.match(header, /CueBracket Pro/);
   assert.match(header, /bg-\[#020617\]/);
 });
+
+test("first-time visitors get a skippable walkthrough that can be reopened", () => {
+  const layout = read("../app/layout.tsx");
+  const walkthrough = read("../components/CueBracketWalkthrough.tsx");
+
+  assert.match(layout, /CueBracketWalkthrough/);
+  assert.match(walkthrough, /How to use CueBracket/);
+  assert.match(walkthrough, /Follow and Join are different/);
+  assert.match(walkthrough, /membership is not required/i);
+  assert.match(walkthrough, /Skip/);
+  assert.match(walkthrough, /localStorage/);
+  assert.match(walkthrough, /showModal/);
+});

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import { CloudAutoSyncProvider } from "@/components/CloudAutoSyncProvider";
+import { CueBracketWalkthrough } from "@/components/CueBracketWalkthrough";
 import { LeagueCloudSyncProvider } from "@/components/LeagueCloudSyncProvider";
 import { PwaProvider } from "@/components/PwaProvider";
 
@@ -63,6 +64,7 @@ export default function RootLayout({
       <body className="min-h-full">
         <PwaProvider><CloudAutoSyncProvider>
           <LeagueCloudSyncProvider>{children}</LeagueCloudSyncProvider>
+          <CueBracketWalkthrough />
         </CloudAutoSyncProvider></PwaProvider>
       </body>
     </html>
