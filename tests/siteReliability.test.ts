@@ -47,4 +47,8 @@ test("the public front door serves the whole pool community without organizer cl
   assert.match(header, /Live/);
   assert.match(header, /Marketplace/);
   assert.doesNotMatch(header, /Manage|New event|My tables|Cloud backup/);
+  assert.match(page, /cb-app-bg/);
+  assert.match(page, /cb-card cb-card-hover/);
+  assert.match(header, /CueBracket Pro/);
+  assert.match(header, /bg-\[#020617\]/);
 });

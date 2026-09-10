@@ -2,17 +2,14 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 
 import { RemoteMedia } from "@/components/RemoteMedia";
 
 import {
-  followClub,
   removeClubMember,
   requestClubMembership,
-  unfollowClub,
   updateClub,
   updateClubMemberRole,
   updateMembershipRequest,
@@ -35,7 +32,6 @@ export interface ClubMemberView {
 interface Props {
   club: ClubRow;
   userId: string | null;
-  isFollowing: boolean;
   ownRole: ClubRole | null;
   ownRequest: ClubMembershipRequestRow | null;
   pendingRequests: ClubMembershipRequestRow[];
@@ -49,7 +45,6 @@ interface Props {
 export function ClubCommunityPanel({
   club,
   userId,
-  isFollowing,
   ownRole,
   ownRequest,
   pendingRequests,
@@ -60,7 +55,6 @@ export function ClubCommunityPanel({
   managementOnly = false,
 }: Props) {
   const router = useRouter();
-  const [following, setFollowing] = useState(isFollowing);
   const [requestName, setRequestName] = useState(defaultRequestName);
   const [busy, setBusy] = useState("");
   const [message, setMessage] = useState("");
@@ -106,15 +100,6 @@ export function ClubCommunityPanel({
     }
   }
 
-  async function toggleFollow() {
-    const next = !following;
-    await run("follow", async () => {
-      if (next) await followClub(club.id);
-      else await unfollowClub(club.id);
-      setFollowing(next);
-    });
-  }
-
   function submitMembership(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     void run("join", async () => {
@@ -147,17 +132,9 @@ export function ClubCommunityPanel({
   return (
     <div className="space-y-5">
       {!managementOnly ? <section className="rounded-[1.75rem] border border-white/10 bg-slate-900/70 p-5 sm:p-6">
-        <div className="flex flex-col gap-3 sm:flex-row">
-          {userId ? (
-            <button type="button" onClick={() => void toggleFollow()} disabled={Boolean(busy)} className={`min-h-12 flex-1 rounded-2xl px-5 py-3 font-black ${following ? "border border-cyan-400/25 bg-cyan-400/10 text-cyan-200" : "bg-cyan-400 text-slate-950"}`}>
-              {busy === "follow" ? "Saving…" : following ? "✓ Following" : "+ Follow club"}
-            </button>
-          ) : (
-            <Link href={`/auth/login?next=${encodeURIComponent(`/clubs/${club.slug}`)}`} className="flex min-h-12 flex-1 items-center justify-center rounded-2xl bg-cyan-400 px-5 py-3 font-black text-slate-950">
-              Sign in to follow
-            </Link>
-          )}
-        </div>
+        <p className="cb-kicker">Club membership</p>
+        <h2 className="mt-2 text-2xl font-black">Join the club</h2>
+        <p className="mt-2 text-sm leading-6 text-slate-400">Membership unlocks the private member directory and clubhouse after organizer approval. It is separate from following public updates.</p>
 
         {ownRole ? (
           <div className="mt-4 rounded-2xl border border-emerald-300/20 bg-emerald-300/10 px-4 py-3 text-sm font-bold text-emerald-100">

@@ -28,6 +28,18 @@ test("club membership migration keeps follows lightweight and stores request nam
   assert.match(source, /protect_club_owner_membership/);
 });
 
+test("club follow and membership calls to action are independent and clearly explained", () => {
+  const commandCenter = readFileSync(new URL("../components/ClubCommandCenter.tsx", import.meta.url), "utf8");
+  const membershipPanel = readFileSync(new URL("../components/ClubCommunityPanel.tsx", import.meta.url), "utf8");
+
+  assert.match(commandCenter, /\+ Follow club/);
+  assert.match(commandCenter, /Join club/);
+  assert.match(commandCenter, /no membership required/i);
+  assert.match(commandCenter, /separate request/i);
+  assert.match(membershipPanel, /It is separate from following public updates/);
+  assert.doesNotMatch(membershipPanel, /Sign in to follow/);
+});
+
 test("only club owners can grant, demote or remove admin access", () => {
   const migration = readFileSync(
     new URL("../supabase/migrations/20260902092753_owner_only_club_admin_roles.sql", import.meta.url),
