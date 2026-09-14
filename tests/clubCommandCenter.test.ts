@@ -118,7 +118,7 @@ test("club activity merges community updates into newest-first order", () => {
   const activity = buildClubActivityFeed({
     announcements: [{ id: "a", club_id: "c", author_id: "u", kind: "general", title: "Welcome", body: "Hello", is_pinned: false, published_at: "2026-08-31T10:00:00Z", created_at: "2026-08-31T10:00:00Z", updated_at: "2026-08-31T10:00:00Z" }],
     tournaments: [], leagues: [], challenges: [],
-    calendarEvents: [{ id: "e", club_id: "c", creator_id: "u", title: "Practice night", kind: "practice", description: "", starts_at: "2026-09-02T18:00:00Z", ends_at: null, location: "Club", capacity: 10, is_cancelled: false, going_count: 2, maybe_count: 1, created_at: "2026-08-31T11:00:00Z", updated_at: "2026-08-31T11:00:00Z" }],
+    calendarEvents: [{ id: "e", club_id: "c", creator_id: "u", title: "Practice night", kind: "practice", description: "", starts_at: "2026-09-02T18:00:00Z", ends_at: null, location: "Club", capacity: 10, is_cancelled: false, going_count: 2, maybe_count: 1, series_id: null, recurrence: "none", created_at: "2026-08-31T11:00:00Z", updated_at: "2026-08-31T11:00:00Z" }],
   });
   assert.deepEqual(activity.map((item) => item.id), ["calendar:e", "announcement:a"]);
   assert.equal(activity[0]?.tab, "events");
