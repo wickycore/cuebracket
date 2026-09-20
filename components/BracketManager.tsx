@@ -50,17 +50,9 @@ function SingleEliminationManager({ tournament, onTournamentChange }: BracketMan
     () => (bracket ? getSingleEliminationLateEntrySlots(bracket) : []),
     [bracket],
   );
-  const lateEntrySlots = useMemo(
-    () =>
-      drawEditable
-        ? rawLateEntrySlots
-        : rawLateEntrySlots.map((slot) => ({
-            ...slot,
-            available: false,
-            lockedReason: DRAW_LOCKED_MESSAGE,
-          })),
-    [drawEditable, rawLateEntrySlots],
-  );
+  // Late-entry BYEs stay open after tournament start until their affected
+  // downstream match has actually started or has a saved result.
+  const lateEntrySlots = rawLateEntrySlots;
   const drawCapacity = bracket ? getKnockoutDrawCapacity(bracket) : 0;
   const remainingDrawSlots = Math.max(
     0,
@@ -99,8 +91,6 @@ function SingleEliminationManager({ tournament, onTournamentChange }: BracketMan
     const latestTournament = getTournament(tournament.id) ?? tournament;
     const latestBracket = latestTournament.bracket?.type === "single" ? latestTournament.bracket : bracket;
     if (!latestBracket) return "The bracket has not been generated.";
-    if (!isDrawEditable(latestTournament.status)) return DRAW_LOCKED_MESSAGE;
-
     const latestDrawCapacity = getKnockoutDrawCapacity(latestBracket);
     if (latestTournament.players.length >= latestTournament.bracketSize) {
       return `This event is full at ${latestTournament.bracketSize} players.`;
