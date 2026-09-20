@@ -14,7 +14,6 @@ import {
   DRAW_LOCKED_MESSAGE,
   getFirstRoundByeCount,
   getKnockoutDrawCapacity,
-  isDrawEditable,
 } from "@/lib/bracket/drawIntegrity";
 import type { DoubleEliminationBracket, Tournament } from "@/lib/tournaments";
 import { getTournament, updateTournament } from "@/lib/tournaments";
@@ -32,7 +31,6 @@ export function DoubleEliminationManager({
 }: Props) {
   const [message, setMessage] = useState("");
   const bracket = tournament.bracket?.type === "double" ? tournament.bracket : undefined;
-  const drawEditable = isDrawEditable(tournament.status);
 
   const completed = useMemo(() => {
     if (!bracket) return 0;
@@ -109,7 +107,7 @@ export function DoubleEliminationManager({
     const updated = updateTournament(latestTournament.id, {
       players: [...latestTournament.players, normalizedName],
       bracket: result.bracket,
-      status: "draft",
+      status: latestTournament.status === "completed" ? "live" : latestTournament.status,
     });
     if (!updated) return "The late player could not be saved.";
 
@@ -124,7 +122,7 @@ export function DoubleEliminationManager({
         <span className="text-3xl">♻️</span>
         <h2 className="mt-3 text-2xl font-black text-white">Generate the double-elimination bracket</h2>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">
-          Each player is eliminated only after a second loss. CueBracket builds the smallest valid knockout draw for the checked-in field; BYEs are empty first-round slots and never count as played matches.
+          Each player is eliminated only after a second loss. CueBracket preserves the selected knockout bracket size. BYEs stay available for late entry until an affected downstream match has started or has a saved result.
         </p>
         {message ? <p className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/10 px-4 py-3 text-sm font-bold text-rose-200">{message}</p> : null}
         <button type="button" onClick={generate} className="mt-5 rounded-xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950 hover:bg-cyan-300">Generate double bracket</button>
@@ -141,12 +139,6 @@ export function DoubleEliminationManager({
         </div>
       ) : bracket.resetRequired ? (
         <div className="rounded-2xl border border-violet-400/25 bg-violet-400/10 p-4 text-sm font-bold text-violet-200">Grand Final reset match required.</div>
-      ) : null}
-
-      {!bracket.champion && tournament.status !== "draft" ? (
-        <div className="rounded-2xl border border-emerald-300/20 bg-emerald-300/10 px-4 py-3 text-sm font-bold text-emerald-100">
-          🔒 Draw locked — player positions and BYEs are frozen for bracket integrity.
-        </div>
       ) : null}
 
       {message ? <p className="rounded-xl border border-rose-400/20 bg-rose-400/10 px-4 py-3 text-sm font-bold text-rose-200">{message}</p> : null}
