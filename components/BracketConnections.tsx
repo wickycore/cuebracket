@@ -180,24 +180,9 @@ export function BracketConnections({
           },
         );
 
-        const entryPaths = plan.entryStubs.flatMap(({ to, targetSlot }) => {
-          const target =
-            matchRefs.current.get(to) ??
-            container.querySelector<HTMLElement>(
-              `[data-bracket-match-id="${CSS.escape(to)}"]`,
-            );
-          const targetSlotElement = target?.querySelector<HTMLElement>(
-            `[data-bracket-player-slot="${targetSlot}"]`,
-          );
-          if (!targetSlotElement) return [];
-
-          const d = makeEntryPath(getUnscaledBox(targetSlotElement, container));
-          return d
-            ? [{ id: `entry-${to}-${targetSlot}`, d, kind: "entry" as const }]
-            : [];
-        });
-
-        const nextPaths = [...matchPaths, ...entryPaths];
+        // All first-round BYE cards are rendered, so there are no synthetic
+        // dotted entry stubs in the full bracket.
+        const nextPaths = matchPaths;
 
         setSize((current) =>
           current.width === width && current.height === height
