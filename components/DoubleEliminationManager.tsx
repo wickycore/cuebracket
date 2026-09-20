@@ -11,7 +11,6 @@ import {
   recomputeDoubleEliminationBracket,
 } from "@/lib/bracket/doubleElimination";
 import {
-  DRAW_LOCKED_MESSAGE,
   getFirstRoundByeCount,
   getKnockoutDrawCapacity,
 } from "@/lib/bracket/drawIntegrity";
