@@ -6,7 +6,6 @@ import { DoubleEliminationManager } from "@/components/DoubleEliminationManager"
 import { LateEntryPanel } from "@/components/LateEntryPanel";
 import { PlayerNameEditor } from "@/components/PlayerNameEditor";
 import {
-  DRAW_LOCKED_MESSAGE,
   getKnockoutDrawCapacity,
 } from "@/lib/bracket/drawIntegrity";
 import {
