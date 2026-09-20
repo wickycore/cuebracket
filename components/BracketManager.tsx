@@ -8,7 +8,6 @@ import { PlayerNameEditor } from "@/components/PlayerNameEditor";
 import {
   DRAW_LOCKED_MESSAGE,
   getKnockoutDrawCapacity,
-  isDrawEditable,
 } from "@/lib/bracket/drawIntegrity";
 import {
   buildSingleEliminationBracket,
@@ -36,7 +35,6 @@ function SingleEliminationManager({ tournament, onTournamentChange }: BracketMan
   const [message, setMessage] = useState("");
   const bracket = tournament.bracket?.type === "single" ? tournament.bracket : undefined;
   const canGenerate = tournament.players.length >= 2;
-  const drawEditable = isDrawEditable(tournament.status);
 
   const playedMatches = useMemo(
     () => (bracket ? countSingleEliminationPlayedMatches(bracket) : 0),
@@ -108,7 +106,7 @@ function SingleEliminationManager({ tournament, onTournamentChange }: BracketMan
     const updated = updateTournament(latestTournament.id, {
       players: [...latestTournament.players, playerName],
       bracket: result.bracket,
-      status: "draft",
+      status: latestTournament.status === "completed" ? "live" : latestTournament.status,
     });
     if (!updated) return "The late player could not be saved.";
     setMessage("");
@@ -122,7 +120,7 @@ function SingleEliminationManager({ tournament, onTournamentChange }: BracketMan
         <span className="text-xs font-black uppercase tracking-[0.24em] text-cyan-300">Single elimination</span>
         <h2 className="mt-2 text-2xl font-black text-white">Generate the tournament bracket</h2>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">
-          The player order becomes the draw order. CueBracket creates the smallest valid knockout draw and spreads empty first-round slots as BYEs. BYEs are empty slots, not fake players or played matches.
+          The player order becomes the draw order. CueBracket preserves the selected knockout bracket size and spreads empty first-round slots as BYEs. BYEs stay available for late entry until the affected next match has started or has a saved result.
         </p>
         {message ? <p className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/10 px-4 py-3 text-sm font-bold text-rose-200">{message}</p> : null}
         <button type="button" onClick={generateBracket} className="mt-5 rounded-xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950 hover:bg-cyan-300">Generate bracket</button>
@@ -136,12 +134,6 @@ function SingleEliminationManager({ tournament, onTournamentChange }: BracketMan
         <div className="rounded-2xl border border-emerald-400/25 bg-emerald-400/10 p-5">
           <span className="text-xs font-black uppercase tracking-[0.2em] text-emerald-300">Tournament champion</span>
           <h3 className="mt-2 text-2xl font-black text-white">🏆 {bracket.champion}</h3>
-        </div>
-      ) : null}
-
-      {!bracket.champion && tournament.status !== "draft" ? (
-        <div className="rounded-2xl border border-emerald-300/20 bg-emerald-300/10 px-4 py-3 text-sm font-bold text-emerald-100">
-          🔒 Draw locked — player positions and BYEs are frozen for bracket integrity.
         </div>
       ) : null}
 
