@@ -153,12 +153,7 @@ export function DoubleEliminationManager({
         <div className="rounded-2xl border border-violet-400/25 bg-violet-400/10 p-4 text-sm font-bold text-violet-200">Grand Final reset match required.</div>
       ) : null}
 
-      {tournament.status === "draft" ? (
-        <div className="rounded-2xl border border-amber-300/20 bg-amber-300/10 px-4 py-3 text-sm text-amber-100">
-          <span className="font-black">Draw preview · {drawCapacity} slots.</span>{" "}
-          BYE positions can still be filled explicitly. Press <span className="font-black">Start Tournament</span> above when the draw is final; after that, positions are frozen.
-        </div>
-      ) : !bracket.champion ? (
+      {!bracket.champion && tournament.status !== "draft" ? (
         <div className="rounded-2xl border border-emerald-300/20 bg-emerald-300/10 px-4 py-3 text-sm font-bold text-emerald-100">
           🔒 Draw locked — player positions and BYEs are frozen for bracket integrity.
         </div>
