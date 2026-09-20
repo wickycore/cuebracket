@@ -20,8 +20,6 @@ import { BracketMatchList } from "@/components/BracketMatchList";
 import { normalizeParticipantName,participantProfilePath,type PublicTournamentParticipant } from "@/lib/cloud/public-participants";
 import { ChampionCelebration } from "@/components/ChampionCelebration";
 import {
-  buildCompactSpectatorCenters,
-  compactSpectatorRounds,
   getAutomaticAdvanceCount,
   numberBracketMatches,
   spectatorSourceLabel,
@@ -144,9 +142,7 @@ function Section({
   const matchPitch = 110;
   const bracketBodyHeight = matchHeight + (maxMatches - 1) * matchPitch;
   const balancedCenters = balancedGeometry
-    ? compactGeometry
-      ? buildCompactSpectatorCenters(rounds, maxMatches)
-      : buildBalancedCenters(rounds, maxMatches)
+    ? buildBalancedCenters(rounds, maxMatches)
     : new Map<string, number>();
   const sectionMatchNumbers = matchNumbers ?? numberBracketMatches(rounds);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -417,12 +413,6 @@ export function ReadOnlyBracket({
   const liveMatches = bracket.rounds.filter(Boolean).flatMap((round) => round.matches).filter(
     (match) => !match.completed && (match.status === "live" || Boolean(match.startedAt && !match.endedAt)),
   ).length;
-  const compactFlowchartRounds = compactSpectatorRounds(bracket.rounds);
-  const automaticAdvanceCounts = new Map(
-    bracket.rounds
-      .map((round) => [round.round, getAutomaticAdvanceCount(round)] as const)
-      .filter(([, count]) => count >= 2),
-  );
 
   return (
     <div>
@@ -464,7 +454,7 @@ export function ReadOnlyBracket({
           <p className="mt-3 text-center text-xs font-bold text-[#d2dfec] sm:hidden">Wide chart mode · drag sideways · pinch to zoom · double-tap to reset</p>
           <Section
             title="Single Elimination"
-            rounds={compactFlowchartRounds}
+            rounds={bracket.rounds}
             raceTo={tournament.raceTo}
             tone="cyan"
             balancedGeometry
@@ -473,9 +463,6 @@ export function ReadOnlyBracket({
             matchNumbers={numberBracketMatches(bracket.rounds)}
             tournamentId={enablePlayerCards?tournament.id:undefined}
             participants={publicParticipants}
-            automaticAdvanceCounts={automaticAdvanceCounts}
-            compactGeometry
-            sourceRounds={bracket.rounds}
           />
         </>
       ) : (
