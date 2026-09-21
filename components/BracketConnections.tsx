@@ -53,9 +53,9 @@ function getUnscaledBox(
   element: HTMLElement,
   container: HTMLDivElement,
 ): ElementBox {
-  // Use the rendered rectangles so CSS positioning transforms are included.
-  // Dividing by the viewport scale converts the points back into the SVG's
-  // unscaled coordinate system used by BracketViewport.
+  // Measure the rendered edges so transforms and the bracket viewport zoom are
+  // included, then translate them back into the SVG's unscaled coordinates.
+  // This keeps every connector attached to the exact card/row edge at any zoom.
   const containerBox = container.getBoundingClientRect();
   const elementBox = element.getBoundingClientRect();
 
@@ -79,18 +79,33 @@ function getUnscaledBox(
   };
 }
 
-function makePath(source: ElementBox, target: ElementBox) {
+function makePath(
+  source: ElementBox,
+  target: ElementBox,
+  targetSlot: 0 | 1,
+) {
   const startX = source.left + source.width;
   const startY = source.top + source.height / 2;
   const endX = target.left;
   const endY = target.top + target.height / 2;
 
   if (![startX, startY, endX, endY].every(Number.isFinite)) return null;
-  if (endX <= startX) return null;
 
-  const middleX = startX + (endX - startX) / 2;
+  const gap = endX - startX;
+  if (gap <= 0) return null;
 
-  return `M ${startX} ${startY} H ${middleX} V ${endY} H ${endX}`;
+  // Never send both feeders down the same vertical lane. When they share one
+  // midpoint the two SVG paths visually fuse into a single long connector,
+  // especially with glow enabled. Give each destination slot its own channel.
+  const centerX = startX + gap / 2;
+  const laneOffset = Math.min(18, Math.max(8, gap * 0.08));
+  const preferredLane =
+    centerX + (targetSlot === 0 ? -laneOffset : laneOffset);
+  const minLaneX = startX + Math.min(8, gap / 3);
+  const maxLaneX = endX - Math.min(8, gap / 3);
+  const laneX = Math.max(minLaneX, Math.min(maxLaneX, preferredLane));
+
+  return `M ${startX} ${startY} H ${laneX} V ${endY} H ${endX}`;
 }
 
 function makeEntryPath(target: ElementBox) {
@@ -172,6 +187,7 @@ export function BracketConnections({
             const d = makePath(
               getUnscaledBox(sourceCard, container),
               getUnscaledBox(targetSlotElement, container),
+              targetSlot,
             );
 
             return d
@@ -234,7 +250,7 @@ export function BracketConnections({
 
   return (
     <svg
-      data-bracket-connectors-version="0.11.0"
+      data-bracket-connectors-version="0.11.1"
       aria-hidden="true"
       className="pointer-events-none absolute left-0 top-0 z-[1] overflow-visible"
       width={size.width}
@@ -257,7 +273,7 @@ export function BracketConnections({
           width="160%"
           height="160%"
         >
-          <feGaussianBlur stdDeviation="2.5" result="blur" />
+          <feGaussianBlur stdDeviation="1.75" result="blur" />
           <feMerge>
             <feMergeNode in="blur" />
             <feMergeNode in="SourceGraphic" />
@@ -271,8 +287,8 @@ export function BracketConnections({
             d={path.d}
             fill="none"
             stroke={stroke}
-            strokeOpacity={path.kind === "entry" ? "0.18" : "0.16"}
-            strokeWidth={path.kind === "entry" ? "4" : "6"}
+            strokeOpacity={path.kind === "entry" ? "0.16" : "0.13"}
+            strokeWidth={path.kind === "entry" ? "3.5" : "4.5"}
             strokeLinecap="round"
             strokeLinejoin="round"
             filter={`url(#${filterId})`}
@@ -283,7 +299,7 @@ export function BracketConnections({
             fill="none"
             stroke={stroke}
             strokeOpacity={path.kind === "entry" ? "0.95" : "0.94"}
-            strokeWidth={path.kind === "entry" ? "2" : "2.5"}
+            strokeWidth={path.kind === "entry" ? "2" : "2.25"}
             strokeDasharray={path.kind === "entry" ? "4 3" : undefined}
             strokeLinecap="round"
             strokeLinejoin="round"
