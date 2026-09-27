@@ -10,10 +10,12 @@ import type {
   Session,
 } from "@supabase/supabase-js";
 import {
+  CloudTournamentConflictError,
   CloudTournamentOwnershipError,
   deleteCloudTournament,
   getMyCloudTournaments,
   rowToTournament,
+  sharedRosterMatchesCloud,
   syncTournamentToCloud,
   type CloudTournamentRow,
 } from "@/lib/cloud/tournaments";
@@ -80,6 +82,7 @@ export function CloudAutoSyncProvider({ children }: { children: ReactNode }) {
     const offlineIds = new Set<string>();
     const retryAttempts = new Map<string, number>();
     const managedTournamentIds = new Set<string>();
+    const conflictingIds = new Set<string>();
 
     function clearTimer(id: string) {
       const timer = timers.get(id);
@@ -109,6 +112,7 @@ export function CloudAutoSyncProvider({ children }: { children: ReactNode }) {
 
     function applyRemoteRow(row: CloudTournamentRow) {
       if (!active || (row.owner_id !== userId && !managedTournamentIds.has(row.id))) return;
+      if (conflictingIds.has(row.id)) return;
       setLocalCloudOwner(row.id, row.owner_id);
       if (dirtyIds.has(row.id) || syncingIds.has(row.id)) return;
 
@@ -151,6 +155,7 @@ export function CloudAutoSyncProvider({ children }: { children: ReactNode }) {
     async function flush(id: string) {
       clearTimer(id);
       if (!active || !userId || syncingIds.has(id)) return;
+      if (conflictingIds.has(id)) return;
 
       const syncUserId = userId;
       const knownOwner = getLocalCloudOwner(id);
@@ -236,6 +241,19 @@ export function CloudAutoSyncProvider({ children }: { children: ReactNode }) {
       } catch (error) {
         if (!active || userId !== syncUserId) return;
 
+        if (error instanceof CloudTournamentConflictError) {
+          conflictingIds.add(id);
+          dirtyIds.delete(id);
+          clearTimer(id);
+          publishCloudSyncStatus({
+            state: "error",
+            tournamentId: id,
+            tournamentName: getTournament(id)?.name,
+            message: error.message,
+          });
+          return;
+        }
+
         if (error instanceof CloudTournamentOwnershipError) {
           dirtyIds.delete(id);
           clearPendingCloudChange(id, syncUserId);
@@ -288,6 +306,7 @@ export function CloudAutoSyncProvider({ children }: { children: ReactNode }) {
 
     function scheduleSync(id: string, delay = SYNC_DEBOUNCE_MS) {
       if (!active || !userId) return;
+      if (conflictingIds.has(id)) return;
 
       const knownOwner = getLocalCloudOwner(id);
       if (knownOwner && knownOwner !== userId && !managedTournamentIds.has(id)) {
@@ -492,6 +511,7 @@ export function CloudAutoSyncProvider({ children }: { children: ReactNode }) {
 
         for (const previousId of previouslyManagedIds) {
           if (!managedTournamentIds.has(previousId)) {
+            conflictingIds.delete(previousId);
             local = local.filter((item) => item.id !== previousId);
             removeLocalCloudOwner(previousId);
             dirtyIds.delete(previousId);
@@ -503,6 +523,20 @@ export function CloudAutoSyncProvider({ children }: { children: ReactNode }) {
           setLocalCloudOwner(row.id, row.owner_id);
           let pending = getPendingCloudChange(row.id, user.id);
           const existing = local.find((item) => item.id === row.id);
+
+          if (row.access_role === "co_organizer" && existing &&
+              !sharedRosterMatchesCloud(row.players ?? [], existing.players)) {
+            conflictingIds.add(row.id);
+            dirtyIds.delete(row.id);
+            clearTimer(row.id);
+            publishCloudSyncStatus({
+              state: "error",
+              tournamentId: row.id,
+              tournamentName: row.name,
+              message: new CloudTournamentConflictError().message,
+            });
+            continue;
+          }
 
           // An upsert cannot be replayed after its local tournament disappeared.
           // In that unusual case, restore the safe cloud copy instead of deleting it.
@@ -518,7 +552,7 @@ export function CloudAutoSyncProvider({ children }: { children: ReactNode }) {
 
           const incoming = rowToTournament(row);
 
-          if (
+          if (row.access_role === "co_organizer" ||
             !existing ||
             timestamp(incoming.updatedAt) > timestamp(existing.updatedAt)
           ) {
@@ -589,6 +623,7 @@ export function CloudAutoSyncProvider({ children }: { children: ReactNode }) {
         userId = nextUserId;
         dirtyIds.clear();
         managedTournamentIds.clear();
+        conflictingIds.clear();
         offlineIds.clear();
         retryAttempts.clear();
         for (const id of timers.keys()) clearTimer(id);
@@ -625,9 +660,41 @@ export function CloudAutoSyncProvider({ children }: { children: ReactNode }) {
       });
     };
 
+    async function reloadSharedTournament(event: Event) {
+      const id = (event as CustomEvent<{ id: string }>).detail?.id;
+      if (!id || !userId) return;
+      const currentUserId = userId;
+      try {
+        const row = (await getMyCloudTournaments()).find((item) => item.id === id);
+        if (!active || userId !== currentUserId) return;
+        if (!row || row.access_role !== "co_organizer") {
+          throw new Error("This shared tournament is no longer available.");
+        }
+        clearTimer(id);
+        conflictingIds.delete(id);
+        dirtyIds.delete(id);
+        offlineIds.delete(id);
+        retryAttempts.delete(id);
+        clearPendingCloudChange(id, currentUserId);
+        managedTournamentIds.add(id);
+        setLocalCloudOwner(id, row.owner_id);
+        writeRemoteState(mergeTournament(getTournaments(), rowToTournament(row)));
+        publishCloudSyncStatus({
+          state: "synced", tournamentId: id, tournamentName: row.name,
+          message: "Loaded the owner's current shared tournament. You can now edit matches and BYEs.",
+        });
+      } catch (error) {
+        publishCloudSyncStatus({
+          state: "error", tournamentId: id,
+          message: error instanceof Error ? error.message : "Unable to reload the shared tournament.",
+        });
+      }
+    }
+
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
     window.addEventListener("cuebracket:collaborations-changed", reconcile);
+    window.addEventListener("cuebracket:reload-shared-tournament", reloadSharedTournament);
     rememberLocalState();
     void reconcile();
 
@@ -638,6 +705,7 @@ export function CloudAutoSyncProvider({ children }: { children: ReactNode }) {
       authSubscription.unsubscribe();
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
+      window.removeEventListener("cuebracket:reload-shared-tournament", reloadSharedTournament);
       window.removeEventListener("cuebracket:collaborations-changed", reconcile);
       stopRealtime();
       if (authReconcileTimer) clearTimeout(authReconcileTimer);
