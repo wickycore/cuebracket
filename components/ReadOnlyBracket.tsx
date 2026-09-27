@@ -230,7 +230,7 @@ function Section({
                                 </div>
                               );
                             })}
-                            {!sharedRoundRace ? <div className="px-2.5 py-0.5 text-[10px] font-bold text-[#d2dfec]">Race to {matchRaceTo}</div> : null
+                            {!sharedRoundRace ? <div className="px-2.5 py-0.5 text-[10px] font-bold text-[#d2dfec]">Race to {matchRaceTo}</div> : null}
                         </article>
                       </div>
                     );
