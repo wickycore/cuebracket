@@ -214,7 +214,6 @@ function Section({
                   {round.matches.map((match) => {
                     const matchRaceTo = getMatchRaceTo(match, raceTo);
                     const automaticAdvance = isAutomaticAdvance(match);
-                    const advancingPlayer = match.player1 ?? match.player2 ?? match.winner;
                     const matchNumber = sectionMatchNumbers.get(match.id) ?? match.position + 1;
                     const centerSlot =
                       balancedCenters.get(match.id) ?? match.position;
@@ -237,26 +236,18 @@ function Section({
                             : undefined
                         }
                       >
-                        {automaticAdvance ? (
-                          <article data-bracket-card className="relative z-10 flex h-9 items-center justify-center overflow-hidden rounded-lg border border-[#a78bfa]/55 bg-[#30295d] px-3 shadow-[0_8px_18px_rgba(0,0,0,.16)]">
-                            {advancingPlayer&&playerHref(advancingPlayer)?<Link href={playerHref(advancingPlayer)!} aria-label={`Open ${advancingPlayer} player profile`} className="flex min-w-0 flex-1 items-center justify-center gap-1 rounded-md py-1 hover:bg-white/5"><span className="truncate whitespace-nowrap text-center text-[9px] font-black tracking-normal text-[#ede9fe]"><span aria-hidden="true" className="mr-1.5 text-[#c4b5fd]">✓</span>{advancingPlayer} advances · BYE</span><span aria-hidden="true" className="text-sm text-[#c4b5fd]">›</span></Link>:<p className="min-w-0 truncate whitespace-nowrap text-center text-[9px] font-black tracking-normal text-[#ede9fe]">
-                              <span aria-hidden="true" className="mr-1.5 text-[#c4b5fd]">✓</span>
-                              {advancingPlayer} advances · BYE
-                            </p>}
-                          </article>
-                        ) : (
-                          <article data-bracket-card className={`group relative z-10 overflow-hidden rounded-xl border bg-[#123763] shadow-[0_10px_24px_rgba(0,0,0,.18)] transition-colors duration-200 ${match.completed ? "border-[#78c69b]/60" : match.status === "live" ? "border-[#ef8193]/65" : "border-[#356a98]"}`}>
+                        <article data-bracket-card className={`group relative z-10 overflow-hidden rounded-xl border bg-[#123763] shadow-[0_10px_24px_rgba(0,0,0,.18)] transition-colors duration-200 ${automaticAdvance ? "border-[#a78bfa]/55" : match.completed ? "border-[#78c69b]/60" : match.status === "live" ? "border-[#ef8193]/65" : "border-[#356a98]"}`}>
                             <div className="flex items-center justify-between border-b border-[#2a5680] bg-[#11335d] px-3 py-1.5">
                               <span className="text-[10px] font-black uppercase tracking-[0.16em] text-[#dce8f4]">{match.tableNumber ? `Table ${match.tableNumber} · Match #${matchNumber}` : `Match #${matchNumber}`}</span>
                               <span className={`rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] ${match.completed ? "bg-[#78c69b]/15 text-[#b9e7ca]" : match.status === "live" ? "bg-[#ef8193]/18 text-[#ffc2cb] ring-1 ring-[#ef8193]/40" : match.player1 && match.player2 ? "bg-[#27c2e6]/15 text-[#7ce8fb]" : "bg-[#1a426d] text-[#d2dfec]"}`}>
-                                {match.completed ? "Finished" : match.status === "live" ? "● Live" : match.player1 && match.player2 ? "Ready" : "Waiting"}
+                                {automaticAdvance ? "BYE" : match.completed ? "Finished" : match.status === "live" ? "● Live" : match.player1 && match.player2 ? "Ready" : "Waiting"}
                               </span>
                             </div>
                             {[match.player1, match.player2].map((player, index) => {
                               const winner = Boolean(match.completed && player && match.winner === player);
                               const score = index === 0 ? match.score1 : match.score2;
                               const source = index === 0 ? match.source1 : match.source2;
-                              const placeholder = playerPlaceholders?.[index]
+                              const placeholder = automaticAdvance ? "BYE" : playerPlaceholders?.[index]
                                 ?? spectatorSourceLabel(source, sectionMatchNumbers);
                               return (
                                 <div
@@ -275,8 +266,7 @@ function Section({
                                 <span>{match.startedAt ? formatDuration((match.endedAt ? new Date(match.endedAt).getTime() : now) - new Date(match.startedAt).getTime()) : ""}</span>
                               </div>
                             ) : null}
-                          </article>
-                        )}
+                        </article>
                       </div>
                     );
                   })}
