@@ -11,6 +11,7 @@ import {
   type LateEntryByeSlot,
   type LateEntryResult,
 } from "@/lib/bracket/lateEntry";
+import { getKnockoutDrawSize } from "@/lib/bracket/drawIntegrity";
 
 // CueBracket 0.9E.9 — double elimination with safe late-entry BYE replacement.
 function id(prefix: string, round: number, position: number) {
@@ -178,7 +179,8 @@ function buildBalancedFirstRoundSlots(players: string[], size: number) {
 export function buildDoubleEliminationBracket(
   tournament: Tournament,
 ): DoubleEliminationBracket {
-  const size = tournament.bracketSize;
+  // Registration capacity can be 48 while the knockout graph needs 64 slots.
+  const size = getKnockoutDrawSize(Math.max(tournament.bracketSize, tournament.players.length));
   const roundsCount = Math.log2(size);
   const slots = buildBalancedFirstRoundSlots(tournament.players, size);
   const winners: BracketRound[] = [];
