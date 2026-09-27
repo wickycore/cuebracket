@@ -10,6 +10,18 @@ export class CloudTournamentOwnershipError extends Error {
   }
 }
 
+export class CloudTournamentConflictError extends Error {
+  constructor() {
+    super("Your local player list differs from the shared tournament. Reload the shared version before making more changes.");
+    this.name = "CloudTournamentConflictError";
+  }
+}
+
+export function sharedRosterMatchesCloud(cloudPlayers: string[], localPlayers: string[]) {
+  return cloudPlayers.length <= localPlayers.length &&
+    cloudPlayers.every((player, index) => player === localPlayers[index]);
+}
+
 function isOwnershipConflict(error: unknown) {
   if (!error || typeof error !== "object") return false;
   const value = error as { code?: string; message?: string };
@@ -102,7 +114,7 @@ export async function syncTournamentToCloud(
 
   const { data: existing, error: lookupError } = await supabase
     .from("cloud_tournaments")
-    .select("id, owner_id, club_id")
+    .select("id, owner_id, club_id, players")
     .eq("id", tournament.id)
     .maybeSingle();
 
@@ -118,12 +130,26 @@ export async function syncTournamentToCloud(
       .maybeSingle();
     if (collaborationError) throw collaborationError;
     if (!collaboration) throw new CloudTournamentOwnershipError();
+    if (!sharedRosterMatchesCloud(existing.players ?? [], tournament.players)) {
+      throw new CloudTournamentConflictError();
+    }
   }
 
   if (existing) {
+    const payload = existing.owner_id === user.id
+      ? tournamentPayload(tournament)
+      : {
+          bracket: tournament.bracket ?? null,
+          competition: tournament.competition ?? null,
+          status: tournament.status,
+          updated_at: new Date().toISOString(),
+          ...(tournament.players.length > (existing.players?.length ?? 0)
+            ? { players: tournament.players }
+            : {}),
+        };
     const { data, error } = await supabase
       .from("cloud_tournaments")
-      .update(tournamentPayload(tournament))
+      .update(payload)
       .eq("id", tournament.id)
       .select("*")
       .single();

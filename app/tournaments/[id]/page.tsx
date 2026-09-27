@@ -12,6 +12,8 @@ import { ShareTournament } from "@/components/ShareTournament";
 import { TournamentStats } from "@/components/TournamentStats";
 import { TournamentRegistrationManager } from "@/components/TournamentRegistrationManager";
 import { TournamentCollaborators } from "@/components/TournamentCollaborators";
+import { getMyCloudTournament, sharedRosterMatchesCloud } from "@/lib/cloud/tournaments";
+import { subscribeToCloudSyncStatus, type CloudSyncStatusDetail } from "@/lib/cloud/sync-events";
 import {
   deleteTournament,
   getFormatLabel,
@@ -31,6 +33,35 @@ export default function TournamentDetailPage() {
   const [missing, setMissing] = useState(false);
   const [selectedMatchId, setSelectedMatchId] = useState("");
   const [cloudAccessRole, setCloudAccessRole] = useState<"owner" | "co_organizer" | null>(null);
+  const [syncNotice, setSyncNotice] = useState<CloudSyncStatusDetail | null>(null);
+  const [reloadingShared, setReloadingShared] = useState(false);
+
+  useEffect(() => subscribeToCloudSyncStatus((detail) => {
+    if (detail.tournamentId !== params.id) return;
+    setSyncNotice(detail);
+    if (detail.state === "synced" || detail.state === "error") setReloadingShared(false);
+  }), [params.id]);
+
+  useEffect(() => {
+    if (cloudAccessRole !== "co_organizer") return;
+    let active = true;
+    void getMyCloudTournament(params.id).then((row) => {
+      if (!active || !row) return;
+      const local = getTournament(params.id);
+      if (local && !sharedRosterMatchesCloud(row.players ?? [], local.players)) {
+        setSyncNotice({ state: "error", tournamentId: params.id,
+          message: "Your local player list differs from the shared tournament. Reload the shared version before editing.",
+          changedAt: new Date().toISOString() });
+      }
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, [cloudAccessRole, params.id]);
+
+  function reloadSharedTournament() {
+    if (!window.confirm("Load the owner's current shared tournament? Unsynced changes on this device will be replaced. You can add the late player again afterward.")) return;
+    setReloadingShared(true);
+    window.dispatchEvent(new CustomEvent("cuebracket:reload-shared-tournament", { detail: { id: params.id } }));
+  }
 
   useEffect(() => {
     const load = () => {
@@ -181,6 +212,17 @@ export default function TournamentDetailPage() {
           tournament={tournament}
           onAccessRoleChange={setCloudAccessRole}
         />
+
+        {cloudAccessRole === "co_organizer" ? (
+          <div className="mt-4 rounded-2xl border border-violet-300/20 bg-violet-300/[0.06] p-4 text-sm text-violet-100">
+            <p className="font-bold">You are editing the owner’s shared cloud tournament.</p>
+            {syncNotice?.message ? <p role="status" className={`mt-2 ${syncNotice.state === "error" ? "text-rose-200" : "text-violet-200"}`}>{syncNotice.message}</p> : null}
+            <button type="button" onClick={reloadSharedTournament} disabled={reloadingShared}
+              className="mt-3 rounded-xl border border-violet-300/30 px-3 py-2 font-bold text-violet-100 disabled:opacity-50">
+              {reloadingShared ? "Loading shared tournament…" : "Load owner’s current tournament"}
+            </button>
+          </div>
+        ) : null}
 
         {structureReady ? (
           <div className="mt-6">
