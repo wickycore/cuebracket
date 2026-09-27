@@ -327,9 +327,9 @@ test("spectator match cards use compact desktop geometry", () => {
   const flowchart = readFileSync(new URL("../components/ReadOnlyBracket.tsx", import.meta.url), "utf8");
 
   assert.match(list, /grid min-h-14 w-full/);
-  assert.match(flowchart, /const matchHeight = 94/);
-  assert.match(flowchart, /const matchPitch = 110/);
-  assert.match(flowchart, /className="w-48 shrink-0 snap-start"/);
+  assert.match(flowchart, /const matchHeight = 76/);
+  assert.match(flowchart, /const matchPitch = 92/);
+  assert.match(flowchart, /className="w-44 shrink-0 snap-start"/);
 });
 
 test("automatic advances retain their first-round match and visible BYE opponent", () => {
@@ -359,7 +359,7 @@ test("flowchart shows a shared race target once in each round heading", () => {
   assert.match(source, /const sharedRoundRace = roundRaceTargets\.length === 1/);
   assert.match(source, /`RT\$\{sharedRoundRace\}`/);
   assert.match(source, /aria-label=\{sharedRoundRace \? `Race to \$\{sharedRoundRace\}`/);
-  assert.match(source, /sharedRoundRace \? "" : `Race to \$\{matchRaceTo\}`/);
+  assert.match(source, /!sharedRoundRace \? <div[^>]*>Race to \{matchRaceTo\}/);
 });
 
 test("list view pins a concise round heading with playable progress", () => {
