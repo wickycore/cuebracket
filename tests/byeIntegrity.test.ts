@@ -20,6 +20,7 @@ import {
   getSingleEliminationLateEntrySlots,
   updateSingleEliminationMatch,
 } from "@/lib/bracket/singleElimination";
+import { holdOpenByeNames } from "@/lib/bracket/spectator";
 import {
   DEFAULT_TOURNAMENT_OPTIONS,
   type Tournament,
@@ -172,6 +173,24 @@ test("double-elimination late entry fills an explicit BYE without redrawing the 
   assert.ok(filled?.player1 === "Late Double" || filled?.player2 === "Late Double");
   assert.equal(filled?.completed, false);
   assert.equal(filled?.winner, null);
+});
+
+test("double-elimination spectator view holds open BYE names across tournaments", () => {
+  const bracket = buildDoubleEliminationBracket(
+    tournamentFixture(players(13), getKnockoutDrawSize(13)),
+  );
+  const available = getDoubleEliminationLateEntrySlots(bracket).filter((slot) => slot.available);
+  assert.ok(available.length > 0);
+  const displayed = holdOpenByeNames(bracket.winners, new Set(available.map((slot) => slot.matchId)));
+  const first = available[0];
+  const nextMatch = displayed[1].matches.find((match) =>
+    [match.source1, match.source2].some((source) => source?.kind === "winner" && source.matchId === first.matchId),
+  );
+  assert.ok(nextMatch);
+  const sourceSlot = nextMatch.source1?.kind === "winner" && nextMatch.source1.matchId === first.matchId ? 1 : 2;
+  assert.equal(sourceSlot === 1 ? nextMatch.player1 : nextMatch.player2, null);
+  const original = bracket.winners[1].matches.find((match) => match.id === nextMatch.id);
+  assert.equal(sourceSlot === 1 ? original?.player1 : original?.player2, first.advancingPlayer);
 });
 
 test("draw editability ends when the tournament starts", () => {

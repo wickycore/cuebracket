@@ -5,8 +5,8 @@ export type SpectatorMatchFilter = "all" | "live" | "upcoming" | "finished";
 export type SpectatorMatchState = "advanced" | "finished" | "live" | "ready" | "waiting";
 
 /** Keep a replaceable first-round BYE visible without naming its next-round entrant early. */
-export function holdOpenByeNames(rounds: BracketRound[]): BracketRound[] {
-  const openByes = new Set(
+export function holdOpenByeNames(rounds: BracketRound[], availableByeIds?: Set<string>): BracketRound[] {
+  const openByes = availableByeIds ?? new Set(
     rounds[0]?.matches
       .filter((match) => match.completed && Boolean(match.player1) !== Boolean(match.player2))
       .map((match) => match.id) ?? [],
