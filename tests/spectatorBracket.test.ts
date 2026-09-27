@@ -327,8 +327,8 @@ test("spectator match cards use compact desktop geometry", () => {
   const flowchart = readFileSync(new URL("../components/ReadOnlyBracket.tsx", import.meta.url), "utf8");
 
   assert.match(list, /grid min-h-14 w-full/);
-  assert.match(flowchart, /const matchHeight = 76/);
-  assert.match(flowchart, /const matchPitch = 92/);
+  assert.match(flowchart, /const matchHeight = 94/);
+  assert.match(flowchart, /const matchPitch = 100/);
   assert.match(flowchart, /className="w-44 shrink-0 snap-start"/);
 });
 

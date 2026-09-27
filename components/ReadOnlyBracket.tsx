@@ -118,8 +118,9 @@ function Section({
 }) {
   const colors = toneClass[tone];
   const maxMatches = Math.max(1, ...rounds.map((round) => round.matches.length));
-  const matchHeight = 76;
-  const matchPitch = 92;
+  // Reserve enough room for the occasional per-match race label.
+  const matchHeight = 94;
+  const matchPitch = 100;
   const bracketBodyHeight = matchHeight + (maxMatches - 1) * matchPitch;
   const balancedCenters = balancedGeometry
     ? buildBalancedCenters(rounds, maxMatches)
