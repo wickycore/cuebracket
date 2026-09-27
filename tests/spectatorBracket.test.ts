@@ -246,12 +246,11 @@ test("public spectator player navigation is privacy-safe and does not merge gues
   assert.match(migration, /drop function if exists public\.get_public_tournament_participants/);
 });
 
-test("flowchart player names and BYE chevrons open the same registered or guest profiles as list view",()=>{
+test("flowchart player names open the same registered or guest profiles as list view",()=>{
   const source=readFileSync(new URL("../components/ReadOnlyBracket.tsx",import.meta.url),"utf8");
   assert.match(source,/participantProfilePath\(participant\)/);
   assert.match(source,/cloud\/live\/\$\{encodeURIComponent\(tournamentId\)\}\/players/);
   assert.match(source,/Open \$\{player\} player profile/);
-  assert.match(source,/Open \$\{advancingPlayer\} player profile/);
   assert.match(source,/participants=\{publicParticipants\}/);
 });
 
@@ -303,13 +302,12 @@ test("spectator match cards use compact desktop geometry", () => {
   const flowchart = readFileSync(new URL("../components/ReadOnlyBracket.tsx", import.meta.url), "utf8");
 
   assert.match(list, /grid min-h-14 w-full/);
-  assert.match(list, /flex min-h-12 w-full/);
   assert.match(flowchart, /const matchHeight = 94/);
   assert.match(flowchart, /const matchPitch = 110/);
   assert.match(flowchart, /className="w-48 shrink-0 snap-start"/);
 });
 
-test("automatic advances use one slim BYE line in list and flowchart views", () => {
+test("automatic advances retain their first-round match and visible BYE opponent", () => {
   const list = readFileSync(
     new URL("../components/BracketMatchList.tsx", import.meta.url),
     "utf8",
@@ -319,16 +317,12 @@ test("automatic advances use one slim BYE line in list and flowchart views", () 
     "utf8",
   );
 
-  assert.match(list, /const advancingPlayer = match\.player1 \?\? match\.player2 \?\? match\.winner/);
-  assert.match(list, /\{advancingPlayer\}<\/span>[\s\S]*advances · BYE/);
-  assert.match(list, /advances · BYE/);
-  assert.match(list, /flex min-h-12 w-full/);
-  assert.doesNotMatch(list, /BYE<\/strong> — No opponent/);
-  assert.doesNotMatch(list, /Automatic advance<\/strong> · no match played/);
-  assert.match(flowchart, /\{advancingPlayer\} advances · BYE/);
-  assert.match(flowchart, /flex h-9 items-center justify-center/);
-  assert.doesNotMatch(flowchart, />Automatic BYE</);
-  assert.doesNotMatch(flowchart, />No opponent</);
+  assert.match(list, /automaticAdvance \? "BYE" : spectatorSourceLabel/);
+  assert.match(list, /const matches = matchingMatches/);
+  assert.doesNotMatch(list, /players advanced automatically/);
+  assert.match(flowchart, /const placeholder = automaticAdvance \? "BYE"/);
+  assert.match(flowchart, /automaticAdvance \? "BYE" : match.completed/);
+  assert.doesNotMatch(flowchart, /advances · BYE/);
 });
 
 test("flowchart shows a shared race target once in each round heading", () => {
