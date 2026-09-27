@@ -25,6 +25,13 @@ export interface TournamentCollaboratorView extends TournamentCollaboratorRow {
   tournamentTitle?: string;
 }
 
+function inviteFailure(stage: string, error: unknown): Error {
+  const detail = error instanceof Error ? error.message :
+    (error && typeof error === "object" && "message" in error && typeof error.message === "string")
+      ? error.message : "Unknown error";
+  return new Error(`${stage}: ${detail}`);
+}
+
 async function requireUser() {
   const supabase = createClient();
   const { data: { user }, error } = await supabase.auth.getUser();
@@ -94,11 +101,28 @@ export async function inviteTournamentCoOrganizer(
   tournament: Tournament,
   username: string,
 ) {
-  const { supabase } = await requireUser();
-  await syncTournamentToCloud(tournament);
+  const { supabase, user } = await requireUser();
   const cleanUsername = username.trim().replace(/^@/, "").toLowerCase();
   if (!/^[a-z0-9_]{3,24}$/.test(cleanUsername)) {
     throw new Error("Enter the player’s exact CueBracket username.");
+  }
+  const { data: existing, error: lookupError } = await supabase
+    .from("cloud_tournaments")
+    .select("owner_id")
+    .eq("id", tournament.id)
+    .maybeSingle();
+  if (lookupError) throw inviteFailure("Could not check tournament ownership", lookupError);
+  if (existing && existing.owner_id !== user.id) {
+    throw new Error("Sign in with the account that owns this tournament to invite co-organizers.");
+  }
+  // A saved tournament is already ready for invitations. Syncing it again here
+  // can overwrite newer cloud changes with the local copy.
+  if (!existing) {
+    try {
+      await syncTournamentToCloud(tournament);
+    } catch (error) {
+      throw inviteFailure("Could not save tournament before inviting", error);
+    }
   }
   const { data, error } = await supabase.rpc("invite_tournament_co_organizer", {
     target_tournament_id: tournament.id,
@@ -108,7 +132,7 @@ export async function inviteTournamentCoOrganizer(
     if (error.code === "23505") {
       throw new Error("That player already has an invitation for this tournament.");
     }
-    throw error;
+    throw inviteFailure("Could not create invitation", error);
   }
   return data as TournamentCollaboratorRow;
 }

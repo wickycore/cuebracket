@@ -15,6 +15,13 @@ interface Props {
   onAccessRoleChange?: (role: "owner" | "co_organizer" | null) => void;
 }
 
+function inviteErrorMessage(error: unknown) {
+  if (error instanceof Error && error.message) return error.message;
+  if (typeof error === "object" && error !== null && "message" in error &&
+      typeof error.message === "string" && error.message) return error.message;
+  return "Unable to send this invitation. Please try again.";
+}
+
 export function TournamentCollaborators({ tournament, onAccessRoleChange }: Props) {
   const [role, setRole] = useState<"owner" | "co_organizer" | null>(null);
   const [collaborators, setCollaborators] = useState<TournamentCollaboratorView[]>([]);
@@ -51,7 +58,7 @@ export function TournamentCollaborators({ tournament, onAccessRoleChange }: Prop
       setMessage("Invitation sent. They can accept it from the Cloud center.");
       await load();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Unable to send this invitation.");
+      setMessage(inviteErrorMessage(error));
     } finally {
       setBusy(false);
     }
