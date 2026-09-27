@@ -21,6 +21,7 @@ import { normalizeParticipantName,participantProfilePath,type PublicTournamentPa
 import { ChampionCelebration } from "@/components/ChampionCelebration";
 import {
   getAutomaticAdvanceCount,
+  holdOpenByeNames,
   numberBracketMatches,
   spectatorSourceLabel,
 } from "@/lib/bracket/spectator";
@@ -403,6 +404,7 @@ export function ReadOnlyBracket({
   const liveMatches = bracket.rounds.filter(Boolean).flatMap((round) => round.matches).filter(
     (match) => !match.completed && (match.status === "live" || Boolean(match.startedAt && !match.endedAt)),
   ).length;
+  const displayedRounds = holdOpenByeNames(bracket.rounds);
 
   return (
     <div>
@@ -444,20 +446,20 @@ export function ReadOnlyBracket({
           <p className="mt-3 text-center text-xs font-bold text-[#d2dfec] sm:hidden">Wide chart mode · drag sideways · pinch to zoom · double-tap to reset</p>
           <Section
             title="Single Elimination"
-            rounds={bracket.rounds}
+            rounds={displayedRounds}
             raceTo={tournament.raceTo}
             tone="cyan"
             balancedGeometry
             showHeader={false}
             edgeToEdge
-            matchNumbers={numberBracketMatches(bracket.rounds)}
+            matchNumbers={numberBracketMatches(displayedRounds)}
             tournamentId={enablePlayerCards?tournament.id:undefined}
             participants={publicParticipants}
           />
         </>
       ) : (
         <BracketMatchList
-          rounds={bracket.rounds}
+          rounds={displayedRounds}
           raceTo={tournament.raceTo}
           tournamentId={enablePlayerCards ? tournament.id : undefined}
           participants={publicParticipants}

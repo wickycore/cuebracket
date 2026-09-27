@@ -6,6 +6,7 @@ import {
   buildCompactSpectatorCenters,
   compactSpectatorRounds,
   getAutomaticAdvanceCount,
+  holdOpenByeNames,
   getActiveSpectatorRound,
   getSpectatorMatchState,
   matchesSpectatorFilter,
@@ -47,6 +48,30 @@ test("spectator list separates live, upcoming, finished and automatic advances",
   assert.equal(matchesSpectatorFilter(ready, "upcoming"), true);
   assert.equal(matchesSpectatorFilter(finished, "finished"), true);
   assert.equal(matchesSpectatorFilter(advanced, "finished"), true);
+});
+
+test("open first-round BYEs keep next-round names pending until that match starts", () => {
+  const rounds: BracketRound[] = [
+    { round: 1, name: "Semi Final", matches: [
+      match({ id: "bye-1", player1: "Riogi", completed: true, winner: "Riogi" }),
+      match({ id: "bye-2", position: 1, player1: "Lusaka", completed: true, winner: "Lusaka" }),
+    ] },
+    { round: 2, name: "Final", matches: [match({
+      id: "next", round: 2, player1: "Riogi", player2: "Lusaka",
+      source1: { kind: "winner", matchId: "bye-1" },
+      source2: { kind: "winner", matchId: "bye-2" },
+    })] },
+  ];
+
+  const pending = holdOpenByeNames(rounds);
+  assert.deepEqual([pending[1].matches[0].player1, pending[1].matches[0].player2], [null, null]);
+  assert.equal(getSpectatorMatchState(pending[1].matches[0]), "waiting");
+  assert.equal(rounds[1].matches[0].player1, "Riogi");
+
+  rounds[1].matches[0].startedAt = "2026-09-27T00:00:00.000Z";
+  rounds[1].matches[0].status = "live";
+  const started = holdOpenByeNames(rounds);
+  assert.deepEqual([started[1].matches[0].player1, started[1].matches[0].player2], ["Riogi", "Lusaka"]);
 });
 
 test("spectator views compact repeated BYEs without changing bracket data", () => {

@@ -1,7 +1,36 @@
 import type { BracketMatch, BracketRound, MatchSource } from "@/lib/tournaments";
+import { hasPlayedOrStartedMatch } from "@/lib/bracket/lateEntry";
 
 export type SpectatorMatchFilter = "all" | "live" | "upcoming" | "finished";
 export type SpectatorMatchState = "advanced" | "finished" | "live" | "ready" | "waiting";
+
+/** Keep a replaceable first-round BYE visible without naming its next-round entrant early. */
+export function holdOpenByeNames(rounds: BracketRound[]): BracketRound[] {
+  const openByes = new Set(
+    rounds[0]?.matches
+      .filter((match) => match.completed && Boolean(match.player1) !== Boolean(match.player2))
+      .map((match) => match.id) ?? [],
+  );
+  if (!openByes.size || rounds.length < 2) return rounds;
+
+  return rounds.map((round, roundIndex) => {
+    if (roundIndex !== 1) return round;
+    return {
+      ...round,
+      matches: round.matches.map((match) => {
+        if (hasPlayedOrStartedMatch(match)) return match;
+        const hide1 = match.source1?.kind === "winner" && openByes.has(match.source1.matchId);
+        const hide2 = match.source2?.kind === "winner" && openByes.has(match.source2.matchId);
+        if (!hide1 && !hide2) return match;
+        return {
+          ...match,
+          player1: hide1 ? null : match.player1,
+          player2: hide2 ? null : match.player2,
+        };
+      }),
+    };
+  });
+}
 
 export function getSpectatorMatchState(match: BracketMatch): SpectatorMatchState {
   if (match.completed && Boolean(match.player1) !== Boolean(match.player2)) return "advanced";
