@@ -26,6 +26,7 @@ import {
   spectatorSourceLabel,
 } from "@/lib/bracket/spectator";
 import { getMatchRaceTo } from "@/lib/tournament-races";
+import { getDoubleEliminationLateEntrySlots } from "@/lib/bracket/doubleElimination";
 
 type SingleBracketView = "flowchart" | "list";
 const SPECTATOR_VIEW_KEY = "cuebracket:spectator-bracket-view:v2";
@@ -316,6 +317,12 @@ export function ReadOnlyBracket({
   }
 
   if (bracket.type === "double") {
+    const openByeIds = new Set(
+      getDoubleEliminationLateEntrySlots(bracket)
+        .filter((slot) => slot.available)
+        .map((slot) => slot.matchId),
+    );
+    const displayedWinners = holdOpenByeNames(bracket.winners, openByeIds);
     const allRounds = [
       ...bracket.winners,
       ...bracket.losers,
@@ -357,7 +364,7 @@ export function ReadOnlyBracket({
         <Section
           title="Winners Bracket"
           subtitle="Players remain here until their first loss."
-          rounds={bracket.winners}
+          rounds={displayedWinners}
           raceTo={tournament.raceTo}
           tone="cyan"
           balancedGeometry
