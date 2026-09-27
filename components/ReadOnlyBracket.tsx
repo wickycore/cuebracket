@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   BracketMatch,
   BracketRound,
@@ -29,27 +29,6 @@ import { getMatchRaceTo } from "@/lib/tournament-races";
 import { getDoubleEliminationLateEntrySlots } from "@/lib/bracket/doubleElimination";
 
 type SingleBracketView = "flowchart" | "list";
-const SPECTATOR_VIEW_KEY = "cuebracket:spectator-bracket-view:v2";
-const SPECTATOR_VIEW_EVENT = "cuebracket:spectator-bracket-view-change";
-
-function subscribeToSpectatorView(onStoreChange: () => void) {
-  window.addEventListener("storage", onStoreChange);
-  window.addEventListener(SPECTATOR_VIEW_EVENT, onStoreChange);
-  return () => {
-    window.removeEventListener("storage", onStoreChange);
-    window.removeEventListener(SPECTATOR_VIEW_EVENT, onStoreChange);
-  };
-}
-
-function getSpectatorViewSnapshot(): SingleBracketView {
-  const savedView = window.localStorage.getItem(SPECTATOR_VIEW_KEY);
-  if (savedView === "list" || savedView === "flowchart") return savedView;
-  return window.matchMedia("(max-width: 767px)").matches ? "list" : "flowchart";
-}
-
-function getServerSpectatorViewSnapshot(): SingleBracketView {
-  return "flowchart";
-}
 
 type Tone = "cyan" | "rose" | "violet";
 
@@ -296,16 +275,7 @@ export function ReadOnlyBracket({
   enablePlayerCards?: boolean;
 }) {
   const bracket = bracketOverride ?? tournament.bracket;
-  const singleView = useSyncExternalStore(
-    subscribeToSpectatorView,
-    getSpectatorViewSnapshot,
-    getServerSpectatorViewSnapshot,
-  );
-
-  function selectSingleView(view: SingleBracketView) {
-    window.localStorage.setItem(SPECTATOR_VIEW_KEY, view);
-    window.dispatchEvent(new Event(SPECTATOR_VIEW_EVENT));
-  }
+  const [singleView, selectSingleView] = useState<SingleBracketView>("flowchart");
 
   if (!bracket) {
     return (

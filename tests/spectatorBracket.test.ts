@@ -395,14 +395,14 @@ test("smart round opening prioritizes live, then ready, then the first unfinishe
   assert.equal(getActiveSpectatorRound(rounds), 2);
 });
 
-test("phones default to the list while retaining a spectator's saved choice", () => {
+test("the public spectator link opens the flowchart on every visit", () => {
   const source = readFileSync(
     new URL("../components/ReadOnlyBracket.tsx", import.meta.url),
     "utf8",
   );
 
-  assert.match(source, /max-width: 767px/);
-  assert.match(source, /savedView === "list" \|\| savedView === "flowchart"/);
+  assert.match(source, /useState<SingleBracketView>\("flowchart"\)/);
+  assert.doesNotMatch(source, /spectator-bracket-view:v2/);
   assert.match(source, /Wide chart mode · drag sideways · pinch to zoom · double-tap to reset/);
 });
 
