@@ -35,7 +35,7 @@ const formats: Array<{
   { value: "leaderboard", name: "Sets & Standings", icon: "📊", description: "Players or teams contest repeated sets while CueBracket tracks wins, losses and points.", bestFor: "Race sets, team battles and mini-leagues" },
 ];
 
-const eliminationCapacities = [2, 4, 8, 16, 32, 64, 128];
+const eliminationCapacities = [2, 4, 8, 16, 32, 48, 64, 128];
 const flexibleCapacities = [4, 6, 8, 10, 12, 16, 24, 32, 48, 64, 128];
 
 export default function NewTournamentPage() {
@@ -276,7 +276,7 @@ export default function NewTournamentPage() {
             {type === "single_stage" && (format === "single" || format === "double") ? (
               <div className="mt-6 rounded-3xl border border-cyan-400/15 bg-cyan-400/[0.05] p-5">
                 <p className="font-black">{selectedFormat.name}</p>
-                <p className="mt-1 text-sm text-slate-400">BYEs are distributed automatically and every winner advances through the correct path.</p>
+                <p className="mt-1 text-sm text-slate-400">BYEs are distributed automatically and every winner advances through the correct path. A 48-player event uses 16 opening matches and 16 first-round BYEs, then a round of 32.</p>
                 {format === "double" ? (
                   <label className="mt-4 flex items-center gap-3 text-sm font-bold text-slate-300">
                     <input type="checkbox" checked={options.bracketResetEnabled} onChange={(event) => updateOption("bracketResetEnabled", event.target.checked)} className="h-5 w-5 accent-cyan-400" />

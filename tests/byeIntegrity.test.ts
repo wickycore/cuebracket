@@ -70,14 +70,26 @@ test("30 entrants create a 32-player single-elimination draw with exactly two BY
 });
 
 test("48 entrants create a 64-player draw with 16 BYEs and 16 real first-round matches", () => {
-  const bracket = buildSingleEliminationBracket(players(48));
+  const bracket = buildSingleEliminationBracket(players(48), 48);
 
   assert.equal(getKnockoutDrawCapacity(bracket), 64);
+  assert.equal(bracket.rounds[0].name, "Round of 64");
+  assert.equal(bracket.rounds[1].name, "Round of 32");
   assert.equal(countSingleEliminationAutomaticByes(bracket), 16);
   assert.equal(
     bracket.rounds[0].matches.filter((match) => match.player1 && match.player2).length,
     16,
   );
+});
+
+test("a 48-player double-elimination event builds a complete 64-slot graph", () => {
+  const bracket = buildDoubleEliminationBracket(tournamentFixture(players(48), 48));
+  assert.equal(getKnockoutDrawCapacity(bracket), 64);
+  assert.equal(bracket.winners[0].matches.length, 32);
+  assert.equal(bracket.winners[1].matches.length, 16);
+  assert.equal(bracket.winners[0].matches.filter((match) => match.player1 && match.player2).length, 16);
+  assert.equal(getFirstRoundByeCount(bracket), 16);
+  assert.equal(getDoubleEliminationLateEntrySlots(bracket).filter((slot) => slot.available).length, 16);
 });
 
 test("filling one single-elimination BYE changes only that bracket position", () => {
