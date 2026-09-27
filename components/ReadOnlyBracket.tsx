@@ -1,13 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import {
   BracketMatch,
   BracketRound,
   Tournament,
   TournamentBracket,
-  formatDuration,
   getTournamentChampionDescription,
 } from "@/lib/tournaments";
 import {
@@ -119,8 +118,8 @@ function Section({
 }) {
   const colors = toneClass[tone];
   const maxMatches = Math.max(1, ...rounds.map((round) => round.matches.length));
-  const matchHeight = 94;
-  const matchPitch = 110;
+  const matchHeight = 76;
+  const matchPitch = 92;
   const bracketBodyHeight = matchHeight + (maxMatches - 1) * matchPitch;
   const balancedCenters = balancedGeometry
     ? buildBalancedCenters(rounds, maxMatches)
@@ -128,18 +127,8 @@ function Section({
   const sectionMatchNumbers = matchNumbers ?? numberBracketMatches(rounds);
   const contentRef = useRef<HTMLDivElement>(null);
   const { matchRefs, registerMatch } = useBracketMatchRefs();
-  const hasLiveTimer = rounds.some((round) =>
-    round.matches.some((match) => match.startedAt && !match.endedAt),
-  );
-  const [now, setNow] = useState(() => Date.now());
   const participantProfiles = new Map(participants.map((participant) => [normalizeParticipantName(participant.displayName), participant]));
   function playerHref(player:string){if(!tournamentId)return null;const participant=participantProfiles.get(normalizeParticipantName(player));return participant?participantProfilePath(participant):`/cloud/live/${encodeURIComponent(tournamentId)}/players/${encodeURIComponent(player)}`}
-
-  useEffect(() => {
-    if (!hasLiveTimer) return;
-    const timer = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(timer);
-  }, [hasLiveTimer]);
 
   return (
     <section className={`${edgeToEdge ? "-mx-3 mt-3 rounded-none border-y sm:mx-0 sm:mt-6 sm:rounded-[1.75rem] sm:border" : "mt-6 rounded-[1.75rem] border"} overflow-hidden border-[#2a5680] bg-gradient-to-br ${colors.panel}`}>
@@ -171,7 +160,7 @@ function Section({
             const hiddenAutomaticAdvances = automaticAdvanceCounts?.get(round.round) ?? 0;
 
             return (
-              <div key={`${title}-${round.round}`} className="w-48 shrink-0 snap-start">
+              <div key={`${title}-${round.round}`} className="w-44 shrink-0 snap-start">
                 <div className="mb-3">
                   <p className="flex items-center justify-between gap-2 text-[9px] font-black uppercase tracking-[0.1em] text-[#dce8f4]">
                     <span className="min-w-0 whitespace-nowrap">{round.name}</span>
@@ -218,8 +207,8 @@ function Section({
                         }
                       >
                         <article data-bracket-card className={`group relative z-10 overflow-hidden rounded-xl border bg-[#123763] shadow-[0_10px_24px_rgba(0,0,0,.18)] transition-colors duration-200 ${automaticAdvance ? "border-[#a78bfa]/55" : match.completed ? "border-[#78c69b]/60" : match.status === "live" ? "border-[#ef8193]/65" : "border-[#356a98]"}`}>
-                            <div className="flex items-center justify-between border-b border-[#2a5680] bg-[#11335d] px-3 py-1.5">
-                              <span className="text-[10px] font-black uppercase tracking-[0.16em] text-[#dce8f4]">{match.tableNumber ? `Table ${match.tableNumber} · Match #${matchNumber}` : `Match #${matchNumber}`}</span>
+                            <div className="flex items-center justify-between border-b border-[#2a5680] bg-[#11335d] px-2.5 py-1">
+                              <span className="min-w-0 truncate text-[10px] font-black uppercase tracking-[0.1em] text-[#dce8f4]" title={match.tableNumber ? `Table ${match.tableNumber} · Match #${matchNumber}` : `Match #${matchNumber}`}>{match.tableNumber ? `T${match.tableNumber} · #${matchNumber}` : `Match #${matchNumber}`}</span>
                               <span className={`rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] ${match.completed ? "bg-[#78c69b]/15 text-[#b9e7ca]" : match.status === "live" ? "bg-[#ef8193]/18 text-[#ffc2cb] ring-1 ring-[#ef8193]/40" : match.player1 && match.player2 ? "bg-[#27c2e6]/15 text-[#7ce8fb]" : "bg-[#1a426d] text-[#d2dfec]"}`}>
                                 {automaticAdvance ? "BYE" : match.completed ? "Finished" : match.status === "live" ? "● Live" : match.player1 && match.player2 ? "Ready" : "Waiting"}
                               </span>
@@ -234,19 +223,14 @@ function Section({
                                 <div
                                   data-bracket-player-slot={index}
                                   key={index}
-                                  className={`flex min-h-8 items-center gap-2 border-b border-[#2a5680] px-3 py-1 last:border-b-0 ${winner ? "bg-[#78c69b]/12" : ""}`}
+                                  className={`flex min-h-7 items-center gap-1.5 border-b border-[#2a5680] px-2.5 py-0.5 last:border-b-0 ${winner ? "bg-[#78c69b]/12" : ""}`}
                                 >
                                   {player&&playerHref(player)?<Link href={playerHref(player)!} aria-label={`Open ${player} player profile`} className={`flex min-w-0 flex-1 items-center gap-1 rounded py-0.5 text-xs font-extrabold hover:bg-white/5 ${winner?"text-[#b9e7ca]":"text-[#fafcff]"}`}><span className="min-w-0 truncate">{player}</span><span aria-hidden="true" className="shrink-0 text-sm text-[#7ce8fb]">›</span></Link>:<span className={`min-w-0 flex-1 truncate text-xs font-extrabold ${winner ? "text-[#b9e7ca]" : player ? "text-[#fafcff]" : playerPlaceholders ? "text-[#e3dcff]" : "text-[#b8c7dc]"}`}>{player ?? placeholder}</span>}
                                   <span className="text-xs font-black tabular-nums text-[#52d3ee]">{score ?? "—"}</span>
                                 </div>
                               );
                             })}
-                            {!sharedRoundRace || match.startedAt ? (
-                              <div className="flex min-h-7 items-center justify-between gap-2 px-3 py-1 text-[10px] font-bold text-[#d2dfec]">
-                                <span>{sharedRoundRace ? "" : `Race to ${matchRaceTo}`}</span>
-                                <span>{match.startedAt ? formatDuration((match.endedAt ? new Date(match.endedAt).getTime() : now) - new Date(match.startedAt).getTime()) : ""}</span>
-                              </div>
-                            ) : null}
+                            {!sharedRoundRace ? <div className="px-2.5 py-0.5 text-[10px] font-bold text-[#d2dfec]">Race to {matchRaceTo}</div> : null
                         </article>
                       </div>
                     );

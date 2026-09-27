@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import {
@@ -11,7 +11,7 @@ import {
   spectatorSourceLabel,
   type SpectatorMatchState,
 } from "@/lib/bracket/spectator";
-import { formatDuration, type BracketMatch, type BracketRound } from "@/lib/tournaments";
+import { type BracketMatch, type BracketRound } from "@/lib/tournaments";
 import { getMatchRaceTo } from "@/lib/tournament-races";
 import {
   normalizeParticipantName,
@@ -34,15 +34,6 @@ const detailStatusLabels: Record<SpectatorMatchState, string> = {
   ready: "Ready",
   waiting: "Not started",
 };
-
-function ClockIcon() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 7v5l3 2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
 
 function ChevronIcon({ open }: { open: boolean }) {
   return (
@@ -76,7 +67,6 @@ function MatchRow({
   matchNumber,
   matchNumbers,
   raceTo,
-  now,
   expanded,
   onToggle,
   onOpenPlayer,
@@ -85,7 +75,6 @@ function MatchRow({
   matchNumber: number;
   matchNumbers: Map<string, number>;
   raceTo: number;
-  now: number;
   expanded: boolean;
   onToggle: () => void;
   onOpenPlayer?: (player: string) => void;
@@ -95,13 +84,6 @@ function MatchRow({
   const automaticAdvance = state === "advanced";
   const player1 = match.player1 ?? (automaticAdvance ? "BYE" : spectatorSourceLabel(match.source1, matchNumbers));
   const player2 = match.player2 ?? (automaticAdvance ? "BYE" : spectatorSourceLabel(match.source2, matchNumbers));
-  const elapsed = match.startedAt
-    ? formatDuration(
-        (match.endedAt ? new Date(match.endedAt).getTime() : now) -
-          new Date(match.startedAt).getTime(),
-      )
-    : "";
-
   const live = state === "live";
   const player1Winner = Boolean(match.completed && match.winner === match.player1);
   const player2Winner = Boolean(match.completed && match.winner === match.player2);
@@ -130,7 +112,6 @@ function MatchRow({
           {match.tableNumber ? <span>Table {match.tableNumber}</span> : null}
           <span>Race to {matchRaceTo}</span>
           <span className={live ? "text-[#63ddff]" : "text-[#a9bdd0]"}>{automaticAdvance ? "BYE · no match played" : detailStatusLabels[state]}</span>
-          {elapsed ? <span className="flex items-center gap-1"><ClockIcon />{elapsed}</span> : null}
         </div>
       ) : null}
     </article>
@@ -141,7 +122,6 @@ function RoundPanel({
   round,
   raceTo,
   matchNumbers,
-  now,
   query,
   expandedMatchId,
   onToggleMatch,
@@ -150,7 +130,6 @@ function RoundPanel({
   round: BracketRound;
   raceTo: number;
   matchNumbers: Map<string, number>;
-  now: number;
   query: string;
   expandedMatchId: string;
   onToggleMatch: (matchId: string) => void;
@@ -180,7 +159,6 @@ function RoundPanel({
               matchNumber={matchNumbers.get(match.id) ?? match.position + 1}
               matchNumbers={matchNumbers}
               raceTo={raceTo}
-              now={now}
               expanded={expandedMatchId === match.id}
               onToggle={() => onToggleMatch(match.id)}
               onOpenPlayer={onOpenPlayer}
@@ -202,23 +180,14 @@ export function BracketMatchList({ rounds, raceTo, tournamentId, participants = 
   const [selectedRoundOverride, setSelectedRoundOverride] = useState<number | null>(null);
   const [expandedMatchId, setExpandedMatchId] = useState("");
   const [query, setQuery] = useState("");
-  const [now, setNow] = useState(() => Date.now());
-  const allMatches = useMemo(() => rounds.flatMap((round) => round.matches), [rounds]);
   const matchNumbers = useMemo(() => numberBracketMatches(rounds), [rounds]);
   const selectedRound = selectedRoundOverride && rounds.some((round) => round.round === selectedRoundOverride)
     ? selectedRoundOverride
     : activeRound || rounds[0]?.round || 1;
   const selectedRoundData = rounds.find((round) => round.round === selectedRound) ?? rounds[0];
-  const hasLiveMatches = allMatches.some((match) => getSpectatorMatchState(match) === "live");
   const participantProfiles = useMemo(() => new Map(
     participants.map((participant) => [normalizeParticipantName(participant.displayName), participant]),
   ), [participants]);
-
-  useEffect(() => {
-    if (!hasLiveMatches) return;
-    const timer = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(timer);
-  }, [hasLiveMatches]);
 
   function selectRound(roundNumber: number) {
     setSelectedRoundOverride(roundNumber);
@@ -273,7 +242,6 @@ export function BracketMatchList({ rounds, raceTo, tournamentId, participants = 
           round={selectedRoundData}
           raceTo={raceTo}
           matchNumbers={matchNumbers}
-          now={now}
           query={query}
           expandedMatchId={expandedMatchId}
           onToggleMatch={(matchId) => setExpandedMatchId((current) => current === matchId ? "" : matchId)}
