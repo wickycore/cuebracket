@@ -20,6 +20,7 @@ import { normalizeParticipantName,participantProfilePath,type PublicTournamentPa
 import { ChampionCelebration } from "@/components/ChampionCelebration";
 import {
   getAutomaticAdvanceCount,
+  compactSpectatorRounds,
   holdOpenByeNames,
   numberBracketMatches,
   spectatorSourceLabel,
@@ -123,7 +124,12 @@ function Section({
   const matchPitch = 100;
   const bracketBodyHeight = matchHeight + (maxMatches - 1) * matchPitch;
   const balancedCenters = balancedGeometry
-    ? buildBalancedCenters(rounds, maxMatches)
+    ? compactGeometry
+      ? new Map(rounds.flatMap((round) => round.matches.map((match, index) => [
+          match.id,
+          (index + 0.5) * maxMatches / round.matches.length - 0.5,
+        ] as const)))
+      : buildBalancedCenters(rounds, maxMatches)
     : new Map<string, number>();
   const sectionMatchNumbers = matchNumbers ?? numberBracketMatches(rounds);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -366,7 +372,16 @@ export function ReadOnlyBracket({
   const liveMatches = bracket.rounds.filter(Boolean).flatMap((round) => round.matches).filter(
     (match) => !match.completed && (match.status === "live" || Boolean(match.startedAt && !match.endedAt)),
   ).length;
-  const displayedRounds = holdOpenByeNames(bracket.rounds);
+  const displayedRounds = bracket.rounds;
+  const flowchartRounds = compactSpectatorRounds(displayedRounds).map((round, index) => {
+    if (index !== 0) return round;
+    const byes = getAutomaticAdvanceCount(displayedRounds[0]);
+    if (!byes || round.matches.length === displayedRounds[0].matches.length) return round;
+    return { ...round, name: `Round of ${round.matches.length * 2 + byes}` };
+  });
+  const automaticAdvanceCounts = new Map(
+    displayedRounds.map((round) => [round.round, getAutomaticAdvanceCount(round)]),
+  );
 
   return (
     <div>
@@ -408,10 +423,13 @@ export function ReadOnlyBracket({
           <p className="mt-3 text-center text-xs font-bold text-[#d2dfec] sm:hidden">Wide chart mode · drag sideways · pinch to zoom · double-tap to reset</p>
           <Section
             title="Single Elimination"
-            rounds={displayedRounds}
+            rounds={flowchartRounds}
             raceTo={tournament.raceTo}
             tone="cyan"
             balancedGeometry
+            compactGeometry
+            sourceRounds={displayedRounds}
+            automaticAdvanceCounts={automaticAdvanceCounts}
             showHeader={false}
             edgeToEdge
             matchNumbers={numberBracketMatches(displayedRounds)}
