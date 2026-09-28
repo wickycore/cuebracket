@@ -374,7 +374,8 @@ export function getSingleEliminationLateEntrySlots(
     if (!hasExactlyOnePlayer || !match.completed || !match.winner) return [];
 
     const dependent = findDependentSingleMatch(repaired, match.id);
-    const locked = hasPlayedOrStartedMatch(dependent);
+    const alreadyPaired = Boolean(dependent?.player1 && dependent?.player2);
+    const locked = alreadyPaired || hasPlayedOrStartedMatch(dependent);
 
     return [
       {
@@ -383,9 +384,11 @@ export function getSingleEliminationLateEntrySlots(
         roundName: firstRound.name,
         advancingPlayer: match.player1 ?? match.player2 ?? match.winner,
         available: !locked,
-        lockedReason: locked
-          ? "The BYE recipient's next match has already started or has a saved score."
-          : undefined,
+        lockedReason: alreadyPaired
+          ? "The BYE recipient already has a named opponent in the next round. This pairing cannot be changed by late entry."
+          : locked
+            ? "The BYE recipient's next match has already started or has a saved score."
+            : undefined,
       },
     ];
   });
