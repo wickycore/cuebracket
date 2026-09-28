@@ -18,6 +18,7 @@ import { buildBracketConnectionPlan } from "@/lib/bracket/connections";
 import type { BracketMatch, BracketRound } from "@/lib/tournaments";
 import { buildTournamentPlayerCard, shortRoundName } from "@/lib/bracket/player-card";
 import { normalizeParticipantName, participantProfilePath } from "@/lib/cloud/public-participants";
+import { buildSingleEliminationBracket, fillSingleEliminationByeSlot, getSingleEliminationLateEntrySlots } from "@/lib/bracket/singleElimination";
 
 function match(overrides: Partial<BracketMatch> = {}): BracketMatch {
   return {
@@ -102,6 +103,24 @@ test("spectator views compact repeated BYEs without changing bracket data", () =
   assert.equal(centers.get("opening-1"), 2.5);
   assert.equal(centers.get("later-0"), 0);
   assert.equal(centers.get("later-1"), 1);
+});
+
+test("48-player flowchart hides 16 BYEs and reveals a late entry without redrawing", () => {
+  const bracket = buildSingleEliminationBracket(Array.from({ length: 48 }, (_, i) => `Player ${i + 1}`), 48);
+  const visible = compactSpectatorRounds(bracket.rounds);
+  assert.equal(bracket.rounds[0].matches.length, 32);
+  assert.equal(visible[0].matches.length, 16);
+  assert.equal(visible[1].matches.length, 16);
+  assert.equal(buildBracketConnectionPlan(visible, bracket.rounds).entryStubs.length, 16);
+
+  const slot = getSingleEliminationLateEntrySlots(bracket).find((item) => item.available);
+  assert.ok(slot);
+  const filled = fillSingleEliminationByeSlot(bracket, slot.matchId, "Late Player");
+  assert.equal(filled.ok, true);
+  if (!filled.ok) return;
+  assert.equal(compactSpectatorRounds(filled.bracket.rounds)[0].matches.length, 17);
+  assert.equal(filled.bracket.rounds[0].matches.length, 32);
+  assert.equal(filled.bracket.rounds[0].matches.find((item) => item.id === slot.matchId)?.completed, false);
 });
 
 test("compacted BYEs keep explicit entries and playable feeders connected", () => {

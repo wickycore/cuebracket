@@ -98,7 +98,7 @@ export function compactSpectatorRounds(rounds: BracketRound[]) {
       (match) => getSpectatorMatchState(match) !== "advanced",
     );
 
-    if (automaticAdvanceCount < 2 || playableMatches.length === 0) return round;
+    if (automaticAdvanceCount === 0 || playableMatches.length === 0) return round;
 
     return {
       ...round,
