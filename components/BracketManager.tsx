@@ -47,8 +47,8 @@ function SingleEliminationManager({ tournament, onTournamentChange }: BracketMan
     () => (bracket ? getSingleEliminationLateEntrySlots(bracket) : []),
     [bracket],
   );
-  // Late-entry BYEs stay open after tournament start until their affected
-  // downstream match has actually started or has a saved result.
+  // Late-entry BYEs remain available only while the next match has no
+  // confirmed pairing or recorded play.
   const lateEntrySlots = rawLateEntrySlots;
   const drawCapacity = bracket ? getKnockoutDrawCapacity(bracket) : 0;
   const remainingDrawSlots = Math.max(
@@ -119,7 +119,7 @@ function SingleEliminationManager({ tournament, onTournamentChange }: BracketMan
         <span className="text-xs font-black uppercase tracking-[0.24em] text-cyan-300">Single elimination</span>
         <h2 className="mt-2 text-2xl font-black text-white">Generate the tournament bracket</h2>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">
-          The player order becomes the draw order. CueBracket preserves the selected knockout bracket size and spreads empty first-round slots as BYEs. BYEs stay available for late entry until the affected next match has started or has a saved result.
+          The player order becomes the draw order. CueBracket preserves the selected knockout bracket size and spreads empty first-round slots as BYEs. Late entry stays available only while the BYE recipient has no named next-round opponent and that match has not started.
         </p>
         {message ? <p className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/10 px-4 py-3 text-sm font-bold text-rose-200">{message}</p> : null}
         <button type="button" onClick={generateBracket} className="mt-5 rounded-xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950 hover:bg-cyan-300">Generate bracket</button>

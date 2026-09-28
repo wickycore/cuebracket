@@ -100,8 +100,8 @@ export function LateEntryPanel({
             Replace an unused first-round BYE
           </h3>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
-            A late player can join while the BYE recipient&apos;s next affected
-            match has not started and has no saved score. Existing played
+            A late player can join while the BYE recipient&apos;s next match has
+            no named opponent and has not started. Existing pairings and played
             matches stay unchanged.
           </p>
         </div>
