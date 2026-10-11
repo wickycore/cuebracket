@@ -75,6 +75,40 @@ test("open first-round BYEs keep next-round names pending until that match start
   assert.deepEqual([started[1].matches[0].player1, started[1].matches[0].player2], ["Riogi", "Lusaka"]);
 });
 
+test("11- and 48-player BYEs stay in round one until their own next match starts", () => {
+  for (const count of [11, 48]) {
+    const bracket = buildSingleEliminationBracket(Array.from({ length: count }, (_, i) => `Player ${i + 1}`), count);
+    const before = structuredClone(bracket);
+    const displayed = holdOpenByeNames(bracket.rounds);
+    assert.equal(displayed[0].matches.length, count === 11 ? 8 : 32);
+    const byes = displayed[0].matches.filter((item) => item.completed && Boolean(item.player1) !== Boolean(item.player2));
+    assert.equal(byes.length, count === 11 ? 5 : 16);
+    const ids = new Set(byes.map((item) => item.id));
+    for (const next of displayed[1].matches) {
+      if (next.source1?.kind === "winner" && ids.has(next.source1.matchId)) assert.equal(next.player1, null);
+      if (next.source2?.kind === "winner" && ids.has(next.source2.matchId)) assert.equal(next.player2, null);
+    }
+    assert.deepEqual(bracket, before);
+    assert.equal(buildBracketConnectionPlan(displayed).entryStubs.length, 0);
+
+    const next = bracket.rounds[1].matches.find((item) => item.source1?.kind === "winner" && ids.has(item.source1.matchId));
+    assert.ok(next);
+    next.startedAt = "2026-10-11T12:00:00.000Z";
+    next.status = "live";
+    const started = holdOpenByeNames(bracket.rounds);
+    assert.equal(started[1].matches.find((item) => item.id === next.id)?.player1, next.player1);
+    assert.deepEqual(started[0], bracket.rounds[0]);
+  }
+});
+
+test("single-elimination flowchart and list use held BYEs without hiding opening cards", () => {
+  const source = readFileSync(new URL("../components/ReadOnlyBracket.tsx", import.meta.url), "utf8");
+  assert.match(source, /const displayedRounds = holdOpenByeNames\(bracket.rounds\)/);
+  assert.match(source, /const flowchartRounds = displayedRounds.map/);
+  assert.doesNotMatch(source, /compactSpectatorRounds|automatic advances/);
+  assert.match(source, /rounds=\{displayedRounds\}/);
+});
+
 test("spectator views compact repeated BYEs without changing bracket data", () => {
   const opening: BracketRound = {
     round: 1,

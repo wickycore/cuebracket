@@ -19,8 +19,6 @@ import { BracketMatchList } from "@/components/BracketMatchList";
 import { normalizeParticipantName,participantProfilePath,type PublicTournamentParticipant } from "@/lib/cloud/public-participants";
 import { ChampionCelebration } from "@/components/ChampionCelebration";
 import {
-  getAutomaticAdvanceCount,
-  compactSpectatorRounds,
   holdOpenByeNames,
   numberBracketMatches,
   spectatorSourceLabel,
@@ -97,7 +95,6 @@ function Section({
   edgeToEdge = false,
   tournamentId,
   participants = [],
-  automaticAdvanceCounts,
   compactGeometry = false,
   sourceRounds,
 }: {
@@ -113,7 +110,6 @@ function Section({
   edgeToEdge?: boolean;
   tournamentId?: string;
   participants?: PublicTournamentParticipant[];
-  automaticAdvanceCounts?: Map<number, number>;
   compactGeometry?: boolean;
   sourceRounds?: BracketRound[];
 }) {
@@ -164,7 +160,6 @@ function Section({
               new Set(round.matches.map((match) => getMatchRaceTo(match, raceTo))),
             );
             const sharedRoundRace = roundRaceTargets.length === 1 ? roundRaceTargets[0] : null;
-            const hiddenAutomaticAdvances = automaticAdvanceCounts?.get(round.round) ?? 0;
 
             return (
               <div key={`${title}-${round.round}`} className="w-44 shrink-0 snap-start">
@@ -179,7 +174,6 @@ function Section({
                       {sharedRoundRace ? `RT${sharedRoundRace}` : "VAR"}
                     </span>
                   </p>
-                  {hiddenAutomaticAdvances ? <p className="mt-1 whitespace-nowrap text-[8px] font-bold text-[#c4b5fd]">{round.matches.length} matches · {hiddenAutomaticAdvances} automatic advances</p> : null}
                 </div>
                 <div
                   style={
@@ -372,16 +366,14 @@ export function ReadOnlyBracket({
   const liveMatches = bracket.rounds.filter(Boolean).flatMap((round) => round.matches).filter(
     (match) => !match.completed && (match.status === "live" || Boolean(match.startedAt && !match.endedAt)),
   ).length;
-  const displayedRounds = bracket.rounds;
-  const flowchartRounds = compactSpectatorRounds(displayedRounds).map((round, index) => {
+  // Keep each opening BYE card and its connector until its next match starts.
+  const displayedRounds = holdOpenByeNames(bracket.rounds);
+  const flowchartRounds = displayedRounds.map((round, index) => {
     if (index !== 0) return round;
-    const byes = getAutomaticAdvanceCount(displayedRounds[0]);
-    if (!byes || round.matches.length === displayedRounds[0].matches.length) return round;
-    return { ...round, name: `Round of ${round.matches.length * 2 + byes}` };
+    const playerCount = round.matches.reduce((count, match) => count + Number(Boolean(match.player1)) + Number(Boolean(match.player2)), 0);
+    if (playerCount === round.matches.length * 2) return round;
+    return { ...round, name: `Round of ${playerCount}` };
   });
-  const automaticAdvanceCounts = new Map(
-    displayedRounds.map((round) => [round.round, getAutomaticAdvanceCount(round)]),
-  );
 
   return (
     <div>
@@ -429,7 +421,6 @@ export function ReadOnlyBracket({
             balancedGeometry
             compactGeometry
             sourceRounds={displayedRounds}
-            automaticAdvanceCounts={automaticAdvanceCounts}
             showHeader={false}
             edgeToEdge
             matchNumbers={numberBracketMatches(displayedRounds)}
