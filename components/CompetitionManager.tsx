@@ -535,7 +535,7 @@ export function CompetitionManager({ tournament, onTournamentChange }: Props) {
                 <>
                   <button type="button" className="rounded-xl border border-amber-300/40 px-4 py-2 text-sm font-bold text-amber-200" onClick={() => {
                     if (!window.confirm("Clear playoff results and unlock league match corrections?")) return;
-                    saveCompetition({ ...competition, knockoutConfirmed: false, knockoutRounds: [], champion: null });
+                    saveCompetition({ ...competition, knockoutConfirmed: false, knockoutSeeds: [], knockoutRounds: [], champion: null });
                   }}>Reset playoffs & unlock league</button>
                   {(competition.knockoutRounds ?? []).map((round) => (
                     <PairRounds key={round.round} {...pairTableProps} rounds={[{...round, name: round.name.split("|")[0]}]} raceTo={tournament.raceTo} drafts={drafts} setDrafts={setDrafts} onSave={savePairMatch} onUndo={undoPairMatch} onStart={startPairMatch} />
