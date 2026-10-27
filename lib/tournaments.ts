@@ -122,6 +122,7 @@ export interface RoundRobinCompetition {
   playoffPlayers: string[];
   playoffCycle: number;
   knockoutConfirmed?: boolean;
+  knockoutSeeds?: string[];
   knockoutRounds?: BracketRound[];
   champion: string | null;
   generatedAt: string;
@@ -366,6 +367,7 @@ function normalizeCompetition(
       standings: normalizeStandings(competition.standings),
       legs: competition.legs ?? 1,
       knockoutConfirmed: competition.knockoutConfirmed ?? false,
+      knockoutSeeds: competition.knockoutSeeds ?? [],
       knockoutRounds: normalizeRounds(competition.knockoutRounds ?? []),
       playoffRounds: normalizeRounds(competition.playoffRounds ?? []),
       playoffStandings: normalizeStandings(competition.playoffStandings ?? []),
@@ -584,6 +586,7 @@ export function renameTournamentPlayer(
       standings: renamePlayerStandings(competition.standings, oldName, newName),
       playoffRounds: renamePlayerRounds(competition.playoffRounds, oldName, newName),
       knockoutRounds: renamePlayerRounds(competition.knockoutRounds ?? [], oldName, newName),
+      knockoutSeeds: competition.knockoutSeeds?.map((player) => player === oldName ? newName : player),
       playoffStandings: renamePlayerStandings(competition.playoffStandings, oldName, newName),
       playoffPlayers: competition.playoffPlayers.map((player) => player === oldName ? newName : player),
       champion: competition.champion === oldName ? newName : competition.champion,
