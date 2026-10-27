@@ -106,24 +106,24 @@ function PairRounds({
   byePoints?: number;
 }) {
   return (
-    <div className="space-y-5">
+    <div className="space-y-3">
       {rounds.map((round) => {
         const playableMatches = round.matches.filter((match) => match.player1 && match.player2);
         const byeMatches = round.matches.filter((match) => Boolean(match.player1) !== Boolean(match.player2));
         const completed = playableMatches.filter((match) => match.completed).length;
         return (
-          <section key={`${eyebrow ?? "round"}-${round.round}-${round.name}`} className="rounded-[2rem] border border-white/10 bg-white/[0.035] p-5 sm:p-6">
-            <div className="flex flex-wrap items-center justify-between gap-3">
+          <section key={`${eyebrow ?? "round"}-${round.round}-${round.name}`} className="rounded-xl border border-white/10 bg-white/[0.035] p-3 sm:p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 {eyebrow ? <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-400">{eyebrow}</p> : null}
-                <h3 className="mt-1 text-xl font-black text-white">{round.name}</h3>
+                <h3 className="mt-1 text-base font-black text-white">{round.name}</h3>
               </div>
               <span className="rounded-full bg-white/5 px-3 py-1 text-xs font-bold text-slate-400 ring-1 ring-white/10">
                 {completed}/{playableMatches.length} played matches complete
               </span>
             </div>
 
-            <div className="mt-5 grid gap-3 lg:grid-cols-2">
+            <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
               {playableMatches.map((match, matchIndex) => {
                 const matchRaceTo = getMatchRaceTo(match, raceTo);
                 const draft = drafts[match.id] ?? {
@@ -131,18 +131,18 @@ function PairRounds({
                   score2: match.score2?.toString() ?? "",
                 };
                 return (
-                  <article key={match.id} className={`overflow-hidden rounded-2xl border bg-slate-950/65 ${match.completed ? "border-emerald-400/25" : "border-white/10"}`}>
-                    <div className="flex items-center justify-between border-b border-white/10 px-4 py-2.5">
+                  <article key={match.id} className={`overflow-hidden rounded-lg border bg-slate-950/65 ${match.completed ? "border-emerald-400/25" : "border-white/10"}`}>
+                    <div className="flex items-center justify-between border-b border-white/10 px-3 py-1.5">
                       <span className="text-[0.64rem] font-black uppercase tracking-wider text-slate-400">
                         {match.tableNumber || `Match ${matchIndex + 1}`}
                       </span>
-                      <span className={`rounded-full px-2 py-0.5 text-xs font-black uppercase ${match.completed ? "bg-emerald-400/10 text-emerald-300" : match.status === "live" ? "bg-rose-400/15 text-rose-300" : "bg-cyan-400/10 text-cyan-300"}`}>
+                      <span className={`rounded-full px-1.5 py-0.5 text-xs font-black uppercase ${match.completed ? "bg-emerald-400/10 text-emerald-300" : match.status === "live" ? "bg-rose-400/15 text-rose-300" : "bg-cyan-400/10 text-cyan-300"}`}>
                         {match.completed ? "Finished" : match.status === "live" ? "● Live" : `Race to ${matchRaceTo}`}
                       </span>
                     </div>
                     {!match.completed ? (
-                      <div className="border-b border-white/10 px-4 py-2.5">
-                        <select value={match.tableId ?? ""} onChange={(event) => onAssignTable(match, event.target.value ? Number(event.target.value) : null)} aria-label={`Table for ${match.player1} versus ${match.player2}`} className="w-full rounded-lg border border-white/10 bg-slate-900 px-3 py-2 text-xs font-bold text-white">
+                      <div className="border-b border-white/10 px-3 py-1.5">
+                        <select value={match.tableId ?? ""} onChange={(event) => onAssignTable(match, event.target.value ? Number(event.target.value) : null)} aria-label={`Table for ${match.player1} versus ${match.player2}`} className="w-full rounded-lg border border-white/10 bg-slate-900 px-2 py-1 text-xs font-bold text-white">
                           <option value="">{tables.length ? "No table assigned" : "Add tables in Floor Control"}</option>
                           {tables.map((table) => {
                             const busy = Boolean(table.active_match_id && table.active_match_id !== match.id);
@@ -155,7 +155,7 @@ function PairRounds({
                       const key = index === 0 ? "score1" : "score2";
                       const isWinner = Boolean(player && match.completed && match.winner === player);
                       return (
-                        <div key={`${match.id}-${index}`} className={`flex items-center gap-3 border-b border-white/10 px-4 py-3 last:border-b-0 ${isWinner ? "bg-emerald-400/10" : ""}`}>
+                        <div key={`${match.id}-${index}`} className={`flex items-center gap-2 border-b border-white/10 px-3 py-1.5 last:border-b-0 ${isWinner ? "bg-emerald-400/10" : ""}`}>
                           <span className={`min-w-0 flex-1 truncate font-black ${isWinner ? "text-emerald-300" : "text-white"}`}>{player}</span>
                           <input
                             inputMode="numeric"
@@ -165,21 +165,21 @@ function PairRounds({
                               [match.id]: { ...draft, [key]: event.target.value },
                             }))}
                             aria-label={`${player} score`}
-                            className="h-10 w-16 rounded-xl border border-white/10 bg-slate-900 text-center font-black text-white outline-none focus:border-cyan-400/50"
+                            className="h-8 w-12 rounded-md border border-white/10 bg-slate-900 text-center font-black text-white outline-none focus:border-cyan-400/50"
                           />
                         </div>
                       );
                     })}
-                    <div className="flex items-center justify-between gap-2 px-4 py-3">
+                    <div className="flex items-center justify-between gap-2 px-3 py-1.5">
                       <MatchTimer startedAt={match.startedAt} endedAt={match.endedAt} />
                       <div className="flex justify-end gap-2">
                       {!match.completed && match.status !== "live" ? (
-                        <button type="button" onClick={() => onStart(match)} className="rounded-lg px-3 py-1.5 text-xs font-bold text-cyan-300 hover:bg-cyan-400/10">Start</button>
+                        <button type="button" onClick={() => onStart(match)} className="rounded-md px-2 py-1 text-xs font-bold text-cyan-300 hover:bg-cyan-400/10">Start</button>
                       ) : null}
                       {match.completed ? (
-                        <button type="button" onClick={() => onUndo(match)} className="rounded-lg px-3 py-1.5 text-xs font-bold text-slate-400 hover:bg-white/5 hover:text-white">Undo</button>
+                        <button type="button" onClick={() => onUndo(match)} className="rounded-md px-2 py-1 text-xs font-bold text-slate-400 hover:bg-white/5 hover:text-white">Undo</button>
                       ) : null}
-                      <button type="button" onClick={() => onSave(match, Number(draft.score1), Number(draft.score2))} className="rounded-lg bg-cyan-400 px-3 py-1.5 text-xs font-black text-slate-950 hover:bg-cyan-300">
+                      <button type="button" onClick={() => onSave(match, Number(draft.score1), Number(draft.score2))} className="rounded-md bg-cyan-400 px-2.5 py-1 text-xs font-black text-slate-950 hover:bg-cyan-300">
                         Save result
                       </button>
                       </div>
@@ -191,15 +191,15 @@ function PairRounds({
               {byeMatches.map((match) => {
                 const player = match.player1 ?? match.player2;
                 return (
-                  <article key={match.id} className="rounded-2xl border border-violet-400/20 bg-violet-400/[0.06] p-4">
-                    <div className="flex items-center justify-between gap-3">
+                  <article key={match.id} className="rounded-lg border border-violet-400/20 bg-violet-400/[0.06] p-3">
+                    <div className="flex items-center justify-between gap-2">
                       <div>
                         <p className="text-[0.64rem] font-black uppercase tracking-wider text-violet-300">{byePoints === undefined ? "Rest round" : "Automatic BYE"}</p>
                         <p className="mt-1 font-black text-white">{player}</p>
                       </div>
                       <span className="rounded-full bg-violet-400/10 px-2.5 py-1 text-xs font-black uppercase text-violet-200">No fixture this round</span>
                     </div>
-                    <p className="mt-3 text-xs leading-5 text-slate-400">
+                    <p className="mt-1 text-xs leading-4 text-slate-400">
                       {byePoints === undefined
                         ? "No match or points recorded."
                         : `${player} receives one win and ${formatPoints(byePoints)} point${byePoints === 1 ? "" : "s"}; the BYE is tracked separately from played matches.`}
