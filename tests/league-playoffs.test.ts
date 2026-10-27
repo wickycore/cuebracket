@@ -25,7 +25,7 @@ test("ten-player home-and-away season has 18 rounds and 90 unique directed fixtu
 
 test("six-player seeded playoffs advance from qualifiers through final; champion waits until final", () => {
   let league = buildRoundRobinCompetition(players, options);
-  for (const round of league.rounds) for (const match of round.matches) league = play(league, match.id);
+  for (const round of league.rounds) for (const match of round.matches) league = play(league, match.id, players.indexOf(match.player1!) < players.indexOf(match.player2!));
   assert.equal(league.champion, null);
   league = confirmLeaguePlayoffs(league, options);
   assert.equal(league.knockoutRounds?.[0].matches.length, 2);
