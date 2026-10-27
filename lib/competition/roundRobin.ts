@@ -38,7 +38,7 @@ function resolveRoundRobin(
 ): RoundRobinCompetition {
   const standings = calculateStandings(players, competition.rounds, options);
   if ((options.leaguePlayoffQualifiers ?? 0) > 0) {
-    const knockoutRounds = progressKnockout(competition.knockoutRounds ?? [], options);
+    const knockoutRounds = progressKnockout(competition.knockoutRounds ?? [], options, competition.knockoutSeeds ?? []);
     const final = knockoutRounds.at(-1);
     const finalMatch = final?.name === "Grand Final" ? final.matches[0] : undefined;
     return { ...competition, standings, knockoutRounds, champion: finalMatch?.completed ? finalMatch.winner : null };
@@ -152,7 +152,7 @@ function knockoutMatch(id: string, round: number, position: number, a: string, b
   return { id, round, position, player1: a, player2: b, score1: null, score2: null, winner: null, completed: false, status: "pending", raceTo };
 }
 
-function progressKnockout(rounds: RoundRobinCompetition["rounds"], options: TournamentOptions) {
+function progressKnockout(rounds: RoundRobinCompetition["rounds"], options: TournamentOptions, seeds: string[]) {
   if (!rounds.length) return rounds;
   const last = rounds[rounds.length - 1];
   if (!last.matches.every((m) => m.completed && m.winner)) return rounds;
@@ -164,7 +164,6 @@ function progressKnockout(rounds: RoundRobinCompetition["rounds"], options: Tour
   let next: BracketMatch[];
   let name: string;
   if (qualifiers === 6 && rounds.length === 1) {
-    const seeds = rounds[0].name.split("|").slice(1);
     // Third vs sixth, fourth vs fifth. Seed 1 faces winner of fourth vs fifth.
     next = [knockoutMatch("league-sf-1", 2, 0, seeds[0], winners[1], race),
       knockoutMatch("league-sf-2", 2, 1, seeds[1], winners[0], race)];
@@ -196,8 +195,6 @@ export function confirmLeaguePlayoffs(competition: RoundRobinCompetition, option
     ? [knockoutMatch("league-sf-1", 1, 0, p[0], p[3], race), knockoutMatch("league-sf-2", 1, 1, p[1], p[2], race)]
     : [knockoutMatch("league-q-1", 1, 0, p[0], p[7], race), knockoutMatch("league-q-2", 1, 1, p[3], p[4], race),
        knockoutMatch("league-q-3", 1, 2, p[1], p[6], race), knockoutMatch("league-q-4", 1, 3, p[2], p[5], race)];
-  const title = count === 4 ? "Semifinals" : "Quarterfinals";
-  // Persist top-two seed identities for the six-player semifinal bye.
-  const name = count === 6 ? title + "|" + p[0] + "|" + p[1] : title;
-  return { ...competition, knockoutConfirmed: true, knockoutRounds: [{ round: 1, name, matches: first }], champion: null };
+  const name = count === 4 ? "Semifinals" : count === 6 ? "Qualifying Round" : "Quarterfinals";
+  return { ...competition, knockoutConfirmed: true, knockoutSeeds: p, knockoutRounds: [{ round: 1, name, matches: first }], champion: null };
 }
