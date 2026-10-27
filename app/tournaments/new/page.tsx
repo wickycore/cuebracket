@@ -114,6 +114,10 @@ export default function NewTournamentPage() {
       setError("Round Robin player capacity must be between 2 and 128.");
       return;
     }
+    if (type === "single_stage" && format === "round_robin" && (options.leaguePlayoffQualifiers ?? 0) > 0 && (bracketSize < (options.leaguePlayoffQualifiers ?? 0) || ![options.leaguePlayoffRaceTo, options.leagueFinalRaceTo].every((n) => Number.isInteger(n) && n! >= 1 && n! <= 25))) {
+      setError("Check the playoff qualifier count and race targets (1 to 25).");
+      return;
+    }
     if (type === "single_stage" && format === "swiss" && (!Number.isInteger(bracketSize) || bracketSize < 4 || bracketSize > 128)) {
       setError("Swiss player capacity must be between 4 and 128.");
       return;
@@ -288,6 +292,8 @@ export default function NewTournamentPage() {
 
             {type === "single_stage" && format === "round_robin" ? (
               <div className="mt-6 grid gap-5 sm:grid-cols-2">
+                <label><span className="mb-2 block text-sm font-bold text-slate-300">Championship format</span><select value={options.leaguePlayoffQualifiers ?? 0} onChange={(event) => updateOption("leaguePlayoffQualifiers", Number(event.target.value) as 0 | 4 | 6 | 8)} className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3.5"><option value={0}>Classic league - table leader wins</option><option value={4}>League + Top 4 playoffs</option><option value={6}>League + Top 6 playoffs (recommended)</option><option value={8}>League + Top 8 playoffs</option></select></label>
+                {(options.leaguePlayoffQualifiers ?? 0) > 0 ? <><label><span className="mb-2 block text-sm font-bold text-slate-300">Playoff race to</span><input type="number" min={1} max={25} value={options.leaguePlayoffRaceTo ?? 5} onChange={(event) => updateOption("leaguePlayoffRaceTo", Number(event.target.value))} className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3.5" /></label><label><span className="mb-2 block text-sm font-bold text-slate-300">Grand final race to</span><input type="number" min={1} max={25} value={options.leagueFinalRaceTo ?? 7} onChange={(event) => updateOption("leagueFinalRaceTo", Number(event.target.value))} className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3.5" /></label></> : null}
                 <label><span className="mb-2 block text-sm font-bold text-slate-300">Meetings per opponent</span><select value={options.roundRobinLegs} onChange={(event) => updateOption("roundRobinLegs", Number(event.target.value) as 1 | 2)} className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3.5"><option value={1}>Once</option><option value={2}>Home and away / twice</option></select></label>
               </div>
             ) : null}
