@@ -13,6 +13,9 @@ export type MatchStatus = "pending" | "live" | "finished";
 
 export interface TournamentOptions {
   roundRobinLegs: 1 | 2;
+  leaguePlayoffQualifiers?: 0 | 4 | 6 | 8;
+  leaguePlayoffRaceTo?: number;
+  leagueFinalRaceTo?: number;
   swissRounds: number;
   freeForAllRounds: number;
   freeForAllHeatSize: number;
@@ -118,6 +121,9 @@ export interface RoundRobinCompetition {
   playoffStandings: StandingRow[];
   playoffPlayers: string[];
   playoffCycle: number;
+  knockoutConfirmed?: boolean;
+  knockoutSeeds?: string[];
+  knockoutRounds?: BracketRound[];
   champion: string | null;
   generatedAt: string;
 }
@@ -254,6 +260,9 @@ const STORAGE_KEY = "cuebracket:tournaments:v1";
 
 export const DEFAULT_TOURNAMENT_OPTIONS: TournamentOptions = {
   roundRobinLegs: 1,
+  leaguePlayoffQualifiers: 0,
+  leaguePlayoffRaceTo: 5,
+  leagueFinalRaceTo: 7,
   swissRounds: 5,
   freeForAllRounds: 3,
   freeForAllHeatSize: 4,
@@ -357,6 +366,9 @@ function normalizeCompetition(
       rounds: normalizeRounds(competition.rounds),
       standings: normalizeStandings(competition.standings),
       legs: competition.legs ?? 1,
+      knockoutConfirmed: competition.knockoutConfirmed ?? false,
+      knockoutSeeds: competition.knockoutSeeds ?? [],
+      knockoutRounds: normalizeRounds(competition.knockoutRounds ?? []),
       playoffRounds: normalizeRounds(competition.playoffRounds ?? []),
       playoffStandings: normalizeStandings(competition.playoffStandings ?? []),
       playoffPlayers: competition.playoffPlayers ?? [],
@@ -573,6 +585,8 @@ export function renameTournamentPlayer(
       rounds: renamePlayerRounds(competition.rounds, oldName, newName),
       standings: renamePlayerStandings(competition.standings, oldName, newName),
       playoffRounds: renamePlayerRounds(competition.playoffRounds, oldName, newName),
+      knockoutRounds: renamePlayerRounds(competition.knockoutRounds ?? [], oldName, newName),
+      knockoutSeeds: competition.knockoutSeeds?.map((player) => player === oldName ? newName : player),
       playoffStandings: renamePlayerStandings(competition.playoffStandings, oldName, newName),
       playoffPlayers: competition.playoffPlayers.map((player) => player === oldName ? newName : player),
       champion: competition.champion === oldName ? newName : competition.champion,
@@ -684,7 +698,7 @@ export function getCompetitionRounds(competition?: TournamentCompetition): Brack
   if (
     competition.type === "round_robin"
   ) {
-    return [...competition.rounds, ...(competition.playoffRounds ?? [])];
+    return [...competition.rounds, ...(competition.playoffRounds ?? []), ...(competition.knockoutRounds ?? [])];
   }
   if (
     competition.type === "swiss" ||
@@ -825,6 +839,7 @@ export function getTournamentChampionDescription(tournament: Tournament) {
     ? competition.standings.find((row) => row.player === champion) ?? competition.standings[0]
     : undefined;
 
+  if (competition.type === "round_robin" && competition.knockoutConfirmed) return `${champion} wins the league playoff final.`;
   if (competition.type === "round_robin" && top) {
     const second = competition.standings.find((row) => row.player !== top.player);
     if (second && top.points === second.points) {

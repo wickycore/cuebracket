@@ -17,7 +17,7 @@ import { isValidRaceResult } from "@/lib/bracket/singleElimination";
 import { clearFreeForAllHeat, FREE_FOR_ALL_PLAYOFF_OPTIONS, updateFreeForAllHeat, updateFreeForAllPlayoffMatch } from "@/lib/competition/freeForAll";
 import { generateChampionshipPlayoffRematch } from "@/lib/competition/common";
 import { setLeaderboardAdjustment, updateLeaderboardMatch } from "@/lib/competition/leaderboard";
-import { generateRoundRobinPlayoffRematch, updateRoundRobinMatch } from "@/lib/competition/roundRobin";
+import { confirmLeaguePlayoffs, generateRoundRobinPlayoffRematch, updateRoundRobinMatch } from "@/lib/competition/roundRobin";
 import { canGenerateNextSwissRound, generateNextSwissRound, updateSwissMatch } from "@/lib/competition/swiss";
 import {
   areTwoStageGroupsComplete,
@@ -379,6 +379,17 @@ export function CompetitionManager({ tournament, onTournamentChange }: Props) {
   function applyPairMatchUpdate(matchId: string, updater: (target: BracketMatch) => void, groupId?: string) {
     if (!competition) return;
     if (competition.type === "round_robin") {
+      if (competition.knockoutConfirmed && competition.rounds.some((round) => round.matches.some((match) => match.id === matchId))) {
+        setMessage("The playoff bracket is locked. Reset playoff confirmation before correcting league results.");
+        return;
+      }
+      if (competition.knockoutConfirmed) {
+        const roundIndex = (competition.knockoutRounds ?? []).findIndex((round) => round.matches.some((match) => match.id === matchId));
+        if (roundIndex >= 0 && roundIndex < (competition.knockoutRounds?.length ?? 0) - 1) {
+          setMessage("Later knockout rounds have already been generated. Reset playoffs to correct an earlier round.");
+          return;
+        }
+      }
       saveCompetition(updateRoundRobinMatch(competition, tournament.players, tournament.options, matchId, updater));
     } else if (competition.type === "swiss") {
       saveCompetition(updateSwissMatch(competition, tournament.players, tournament.options, matchId, updater));
@@ -517,7 +528,30 @@ export function CompetitionManager({ tournament, onTournamentChange }: Props) {
         <>
           <StandingsTable rows={competition.standings} rules={TABLE_RULES} />
           <PairRounds {...pairTableProps} rounds={competition.rounds} raceTo={tournament.raceTo} drafts={drafts} setDrafts={setDrafts} onSave={savePairMatch} onUndo={undoPairMatch} onStart={startPairMatch} />
-          {competition.playoffRounds.length ? (
+          {(tournament.options.leaguePlayoffQualifiers ?? 0) > 0 ? (
+            <section className="space-y-4 rounded-2xl border border-cyan-400/25 p-5">
+              <h3 className="text-xl font-black">League Championship Playoffs</h3>
+              <p className="text-sm text-slate-300">Top {tournament.options.leaguePlayoffQualifiers} qualify. League standings remain recorded. The champion is crowned only after the final.</p>
+              {!competition.knockoutConfirmed ? (
+                <button type="button" className="rounded-xl bg-cyan-400 px-5 py-3 font-black text-slate-950" onClick={() => {
+                  if (!window.confirm("Confirm final league standings and lock regular-season results for playoffs?")) return;
+                  try { saveCompetition(confirmLeaguePlayoffs(competition, tournament.options)); setMessage(""); }
+                  catch (error) { setMessage(error instanceof Error ? error.message : "Unable to confirm playoffs."); }
+                }}>Confirm standings & generate playoffs</button>
+              ) : (
+                <>
+                  <button type="button" className="rounded-xl border border-amber-300/40 px-4 py-2 text-sm font-bold text-amber-200" onClick={() => {
+                    if (!window.confirm("Clear playoff results and unlock league match corrections?")) return;
+                    saveCompetition({ ...competition, knockoutConfirmed: false, knockoutSeeds: [], knockoutRounds: [], champion: null });
+                  }}>Reset playoffs & unlock league</button>
+                  {(competition.knockoutRounds ?? []).map((round) => (
+                    <PairRounds key={round.round} {...pairTableProps} rounds={[{...round, name: round.name.split("|")[0]}]} raceTo={tournament.raceTo} drafts={drafts} setDrafts={setDrafts} onSave={savePairMatch} onUndo={undoPairMatch} onStart={startPairMatch} />
+                  ))}
+                </>
+              )}
+            </section>
+          ) : null}
+          {(tournament.options.leaguePlayoffQualifiers ?? 0) === 0 && competition.playoffRounds.length ? (
             <section className="space-y-5 rounded-[2rem] border border-amber-300/25 bg-amber-300/[0.05] p-5 sm:p-6">
               <div>
                 <p className="text-sm font-black uppercase tracking-[0.2em] text-amber-300">Championship playoff</p>

@@ -37,6 +37,12 @@ function resolveRoundRobin(
   options: TournamentOptions,
 ): RoundRobinCompetition {
   const standings = calculateStandings(players, competition.rounds, options);
+  if ((options.leaguePlayoffQualifiers ?? 0) > 0) {
+    const knockoutRounds = progressKnockout(competition.knockoutRounds ?? [], options, competition.knockoutSeeds ?? []);
+    const final = knockoutRounds.at(-1);
+    const finalMatch = final?.name === "Grand Final" ? final.matches[0] : undefined;
+    return { ...competition, standings, knockoutRounds, champion: finalMatch?.completed ? finalMatch.winner : null };
+  }
   if (!allPlayableMatchesComplete(competition.rounds)) {
     return { ...competition, standings, champion: null };
   }
@@ -107,7 +113,8 @@ export function updateRoundRobinMatch(
 ) {
   const rounds = cloneRounds(competition.rounds);
   const playoffRounds = cloneRounds(competition.playoffRounds ?? []);
-  const match = [...rounds, ...playoffRounds]
+  const knockoutRounds = cloneRounds(competition.knockoutRounds ?? []);
+  const match = [...rounds, ...playoffRounds, ...knockoutRounds]
     .flatMap((round) => round.matches)
     .find((item) => item.id === matchId);
   if (!match) return competition;
@@ -116,6 +123,7 @@ export function updateRoundRobinMatch(
     ...competition,
     rounds,
     playoffRounds,
+    knockoutRounds,
   }, players, options);
 }
 
@@ -138,4 +146,55 @@ export function generateRoundRobinPlayoffRematch(
     playoffStandings: calculateStandings(tiedPlayers, playoffRounds, options),
     champion: null,
   };
+}
+
+function knockoutMatch(id: string, round: number, position: number, a: string, b: string, raceTo: number): BracketMatch {
+  return { id, round, position, player1: a, player2: b, score1: null, score2: null, winner: null, completed: false, status: "pending", raceTo };
+}
+
+function progressKnockout(rounds: RoundRobinCompetition["rounds"], options: TournamentOptions, seeds: string[]) {
+  if (!rounds.length) return rounds;
+  const last = rounds[rounds.length - 1];
+  if (!last.matches.every((m) => m.completed && m.winner)) return rounds;
+  if (last.name === "Grand Final") return rounds;
+  const winners = last.matches.map((m) => m.winner!);
+  const qualifiers = options.leaguePlayoffQualifiers ?? 0;
+  const race = options.leaguePlayoffRaceTo ?? 5;
+  const finalRace = options.leagueFinalRaceTo ?? 7;
+  let next: BracketMatch[];
+  let name: string;
+  if (qualifiers === 6 && rounds.length === 1) {
+    // Third vs sixth, fourth vs fifth. Seed 1 faces winner of fourth vs fifth.
+    next = [knockoutMatch("league-sf-1", 2, 0, seeds[0], winners[1], race),
+      knockoutMatch("league-sf-2", 2, 1, seeds[1], winners[0], race)];
+    name = "Semifinals";
+  } else if (winners.length === 4) {
+    next = [knockoutMatch("league-sf-1", 2, 0, winners[0], winners[3], race),
+      knockoutMatch("league-sf-2", 2, 1, winners[1], winners[2], race)];
+    name = "Semifinals";
+  } else if (winners.length === 2) {
+    next = [knockoutMatch("league-final", last.round + 1, 0, winners[0], winners[1], finalRace)];
+    name = "Grand Final";
+  } else return rounds;
+  return [...rounds, { round: last.round + 1, name, matches: next }];
+}
+
+export function confirmLeaguePlayoffs(competition: RoundRobinCompetition, options: TournamentOptions) {
+  if (!allPlayableMatchesComplete(competition.rounds)) throw new Error("Complete all league fixtures first.");
+  const count = options.leaguePlayoffQualifiers ?? 0;
+  if (![4, 6, 8].includes(count) || competition.standings.length < count) throw new Error("Invalid playoff qualification size.");
+  const selected = competition.standings.slice(0, count);
+  if (selected.some((row) => row.rank !== selected.indexOf(row) + 1)) {
+    throw new Error("Playoff qualification has an unresolved ranking tie. Resolve the tie before confirming.");
+  }
+  const p = selected.map((r) => r.player);
+  const race = options.leaguePlayoffRaceTo ?? 5;
+  const first = count === 6
+    ? [knockoutMatch("league-q-1", 1, 0, p[2], p[5], race), knockoutMatch("league-q-2", 1, 1, p[3], p[4], race)]
+    : count === 4
+    ? [knockoutMatch("league-sf-1", 1, 0, p[0], p[3], race), knockoutMatch("league-sf-2", 1, 1, p[1], p[2], race)]
+    : [knockoutMatch("league-q-1", 1, 0, p[0], p[7], race), knockoutMatch("league-q-2", 1, 1, p[3], p[4], race),
+       knockoutMatch("league-q-3", 1, 2, p[1], p[6], race), knockoutMatch("league-q-4", 1, 3, p[2], p[5], race)];
+  const name = count === 4 ? "Semifinals" : count === 6 ? "Qualifying Round" : "Quarterfinals";
+  return { ...competition, knockoutConfirmed: true, knockoutSeeds: p, knockoutRounds: [{ round: 1, name, matches: first }], champion: null };
 }
