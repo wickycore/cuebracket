@@ -131,7 +131,15 @@ function PairRounds({
                   score2: match.score2?.toString() ?? "",
                 };
                 return (
-                  <article key={match.id} className={`overflow-hidden rounded-lg border bg-slate-950/65 ${match.completed ? "border-emerald-400/25" : "border-white/10"}`}>
+                  <details key={match.id} className={`group overflow-hidden rounded-lg border bg-slate-950/65 ${match.completed ? "border-emerald-400/25" : "border-white/10"}`}>
+                    <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 text-sm hover:bg-white/[0.04] [&::-webkit-details-marker]:hidden">
+                      <span className="min-w-0 flex-1 truncate font-bold text-white" title={match.player1 ?? ""}>{match.player1}</span>
+                      <span className="shrink-0 rounded-md bg-white/5 px-2 py-1 text-xs font-black tabular-nums text-cyan-200">{match.completed ? `${match.score1} – ${match.score2}` : "vs"}</span>
+                      <span className="min-w-0 flex-1 truncate font-bold text-white" title={match.player2 ?? ""}>{match.player2}</span>
+                      <span className="shrink-0 text-[10px] font-bold text-slate-400">{match.completed ? "FT" : match.status === "live" ? "LIVE" : `R${matchRaceTo}`}</span>
+                      <span aria-hidden="true" className="shrink-0 text-slate-400 transition-transform group-open:rotate-180">⌄</span>
+                    </summary>
+                    <div className="border-t border-white/10">
                     <div className="flex items-center justify-between border-b border-white/10 px-3 py-1.5">
                       <span className="text-[0.64rem] font-black uppercase tracking-wider text-slate-400">
                         {match.tableNumber || `Match ${matchIndex + 1}`}
@@ -184,7 +192,8 @@ function PairRounds({
                       </button>
                       </div>
                     </div>
-                  </article>
+                    </div>
+                  </details>
                 );
               })}
 
