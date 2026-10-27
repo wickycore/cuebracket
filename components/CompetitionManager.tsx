@@ -383,6 +383,13 @@ export function CompetitionManager({ tournament, onTournamentChange }: Props) {
         setMessage("The playoff bracket is locked. Reset playoff confirmation before correcting league results.");
         return;
       }
+      if (competition.knockoutConfirmed) {
+        const roundIndex = (competition.knockoutRounds ?? []).findIndex((round) => round.matches.some((match) => match.id === matchId));
+        if (roundIndex >= 0 && roundIndex < (competition.knockoutRounds?.length ?? 0) - 1) {
+          setMessage("Later knockout rounds have already been generated. Reset playoffs to correct an earlier round.");
+          return;
+        }
+      }
       saveCompetition(updateRoundRobinMatch(competition, tournament.players, tournament.options, matchId, updater));
     } else if (competition.type === "swiss") {
       saveCompetition(updateSwissMatch(competition, tournament.players, tournament.options, matchId, updater));
