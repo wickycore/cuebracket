@@ -77,36 +77,51 @@ export function LeagueFixtures({ league, admin = false, onChange }: Props) {
   }
 
   return (
-    <section className="rounded-3xl border border-white/10 bg-slate-900/70 p-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <section className="rounded-2xl border border-white/10 bg-slate-900/70 p-3 sm:p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-sm font-black uppercase tracking-[0.22em] text-cyan-300">Fixtures</p>
-          <h2 className="mt-2 text-2xl font-black text-white">Match schedule</h2>
+          <h2 className="mt-1 text-lg font-black text-white">Match schedule</h2>
         </div>
         <select
           value={round}
           onChange={(event) => setRound(event.target.value === "all" ? "all" : Number(event.target.value))}
-          className="rounded-xl border border-white/10 bg-slate-950 px-4 py-3 font-bold text-white"
+          aria-label="Filter fixtures by round"
+          className="min-h-11 rounded-lg border border-white/10 bg-slate-950 px-3 py-2 text-sm font-bold text-white"
         >
           <option value="all">All rounds</option>
           {rounds.map((value) => <option key={value} value={value}>Round {value}</option>)}
         </select>
       </div>
 
-      <div className="mt-5 space-y-3">
-        {tableMessage ? <p className="rounded-xl bg-amber-400/10 px-4 py-3 text-sm font-bold text-amber-200">{tableMessage}</p> : null}
-        {fixtures.map((fixture) => (
-          <FixtureRow
-            key={fixture.id}
-            fixture={fixture}
-            league={league}
-            admin={admin}
-            onChange={onChange}
-            tables={tables}
-            tableScope={tableScope}
-            onTableError={setTableMessage}
-          />
-        ))}
+      {tableMessage ? <p className="mt-3 rounded-lg bg-amber-400/10 px-3 py-2 text-sm font-bold text-amber-200">{tableMessage}</p> : null}
+      <div className="mt-4 space-y-4">
+        {rounds.filter((value) => round === "all" || value === round).map((value) => {
+          const roundFixtures = fixtures.filter((fixture) => fixture.round === value);
+          const played = roundFixtures.filter((fixture) => fixture.completed).length;
+          return (
+            <div key={value}>
+              <div className="mb-1.5 flex items-center justify-between px-1 text-xs font-bold text-slate-400">
+                <h3 className="uppercase tracking-wider">Round {value}</h3>
+                <span>{played}/{roundFixtures.length} played</span>
+              </div>
+              <div className="overflow-hidden rounded-xl border border-white/10 bg-slate-950/55">
+                {roundFixtures.map((fixture) => (
+                  <FixtureRow
+                    key={fixture.id}
+                    fixture={fixture}
+                    league={league}
+                    admin={admin}
+                    onChange={onChange}
+                    tables={tables}
+                    tableScope={tableScope}
+                    onTableError={setTableMessage}
+                  />
+                ))}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </section>
   );
@@ -172,49 +187,45 @@ function FixtureRow({
     if (updated && onChange) onChange(updated);
   }
 
+  const matchup = (
+    <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_3.25rem_minmax(0,1fr)] items-center gap-2 text-base sm:text-sm">
+      <span title={home} className={`truncate text-right font-bold ${fixture.completed && (fixture.homeScore ?? 0) > (fixture.awayScore ?? 0) ? "text-cyan-200" : "text-white"}`}>{home}</span>
+      <span className={`text-center font-black tabular-nums ${fixture.completed ? "text-emerald-300" : "text-slate-500"}`}>
+        {fixture.completed ? `${fixture.homeScore}–${fixture.awayScore}` : "vs"}
+      </span>
+      <span title={away} className={`truncate font-bold ${fixture.completed && (fixture.awayScore ?? 0) > (fixture.homeScore ?? 0) ? "text-cyan-200" : "text-white"}`}>{away}</span>
+      <span className="sr-only">{fixture.completed ? "Played" : "Pending"}</span>
+    </div>
+  );
+
+  if (!admin) {
+    return (
+      <div className="border-t border-white/5 px-3 py-2.5 first:border-t-0">
+        <div className="flex min-h-7 items-center">{matchup}</div>
+        {fixture.tableName ? <p className="mt-0.5 truncate text-center text-xs text-cyan-300">{fixture.tableName}</p> : null}
+      </div>
+    );
+  }
+
   return (
-    <div className="rounded-2xl border border-white/10 bg-slate-950/55 p-4">
-      <div className="mb-3 flex items-center justify-between">
-        <span className="text-xs font-black uppercase tracking-wider text-slate-400">Round {fixture.round}</span>
-        <span className={`rounded-full px-3 py-1 text-xs font-black ${fixture.completed ? "bg-emerald-400/10 text-emerald-300" : "bg-amber-400/10 text-amber-300"}`}>
-          {fixture.completed ? "Played" : "Pending"}
-        </span>
-      </div>
-
-      <div className="grid items-center gap-3 md:grid-cols-[1fr_auto_1fr]">
-        <div className="text-right font-black text-white">{home}</div>
-        {admin ? (
-          <div className="flex items-center gap-2">
-            <input
-              type="number"
-              min={0}
-              max={league.raceTo}
-              value={homeScore}
-              onChange={(event) => setHomeScore(Number(event.target.value))}
-              className="w-16 rounded-lg border border-white/10 bg-slate-900 px-2 py-2 text-center font-black text-white"
-            />
-            <span className="text-slate-400">–</span>
-            <input
-              type="number"
-              min={0}
-              max={league.raceTo}
-              value={awayScore}
-              onChange={(event) => setAwayScore(Number(event.target.value))}
-              className="w-16 rounded-lg border border-white/10 bg-slate-900 px-2 py-2 text-center font-black text-white"
-            />
-          </div>
-        ) : (
-          <div className="rounded-xl bg-slate-900 px-4 py-2 text-xl font-black text-white">
-            {fixture.completed ? `${fixture.homeScore} – ${fixture.awayScore}` : "vs"}
-          </div>
-        )}
-        <div className="font-black text-white">{away}</div>
-      </div>
-
-      {admin ? (
-        <label className="mx-auto mt-3 block max-w-xs text-xs font-bold uppercase tracking-wider text-slate-400">
+    <details className="group border-t border-white/5 first:border-t-0">
+      <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2 px-3 py-2 hover:bg-white/[0.025] [&::-webkit-details-marker]:hidden">
+        {matchup}
+        <span aria-hidden="true" className="text-slate-500 transition-transform group-open:rotate-90">›</span>
+        <span className="sr-only">Edit match</span>
+      </summary>
+      <div className="border-t border-white/5 bg-slate-900/40 p-3">
+        <p className="mb-2 break-words text-xs font-bold text-slate-300">{home} vs {away} · Race to {league.raceTo}</p>
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <input type="number" aria-label={`Score for ${home}`} min={0} max={league.raceTo} value={homeScore} onChange={(event) => setHomeScore(Number(event.target.value))} className="min-h-11 w-14 rounded-lg border border-white/10 bg-slate-950 px-2 text-center font-black text-white" />
+          <span className="text-slate-400">–</span>
+          <input type="number" aria-label={`Score for ${away}`} min={0} max={league.raceTo} value={awayScore} onChange={(event) => setAwayScore(Number(event.target.value))} className="min-h-11 w-14 rounded-lg border border-white/10 bg-slate-950 px-2 text-center font-black text-white" />
+          <button onClick={() => void save()} className="min-h-11 rounded-lg bg-cyan-400 px-3 text-xs font-black text-slate-950">Save result</button>
+          {fixture.completed ? <button onClick={reset} className="min-h-11 rounded-lg border border-white/10 px-3 text-xs font-bold text-slate-300">Reset</button> : null}
+        </div>
+        <label className="mt-3 block text-xs font-bold text-slate-400">
           Venue table
-          <select value={fixture.tableId ?? ""} onChange={(event) => void assignTable(event.target.value ? Number(event.target.value) : null)} disabled={fixture.completed} className="mt-1.5 w-full rounded-lg border border-white/10 bg-slate-900 px-3 py-2 text-sm font-bold normal-case tracking-normal text-white disabled:opacity-60">
+          <select value={fixture.tableId ?? ""} onChange={(event) => void assignTable(event.target.value ? Number(event.target.value) : null)} disabled={fixture.completed} className="mt-1 block min-h-11 w-full rounded-lg border border-white/10 bg-slate-950 px-3 text-sm text-white disabled:opacity-60">
             <option value="">{tables.length ? "No table" : "Add tables in Floor Control"}</option>
             {tables.map((table) => {
               const busy = Boolean(table.active_match_id && table.active_match_id !== fixture.id);
@@ -222,20 +233,7 @@ function FixtureRow({
             })}
           </select>
         </label>
-      ) : fixture.tableName ? <p className="mt-3 text-center text-xs font-black uppercase tracking-wider text-cyan-300">{fixture.tableName}</p> : null}
-
-      {admin ? (
-        <div className="mt-3 flex justify-center gap-2">
-          <button onClick={() => void save()} className="rounded-lg bg-cyan-400 px-4 py-2 text-sm font-black text-slate-950">
-            Save result
-          </button>
-          {fixture.completed ? (
-            <button onClick={reset} className="rounded-lg border border-white/10 px-4 py-2 text-sm font-bold text-slate-300">
-              Reset
-            </button>
-          ) : null}
-        </div>
-      ) : null}
-    </div>
+      </div>
+    </details>
   );
 }
