@@ -13,6 +13,9 @@ try {
 
 const nextConfig: NextConfig = {
   images: { remotePatterns: mediaPatterns },
+  outputFileTracingIncludes: {
+    "/league/*/opengraph-image": ["./assets/league-branding/nbk-reference.jpg"],
+  },
   async headers() {
     return [{ source: "/sw.js", headers: [
       { key: "Content-Type", value: "application/javascript; charset=utf-8" },

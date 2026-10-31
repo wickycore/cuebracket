@@ -7,13 +7,20 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const { id } = await params;
   const supabase = await createClient();
   const { data } = await supabase.from("cloud_leagues").select("name, season").eq("id", id).eq("is_public", true).maybeSingle();
-  return data
-    ? {
-        title: `${data.name} · ${data.season}`,
-        description: `Follow ${data.name} fixtures, scores and standings live on CueBracket.`,
-        alternates: { canonical: `/league/${id}` },
-      }
-    : { title: "Public league" };
+  const title = data ? `${data.name} · ${data.season}` : "Public league";
+  const description = data ? `Follow ${data.name} fixtures, scores and standings live on CueBracket.` : "Follow public pool league fixtures, scores and standings on CueBracket.";
+  const path = `/league/${id}`;
+  const image = `${path}/opengraph-image`;
+  return {
+    title,
+    description,
+    alternates: { canonical: path },
+    openGraph: {
+      type: "website", url: path, siteName: "CueBracket Pro", title, description,
+      images: [{ url: image, width: 1200, height: 630, alt: data ? `${data.name} league preview` : "CueBracket league preview" }],
+    },
+    twitter: { card: "summary_large_image", title, description, images: [image] },
+  };
 }
 
 export default async function PublicLeaguePage({ params }: { params: Promise<{ id: string }> }) {
