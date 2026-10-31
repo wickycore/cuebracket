@@ -124,7 +124,7 @@ for (const format of ["single-round-robin", "home-and-away"] as const) {
   });
 }
 
-test("standings apply head-to-head before overall frame difference", () => {
+test("standings apply overall frame difference before head-to-head", () => {
   const league = leagueFixture(4);
   league.fixtures = [
     { id: "a", round: 1, homePlayerId: "p1", awayPlayerId: "p2", homeScore: 5, awayScore: 4, completed: true, playedAt: null },
@@ -135,10 +135,82 @@ test("standings apply head-to-head before overall frame difference", () => {
     { id: "f", round: 6, homePlayerId: "p3", awayPlayerId: "p4", homeScore: 5, awayScore: 4, completed: true, playedAt: null },
   ];
   const table = getLeagueStandings(league);
-  assert.deepEqual(table.slice(0, 2).map((row) => row.playerId), ["p1", "p2"]);
-  assert.ok(table[1].difference > table[0].difference);
+  assert.deepEqual(table.slice(0, 2).map((row) => row.playerId), ["p2", "p1"]);
+  assert.equal(table[0].points, table[1].points);
+  assert.ok(table[0].difference > table[1].difference);
   assert.equal(table[0].rank, 1);
 });
+
+test("top six league seeds the exact qualifying paths and safely corrects downstream results", () => {
+  const source = leagueFixture(10, { raceTo: 4, format: "home-and-away" });
+  let league = createLeague({ ...source, playoffEnabled: true, playoffQualifierCount: 6 });
+  saveLeagues([{ ...league, players: source.players }]);
+  league = generateLeagueFixtures(league.id)!;
+  assert.equal(league.fixtures.length, 90);
+  assert.equal(Math.max(...league.fixtures.map((fixture) => fixture.round)), 18);
+  for (let round = 1; round <= 18; round += 1) {
+    assert.equal(league.fixtures.filter((fixture) => fixture.round === round).length, 5);
+  }
+  assert.throws(() => buildLeaguePlayoff(league), /complete every regular-season fixture/i);
+  for (const fixture of league.fixtures) {
+    const homeWins = Number(fixture.homePlayerId.slice(1)) < Number(fixture.awayPlayerId.slice(1));
+    league = saveFixtureResult(league.id, fixture.id, homeWins ? 4 : 0, homeWins ? 0 : 4)!;
+  }
+  assert.deepEqual(getLeagueStandings(league).map((row) => row.playerId), source.players.map((player) => player.id));
+  league = generateLeaguePlayoff(league.id)!;
+  assert.deepEqual(league.playoff.qualifierPlayerIds, ["p1", "p2", "p3", "p4", "p5", "p6"]);
+  assert.deepEqual(league.playoff.rounds.map((round) => round.matches.length), [2, 2, 1]);
+  const [matchA, matchB] = league.playoff.rounds[0].matches;
+  assert.deepEqual([matchA.player1Id, matchA.player2Id, matchB.player1Id, matchB.player2Id], ["p3", "p6", "p4", "p5"]);
+  const [sf1, sf2] = league.playoff.rounds[1].matches;
+  assert.deepEqual([sf1.player1Id, sf1.player2Id, sf2.player1Id, sf2.player2Id], ["p1", null, "p2", null]);
+  assert.equal(saveLeaguePlayoffResult(league.id, sf1.id, 4, 0)!.playoff.rounds[1].matches[0].completed, false);
+
+  league = saveLeaguePlayoffResult(league.id, matchA.id, 3, 4)!;
+  assert.equal(league.playoff.rounds[1].matches[0].player2Id, null);
+  assert.equal(league.playoff.rounds[1].matches[1].player2Id, "p6");
+  league = saveLeaguePlayoffResult(league.id, matchB.id, 0, 4)!;
+  assert.deepEqual(league.playoff.rounds[1].matches.map((match) => [match.seed1, match.seed2]), [[1, 5], [2, 6]]);
+  league = saveLeaguePlayoffResult(league.id, sf1.id, 4, 2)!;
+  league = saveLeaguePlayoffResult(league.id, sf2.id, 3, 4)!;
+  const final = league.playoff.rounds[2].matches[0];
+  assert.deepEqual([final.player1Id, final.player2Id], ["p1", "p6"]);
+  assert.equal(league.championPlayerId, null);
+  league = saveLeaguePlayoffResult(league.id, final.id, 1, 4)!;
+  assert.equal(getLeague(league.id)?.championPlayerId, "p6");
+  assert.equal(league.status, "completed");
+
+  league = resetLeaguePlayoffResult(league.id, matchB.id)!;
+  assert.deepEqual(league.playoff.rounds[1].matches.map((match) => [match.player1Id, match.player2Id, match.completed]), [["p1", null, false], ["p2", "p6", true]]);
+  assert.equal(league.playoff.rounds[2].matches[0].completed, false);
+  assert.equal(league.championPlayerId, null);
+  assert.equal(league.status, "live");
+  league = saveLeaguePlayoffResult(league.id, matchB.id, 4, 1)!;
+  assert.equal(league.playoff.rounds[1].matches[0].player2Id, "p4");
+  assert.equal(league.playoff.rounds[1].matches[1].completed, true);
+  assert.equal(createNextLeagueSeason(league.id, "Season 2")?.playoff.qualifierCount, 6);
+  league = saveFixtureResult(league.id, league.fixtures[0].id, 3, 4)!;
+  assert.equal(league.playoff.rounds.length, 0);
+  assert.equal(league.playoff.qualifierCount, 6);
+});
+
+for (const size of [2, 4, 8] as const) {
+  test(`existing top ${size} playoffs still advance to a final winner`, () => {
+    const league = leagueFixture(10);
+    league.playoff.qualifierCount = size;
+    league.fixtures = buildLeagueFixtures(league).map((fixture) => ({ ...fixture, homeScore: 5, awayScore: 0, completed: true }));
+    saveLeagues([{ ...league, playoff: buildLeaguePlayoff(league) }]);
+    let stored = getLeague(league.id)!;
+    for (let index = 0; index < stored.playoff.rounds.length; index += 1) {
+      for (const match of stored.playoff.rounds[index].matches) {
+        assert.ok(match.player1Id && match.player2Id);
+        stored = saveLeaguePlayoffResult(stored.id, match.id, 5, 1)!;
+      }
+    }
+    assert.equal(stored.status, "completed");
+    assert.equal(stored.championPlayerId, stored.playoff.qualifierPlayerIds[0]);
+  });
+}
 
 test("playoffs seed the table and only crown the final winner", () => {
   const league = leagueFixture(4);

@@ -2,7 +2,7 @@
 
 export type LeagueStatus = "draft" | "live" | "completed";
 export type LeagueFormat = "single-round-robin" | "home-and-away";
-export type LeaguePlayoffSize = 2 | 4 | 8;
+export type LeaguePlayoffSize = 2 | 4 | 6 | 8;
 export type LeaguePlayoffStatus = "pending" | "ready" | "live" | "completed";
 
 export interface LeaguePlayer {
@@ -495,12 +495,12 @@ export function getLeagueStandings(league: League): StandingRow[] {
   }
   const sorted = allRows.sort((a, b) => {
     if (b.points !== a.points) return b.points - a.points;
+    if (b.difference !== a.difference) return b.difference - a.difference;
     const miniA = mini.get(a.playerId);
     const miniB = mini.get(b.playerId);
     return (miniB?.points ?? 0) - (miniA?.points ?? 0)
       || (miniB?.difference ?? 0) - (miniA?.difference ?? 0)
       || (miniB?.framesFor ?? 0) - (miniA?.framesFor ?? 0)
-      || b.difference - a.difference
       || b.framesFor - a.framesFor
       || a.playerName.localeCompare(b.playerName);
   });
@@ -518,6 +518,7 @@ function playoffRoundName(round: number, totalRounds: number) {
 function seedOrder(size: LeaguePlayoffSize) {
   if (size === 2) return [[1, 2]];
   if (size === 4) return [[1, 4], [2, 3]];
+  if (size === 6) return [[3, 6], [4, 5]];
   return [[1, 8], [4, 5], [2, 7], [3, 6]];
 }
 
@@ -526,14 +527,15 @@ export function buildLeaguePlayoff(league: League): LeaguePlayoff {
     throw new Error("Complete every regular-season fixture before generating the playoffs.");
   }
   const size = league.playoff.qualifierCount;
+  if (![2, 4, 6, 8].includes(size)) throw new Error("Choose a playoff field of 2, 4, 6 or 8 players.");
   if (league.players.length < size) throw new Error(`This playoff needs at least ${size} league players.`);
   const qualifiers = getLeagueStandings(league).slice(0, size);
-  const totalRounds = Math.log2(size);
+  const totalRounds = Math.log2(size === 6 ? 8 : size);
   const rounds: LeaguePlayoffRound[] = [];
   for (let round = 1; round <= totalRounds; round += 1) {
-    const matchCount = size / 2 ** round;
+    const matchCount = size === 6 ? (round === 3 ? 1 : 2) : size / 2 ** round;
     rounds.push({
-      id: makeId("playoff-round"), number: round, name: playoffRoundName(round, totalRounds),
+      id: makeId("playoff-round"), number: round, name: size === 6 && round === 1 ? "Qualifying round" : playoffRoundName(round, totalRounds),
       matches: Array.from({ length: matchCount }, (_, position) => ({
         id: makeId("playoff-match"), round, position,
         player1Id: null, player2Id: null, seed1: null, seed2: null,
@@ -549,6 +551,12 @@ export function buildLeaguePlayoff(league: League): LeaguePlayoff {
     match.seed1 = seed1;
     match.seed2 = seed2;
   });
+  if (size === 6) {
+    rounds[1].matches.forEach((match, position) => {
+      match.player1Id = qualifiers[position].playerId;
+      match.seed1 = position + 1;
+    });
+  }
   return {
     enabled: true, qualifierCount: size, status: "live",
     qualifierPlayerIds: qualifiers.map((row) => row.playerId), rounds,
@@ -567,12 +575,19 @@ function recomputePlayoff(playoff: LeaguePlayoff) {
   const rounds = playoff.rounds.map((round) => ({ ...round, matches: round.matches.map((match) => ({ ...match })) }));
   for (let roundIndex = 1; roundIndex < rounds.length; roundIndex += 1) {
     rounds[roundIndex].matches.forEach((match, position) => {
+      const seededSemi = playoff.qualifierCount === 6 && roundIndex === 1;
       const source1 = rounds[roundIndex - 1].matches[position * 2];
-      const source2 = rounds[roundIndex - 1].matches[position * 2 + 1];
-      const player1Id = source1?.winnerPlayerId ?? null;
+      // Seed 1 faces winner of 4 v 5; seed 2 faces winner of 3 v 6.
+      const source2 = rounds[roundIndex - 1].matches[seededSemi ? 1 - position : position * 2 + 1];
+      const player1Id = seededSemi ? playoff.qualifierPlayerIds[position] : source1?.winnerPlayerId ?? null;
       const player2Id = source2?.winnerPlayerId ?? null;
       if (match.player1Id !== player1Id || match.player2Id !== player2Id) {
-        Object.assign(match, { player1Id, player2Id, seed1: null, seed2: null, score1: null, score2: null, winnerPlayerId: null, completed: false, playedAt: null });
+        Object.assign(match, {
+          player1Id, player2Id,
+          seed1: seededSemi ? position + 1 : null,
+          seed2: seededSemi && player2Id ? playoff.qualifierPlayerIds.indexOf(player2Id) + 1 : null,
+          score1: null, score2: null, winnerPlayerId: null, completed: false, playedAt: null,
+        });
       }
     });
   }

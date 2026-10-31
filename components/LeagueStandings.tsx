@@ -10,6 +10,7 @@ export function LeagueStandings({ league }: { league: League }) {
       <div className="p-6">
         <p className="text-sm font-black uppercase tracking-[0.22em] text-cyan-300">Standings</p>
         <h2 className="mt-2 text-2xl font-black text-white">League table</h2>
+        <p className="mt-2 text-xs leading-5 text-slate-400">Ranking: points → frame difference → head-to-head points, frame difference and frames won → overall frames won.</p>
       </div>
       <div className="overflow-x-auto">
         <table className="min-w-[760px] w-full text-left text-sm">
