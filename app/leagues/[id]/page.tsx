@@ -8,6 +8,7 @@ import { LeagueFixtures } from "@/components/LeagueFixtures";
 import { LeaguePlayerManager } from "@/components/LeaguePlayerManager";
 import { LeagueStandings } from "@/components/LeagueStandings";
 import { LeaguePlayoffs } from "@/components/LeaguePlayoffs";
+import { LeagueNameEditor } from "@/components/LeagueNameEditor";
 import { createNextLeagueSeason, deleteLeague, getLeague, getLeagueSeasons, getPlayerName, League, subscribeToLeagueChanges } from "@/lib/leagues";
 
 export default function LeagueManagePage() {
@@ -48,12 +49,12 @@ export default function LeagueManagePage() {
       <AppHeader />
       <div className="mx-auto max-w-7xl px-5 py-10">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div>
+          <div className="min-w-0">
             <div className="flex flex-wrap gap-2">
               <span className="rounded-full bg-emerald-400/10 px-3 py-1 text-xs font-black uppercase text-emerald-300">{league.status}</span>
               <span className="rounded-full bg-cyan-400/10 px-3 py-1 text-xs font-black text-cyan-300">{league.season}</span>
             </div>
-            <h1 className="mt-4 text-4xl font-black">{league.name}</h1>
+            <LeagueNameEditor league={league} onChange={setLeague} />
             <p className="mt-2 text-slate-400">{league.venue || "Venue not set"} · Race to {league.raceTo}</p>
           </div>
           <div className="flex flex-wrap gap-2">

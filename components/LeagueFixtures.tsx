@@ -31,6 +31,7 @@ export function LeagueFixtures({ league, admin = false, onChange }: Props) {
   const [tableMessage, setTableMessage] = useState("");
   const tableScope = useMemo<VenueEventScope>(() => ({ id: league.id, clubId: league.clubId, type: "league" }), [league.clubId, league.id]);
   const rounds = [...new Set(league.fixtures.map((fixture) => fixture.round))].sort((a, b) => a - b);
+  const firstLegRounds = league.players.length % 2 === 0 ? league.players.length - 1 : league.players.length;
 
   const fixtures = useMemo(
     () => league.fixtures.filter((fixture) => round === "all" || fixture.round === round),
@@ -102,10 +103,16 @@ export function LeagueFixtures({ league, admin = false, onChange }: Props) {
           return (
             <div key={value}>
               <div className="mb-1.5 flex items-center justify-between px-1 text-xs font-bold text-slate-400">
-                <h3 className="uppercase tracking-wider">Round {value}</h3>
+                <h3 className="uppercase tracking-wider">Round {value}{league.format === "home-and-away" ? ` · ${value > firstLegRounds ? "Return leg" : "First leg"}` : ""}</h3>
                 <span>{played}/{roundFixtures.length} played</span>
               </div>
               <div className="overflow-hidden rounded-xl border border-white/10 bg-slate-950/55">
+                <div className="flex items-center gap-2 border-b border-white/10 bg-slate-900/60 px-3 py-1 text-xs font-bold text-slate-400">
+                  <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_3.25rem_minmax(0,1fr)] gap-2">
+                    <span className="text-right">Home</span><span className="text-center">Score</span><span>Away</span>
+                  </div>
+                  {admin ? <span className="w-1.5" aria-hidden="true" /> : null}
+                </div>
                 {roundFixtures.map((fixture) => (
                   <FixtureRow
                     key={fixture.id}
@@ -189,11 +196,11 @@ function FixtureRow({
 
   const matchup = (
     <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_3.25rem_minmax(0,1fr)] items-center gap-2 text-base sm:text-sm">
-      <span title={home} className={`truncate text-right font-bold ${fixture.completed && (fixture.homeScore ?? 0) > (fixture.awayScore ?? 0) ? "text-cyan-200" : "text-white"}`}>{home}</span>
+      <span title={`${home} · Home`} className={`truncate text-right font-bold ${fixture.completed && (fixture.homeScore ?? 0) > (fixture.awayScore ?? 0) ? "text-cyan-200" : "text-white"}`}><span className="sr-only">Home: </span>{home}</span>
       <span className={`text-center font-black tabular-nums ${fixture.completed ? "text-emerald-300" : "text-slate-500"}`}>
         {fixture.completed ? `${fixture.homeScore}–${fixture.awayScore}` : "vs"}
       </span>
-      <span title={away} className={`truncate font-bold ${fixture.completed && (fixture.awayScore ?? 0) > (fixture.homeScore ?? 0) ? "text-cyan-200" : "text-white"}`}>{away}</span>
+      <span title={`${away} · Away`} className={`truncate font-bold ${fixture.completed && (fixture.awayScore ?? 0) > (fixture.homeScore ?? 0) ? "text-cyan-200" : "text-white"}`}><span className="sr-only">Away: </span>{away}</span>
       <span className="sr-only">{fixture.completed ? "Played" : "Pending"}</span>
     </div>
   );
@@ -215,7 +222,7 @@ function FixtureRow({
         <span className="sr-only">Edit match</span>
       </summary>
       <div className="border-t border-white/5 bg-slate-900/40 p-3">
-        <p className="mb-2 break-words text-xs font-bold text-slate-300">{home} vs {away} · Race to {league.raceTo}</p>
+        <p className="mb-2 break-words text-xs font-bold text-slate-300">{home} (Home) vs {away} (Away) · Race to {league.raceTo}</p>
         <div className="flex flex-wrap items-center justify-center gap-2">
           <input type="number" aria-label={`Score for ${home}`} min={0} max={league.raceTo} value={homeScore} onChange={(event) => setHomeScore(Number(event.target.value))} className="min-h-11 w-14 rounded-lg border border-white/10 bg-slate-950 px-2 text-center font-black text-white" />
           <span className="text-slate-400">–</span>
