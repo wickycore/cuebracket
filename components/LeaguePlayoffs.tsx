@@ -59,6 +59,7 @@ export function LeaguePlayoffs({ league, admin = false, onChange }: { league: Le
           <p className="text-sm font-black uppercase tracking-[0.22em] text-violet-300">League playoffs</p>
           <h2 className="mt-2 text-2xl font-black text-white">Top {league.playoff.qualifierCount} championship bracket</h2>
           <p className="mt-2 text-sm leading-6 text-slate-400">Seeds come from the final table. Correcting a regular-season result clears the bracket so it can be seeded again safely.</p>
+          {league.playoff.qualifierCount === 6 ? <p className="mt-2 text-sm leading-6 text-violet-200">1st and 2nd enter the semi-finals directly. Qualifiers: 3rd vs 6th and 4th vs 5th. Semi-finals: 1st vs winner of 4th/5th; 2nd vs winner of 3rd/6th.</p> : null}
         </div>
         {admin && !league.playoff.rounds.length ? (
           <button onClick={generate} disabled={!regularComplete || league.players.length < league.playoff.qualifierCount} className="shrink-0 rounded-xl bg-violet-300 px-5 py-3 font-black text-slate-950 disabled:cursor-not-allowed disabled:opacity-40">
@@ -77,7 +78,7 @@ export function LeaguePlayoffs({ league, admin = false, onChange }: { league: Le
             <div key={round.id}>
               <h3 className="mb-3 text-sm font-black uppercase tracking-wider text-violet-200">{round.name}</h3>
               <div className="space-y-3">
-                {round.matches.map((match) => <PlayoffMatchRow key={match.id} league={league} match={match} admin={admin} onChange={onChange} tables={tables} tableScope={tableScope} onTableError={setTableMessage} />)}
+                {round.matches.map((match) => <PlayoffMatchRow key={`${match.id}:${match.player1Id}:${match.player2Id}`} league={league} match={match} admin={admin} onChange={onChange} tables={tables} tableScope={tableScope} onTableError={setTableMessage} />)}
               </div>
             </div>
           ))}
@@ -93,7 +94,9 @@ function PlayoffMatchRow({ league, match, admin, onChange, tables, tableScope, o
   const ready = Boolean(match.player1Id && match.player2Id);
 
   const player1 = getPlayerName(league, match.player1Id);
-  const player2 = getPlayerName(league, match.player2Id);
+  const player2 = !match.player2Id && league.playoff.qualifierCount === 6 && match.round === 2
+    ? match.position === 0 ? "Winner of 4th vs 5th" : "Winner of 3rd vs 6th"
+    : getPlayerName(league, match.player2Id);
 
   async function save() {
     const validation = validateLeagueResult(league.raceTo, score1, score2);

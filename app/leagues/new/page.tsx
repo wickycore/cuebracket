@@ -23,7 +23,7 @@ export default function NewLeaguePage() {
     endDate: "",
     clubId: null,
     playoffEnabled: true,
-    playoffQualifierCount: 4,
+    playoffQualifierCount: 6,
   });
   const [managedClubs, setManagedClubs] = useState<ClubRow[]>([]);
   const [error, setError] = useState("");
@@ -114,8 +114,10 @@ export default function NewLeaguePage() {
                 <select value={form.playoffQualifierCount} onChange={(e) => setForm({ ...form, playoffQualifierCount: Number(e.target.value) as LeagueInput["playoffQualifierCount"] })} className={`${input} mt-2`}>
                   <option value={2}>Top 2 · Final</option>
                   <option value={4}>Top 4 · Semi-finals</option>
+                  <option value={6}>Top 6 · Top 2 enter semi-finals</option>
                   <option value={8}>Top 8 · Quarter-finals</option>
                 </select>
+                {form.playoffQualifierCount === 6 ? <span className="mt-2 block text-xs font-normal leading-5 text-slate-400">3rd vs 6th and 4th vs 5th. In the semi-finals, 1st faces the winner of 4th vs 5th; 2nd faces the winner of 3rd vs 6th.</span> : null}
               </label>
             ) : null}
           </div>
