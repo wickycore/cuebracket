@@ -4,10 +4,14 @@ import test from "node:test";
 import {
   buildLeagueFixtures,
   buildLeaguePlayoff,
+  createLeague,
   createNextLeagueSeason,
+  generateLeagueFixtures,
+  generateLeaguePlayoff,
   getLeague,
   getLeagueStandings,
   resetLeaguePlayoffResult,
+  saveFixtureResult,
   saveLeaguePlayoffResult,
   saveLeagues,
   validateLeagueResult,
@@ -73,6 +77,52 @@ test("race results require one winner to reach the exact target", () => {
   assert.match(validateLeagueResult(5, 5, 5) ?? "", /cannot finish level/i);
   assert.match(validateLeagueResult(5, 6, 2) ?? "", /valid race to 5/i);
 });
+
+test("race to four accepts either winner at four and rejects unfinished, tied or excessive scores", () => {
+  for (let losingScore = 0; losingScore < 4; losingScore += 1) {
+    assert.equal(validateLeagueResult(4, 4, losingScore), null);
+    assert.equal(validateLeagueResult(4, losingScore, 4), null);
+  }
+  for (const [home, away] of [[3, 2], [4, 4], [5, 3], [3, 5], [-1, 4], [4, 1.5]]) {
+    assert.ok(validateLeagueResult(4, home, away));
+  }
+});
+
+for (const format of ["single-round-robin", "home-and-away"] as const) {
+  test(`race to four persists through a ten-player ${format} season and playoffs`, () => {
+    const source = leagueFixture(10, { raceTo: 4, format });
+    let league = createLeague({ ...source, playoffEnabled: true, playoffQualifierCount: 4 });
+    saveLeagues([{ ...league, players: source.players }]);
+    league = generateLeagueFixtures(league.id)!;
+    assert.equal(league.fixtures.length, format === "home-and-away" ? 90 : 45);
+    assert.equal(getLeague(league.id)?.raceTo, 4);
+
+    const first = league.fixtures[0];
+    const invalid = saveFixtureResult(league.id, first.id, 5, 3)!;
+    assert.equal(invalid.fixtures[0].completed, false);
+    for (const fixture of league.fixtures) {
+      league = saveFixtureResult(league.id, fixture.id, 4, 3)!;
+    }
+    assert.equal(league.playoff.status, "ready");
+    const standings = getLeagueStandings(getLeague(league.id)!);
+    const matchesPerPlayer = format === "home-and-away" ? 18 : 9;
+    assert.ok(standings.every((row) => row.played === matchesPerPlayer));
+    assert.equal(standings.reduce((total, row) => total + row.points, 0), league.fixtures.length * 3);
+    assert.equal(standings.reduce((total, row) => total + row.framesFor, 0), league.fixtures.length * 7);
+
+    league = generateLeaguePlayoff(league.id)!;
+    const semi = league.playoff.rounds[0].matches[0];
+    assert.equal(saveLeaguePlayoffResult(league.id, semi.id, 5, 3)!.playoff.rounds[0].matches[0].completed, false);
+    for (const match of league.playoff.rounds[0].matches) {
+      league = saveLeaguePlayoffResult(league.id, match.id, 4, 2)!;
+    }
+    const final = league.playoff.rounds[1].matches[0];
+    league = saveLeaguePlayoffResult(league.id, final.id, 3, 4)!;
+    assert.equal(league.championPlayerId, final.player2Id);
+    assert.equal(getLeague(league.id)?.status, "completed");
+    assert.equal(createNextLeagueSeason(league.id, "Season 2")?.raceTo, 4);
+  });
+}
 
 test("standings apply head-to-head before overall frame difference", () => {
   const league = leagueFixture(4);

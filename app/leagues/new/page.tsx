@@ -87,7 +87,7 @@ export default function NewLeaguePage() {
           </Field>
           <Field label="Race to">
             <select value={form.raceTo} onChange={(e) => setForm({ ...form, raceTo: Number(e.target.value) })} className={input}>
-              {[3, 5, 7, 9, 11].map((value) => <option key={value} value={value}>{value}</option>)}
+              {[3, 4, 5, 7, 9, 11].map((value) => <option key={value} value={value}>{value}</option>)}
             </select>
           </Field>
           <Field label="Points for win">
