@@ -9,6 +9,7 @@ import { LeaguePlayerManager } from "@/components/LeaguePlayerManager";
 import { LeagueStandings } from "@/components/LeagueStandings";
 import { LeaguePlayoffs } from "@/components/LeaguePlayoffs";
 import { LeagueNameEditor } from "@/components/LeagueNameEditor";
+import { ShareLeague } from "@/components/ShareLeague";
 import { createNextLeagueSeason, deleteLeague, getLeague, getLeagueSeasons, getPlayerName, League, subscribeToLeagueChanges } from "@/lib/leagues";
 
 export default function LeagueManagePage() {
@@ -59,6 +60,7 @@ export default function LeagueManagePage() {
           </div>
           <div className="flex flex-wrap gap-2">
             <Link href={`/league/${league.id}`} className="rounded-xl bg-cyan-400 px-4 py-3 text-sm font-black text-slate-950">Open public view</Link>
+            <ShareLeague id={league.id} name={league.name} />
             <button onClick={createSeason} className="rounded-xl border border-white/10 px-4 py-3 text-sm font-bold text-slate-200">Create next season</button>
             <button onClick={() => { if (window.confirm(`Delete “${league.name}”?`)) { deleteLeague(league.id); router.push("/dashboard"); } }} className="rounded-xl border border-rose-400/20 px-4 py-3 text-sm font-bold text-rose-300">Delete</button>
           </div>
